@@ -26,7 +26,7 @@ description.
     accrue from check-ins and challenge completions.
   - Size: likely 4-6 tasks (schema, backend computation, Flutter UI).
 
-- [ ] B2 Ratings: post-visit behavior ratings between users — status: approved
+- [!] B2 Ratings: post-visit behavior ratings between users — status: approved <!-- failed 2026-10-01: BLOCKED: no database available. B2 needs a new `Rating` model, and the project rules require adding it with `npx prisma migrate dev`, which needs a live Postgre... -->
   - Why: requested as a safety/quality signal for who you'll meet at a club.
   - Scope: a `Rating` model (rater, ratee, optional note, 1-5 score), only submittable between two
     users who checked into the same club on the same night; an average rating surfaced on profile.
