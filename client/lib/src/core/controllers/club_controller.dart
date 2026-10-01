@@ -14,6 +14,7 @@ class ClubController extends GetxController {
 
   Set<String> get visitedClubIds => myCheckIns.map((c) => c.clubId).toSet();
 
+  @override
   Future<void> refresh() async {
     isLoading.value = true;
     try {

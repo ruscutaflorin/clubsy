@@ -25,11 +25,7 @@ class _WidgetTreeState extends State<WidgetTree> {
   Widget build(BuildContext context) {
     final navigationController = Get.find<NavigationController>();
 
-    const pages = [
-      ClubMapPage(),
-      CheckInHistoryPage(),
-      ProfilePage(),
-    ];
+    const pages = [ClubMapPage(), CheckInHistoryPage(), ProfilePage()];
 
     return Scaffold(
       body: Obx(() {

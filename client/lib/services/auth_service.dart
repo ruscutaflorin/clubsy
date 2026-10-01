@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,10 +14,7 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/signin'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
+        body: json.encode({'email': email, 'password': password}),
       );
 
       if (response.statusCode == 200) {
@@ -25,7 +23,8 @@ class AuthService {
         return data;
       } else {
         throw Exception(
-            json.decode(response.body)['message'] ?? 'Failed to sign in');
+          json.decode(response.body)['message'] ?? 'Failed to sign in',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to the server');
@@ -33,16 +32,15 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> signUp(
-      String email, String password, String name) async {
+    String email,
+    String password,
+    String name,
+  ) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/signup'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-          'name': name,
-        }),
+        body: json.encode({'email': email, 'password': password, 'name': name}),
       );
 
       if (response.statusCode == 201) {
@@ -51,7 +49,8 @@ class AuthService {
         return data;
       } else {
         throw Exception(
-            json.decode(response.body)['message'] ?? 'Failed to sign up');
+          json.decode(response.body)['message'] ?? 'Failed to sign up',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to the server');

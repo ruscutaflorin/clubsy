@@ -30,9 +30,7 @@ class AuthWidget extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Email',
             labelStyle: const TextStyle(color: Colors.white70),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.white24),
@@ -53,9 +51,7 @@ class AuthWidget extends StatelessWidget {
           decoration: InputDecoration(
             labelText: 'Password',
             labelStyle: const TextStyle(color: Colors.white70),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.white24),
@@ -82,19 +78,21 @@ class AuthWidget extends StatelessWidget {
           }
           return const SizedBox.shrink();
         }),
-        Obx(() => ElevatedButton(
-              onPressed: isLoading.value ? null : onAuth,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple[200],
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+        Obx(
+          () => ElevatedButton(
+            onPressed: isLoading.value ? null : onAuth,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple[200],
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: isLoading.value
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(buttonText),
-            )),
+            ),
+            child: isLoading.value
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(buttonText),
+          ),
+        ),
       ],
     );
   }

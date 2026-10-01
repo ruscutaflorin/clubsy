@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:get/get.dart';
-import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 

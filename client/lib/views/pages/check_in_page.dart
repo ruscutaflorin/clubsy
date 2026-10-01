@@ -26,7 +26,9 @@ class _CheckInPageState extends State<CheckInPage> {
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      setState(() => _statusMessage = 'Location permission is required to check in');
+      setState(
+        () => _statusMessage = 'Location permission is required to check in',
+      );
       return null;
     }
 
@@ -67,7 +69,9 @@ class _CheckInPageState extends State<CheckInPage> {
       Get.back();
       Get.snackbar('Checked in!', 'Welcome to ${widget.club.name}');
     } catch (e) {
-      setState(() => _statusMessage = e.toString().replaceFirst('Exception: ', ''));
+      setState(
+        () => _statusMessage = e.toString().replaceFirst('Exception: ', ''),
+      );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
@@ -80,8 +84,7 @@ class _CheckInPageState extends State<CheckInPage> {
       body: Stack(
         children: [
           MobileScanner(onDetect: _handleDetect),
-          if (_isProcessing)
-            const Center(child: CircularProgressIndicator()),
+          if (_isProcessing) const Center(child: CircularProgressIndicator()),
           if (_statusMessage != null)
             Positioned(
               bottom: 24,

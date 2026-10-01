@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/services/auth_service.dart';
@@ -40,7 +41,9 @@ class CheckInService {
       if (response.statusCode == 201) {
         return CheckInModel.fromMap(json.decode(response.body));
       } else {
-        throw Exception(json.decode(response.body)['message'] ?? 'Failed to check in');
+        throw Exception(
+          json.decode(response.body)['message'] ?? 'Failed to check in',
+        );
       }
     } catch (e) {
       throw Exception(e.toString().replaceFirst('Exception: ', ''));
@@ -50,7 +53,10 @@ class CheckInService {
   Future<List<CheckInModel>> getMyCheckIns() async {
     try {
       final headers = await _authHeaders();
-      final response = await http.get(Uri.parse('$baseUrl/check-ins/me'), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/check-ins/me'),
+        headers: headers,
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -58,7 +64,9 @@ class CheckInService {
             .map((checkIn) => CheckInModel.fromMap(checkIn))
             .toList();
       } else {
-        throw Exception(json.decode(response.body)['message'] ?? 'Failed to fetch check-ins');
+        throw Exception(
+          json.decode(response.body)['message'] ?? 'Failed to fetch check-ins',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to the server: ${e.toString()}');

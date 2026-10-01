@@ -15,10 +15,14 @@ class ProfilePage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          Obx(() => IconButton(
-                onPressed: () => themeController.toggleTheme(),
-                icon: Icon(themeController.isDarkMode ? Icons.light_mode : Icons.dark_mode),
-              )),
+          Obx(
+            () => IconButton(
+              onPressed: () => themeController.toggleTheme(),
+              icon: Icon(
+                themeController.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              ),
+            ),
+          ),
         ],
       ),
       body: ListView(
@@ -34,16 +38,26 @@ class ProfilePage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  child: Obx(() => Text(
-                        authController.user?['name']?.substring(0, 1).toUpperCase() ?? 'U',
-                        style: const TextStyle(fontSize: 32),
-                      )),
+                  child: Obx(
+                    () => Text(
+                      authController.user?['name']
+                              ?.substring(0, 1)
+                              .toUpperCase() ??
+                          'U',
+                      style: const TextStyle(fontSize: 32),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                Obx(() => Text(
-                      authController.user?['name'] ?? 'User',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                    )),
+                Obx(
+                  () => Text(
+                    authController.user?['name'] ?? 'User',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
                 Obx(() => Text(authController.user?['email'] ?? '')),
               ],
             ),

@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/views/pages/welcome_page.dart';
@@ -35,7 +36,8 @@ class AuthMiddleware extends GetMiddleware {
   RouteSettings? redirect(String? route) {
     final authController = Get.find<AuthController>();
     final isAuth = authController.isAuthenticated;
-    final isAuthRoute = route == '/login' || route == '/register' || route == '/';
+    final isAuthRoute =
+        route == '/login' || route == '/register' || route == '/';
 
     if (!isAuth && !isAuthRoute) {
       return const RouteSettings(name: '/');
