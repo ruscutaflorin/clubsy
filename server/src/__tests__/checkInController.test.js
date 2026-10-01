@@ -1,0 +1,102 @@
+import { jest } from "@jest/globals";
+
+const findUnique = jest.fn();
+const create = jest.fn();
+const findMany = jest.fn();
+jest.unstable_mockModule("../prisma/client.js", () => ({
+  default: { club: { findUnique }, checkIn: { create, findMany } },
+}));
+
+const { checkIn, getMyCheckIns } = await import("../controllers/checkInController.js");
+
+const makeRes = () => {
+  const res = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  return res;
+};
+
+const club = { id: "c1", qrSecret: "s3cret", latitude: 45, longitude: 25, isApproved: true };
+const makeReq = (body = {}) => ({
+  user: { id: "u1" },
+  body: {
+    clubId: "c1",
+    qrPayload: JSON.stringify({ clubId: "c1", secret: "s3cret" }),
+    latitude: 45,
+    longitude: 25,
+    ...body,
+  },
+});
+
+describe("checkIn", () => {
+  beforeEach(() => {
+    findUnique.mockReset();
+    create.mockReset();
+    findMany.mockReset();
+    jest.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it("returns 404 for an unknown club", async () => {
+    findUnique.mockResolvedValue(null);
+    const res = makeRes();
+    await checkIn(makeReq(), res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 for an unapproved club", async () => {
+    findUnique.mockResolvedValue({ ...club, isApproved: false });
+    const res = makeRes();
+    await checkIn(makeReq(), res);
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("rejects a wrong QR secret", async () => {
+    findUnique.mockResolvedValue(club);
+    const res = makeRes();
+    await checkIn(makeReq({ qrPayload: JSON.stringify({ clubId: "c1", secret: "bad" }) }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: "Invalid QR code for this club" });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a check-in from too far away", async () => {
+    findUnique.mockResolvedValue(club);
+    const res = makeRes();
+    await checkIn(makeReq({ latitude: 45.01 }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].distanceMeters).toBeGreaterThan(150);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("creates a check-in when QR and proximity both pass", async () => {
+    findUnique.mockResolvedValue(club);
+    create.mockResolvedValue({ id: "ci1" });
+    const res = makeRes();
+    await checkIn(makeReq(), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(create.mock.calls[0][0].data).toMatchObject({
+      userId: "u1",
+      clubId: "c1",
+      verificationMethod: "QR",
+    });
+  });
+
+  it("returns 500 when the database fails", async () => {
+    findUnique.mockRejectedValue(new Error("db"));
+    const res = makeRes();
+    await checkIn(makeReq(), res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getMyCheckIns", () => {
+  it("lists only the caller's check-ins", async () => {
+    findMany.mockResolvedValue([]);
+    const res = makeRes();
+    await getMyCheckIns({ user: { id: "u1" } }, res);
+    expect(findMany.mock.calls[0][0].where).toEqual({ userId: "u1" });
+    expect(res.json).toHaveBeenCalledWith({ checkIns: [] });
+  });
+});
