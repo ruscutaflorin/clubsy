@@ -13,7 +13,7 @@ The scaffold (schema, Express controllers/routes, Flutter pages/controllers/serv
 exists but is unverified: no `flutter pub get`, no `flutter analyze`, no tests, and no database
 migration has been run yet. These tasks get Phase 1 to a genuinely working, tested state.
 
-- [ ] 1.1 Get `client/` building: run `flutter pub get`, resolve any dependency version conflicts
+- [x] 1.1 Get `client/` building: run `flutter pub get`, resolve any dependency version conflicts
       in `client/pubspec.yaml` (`geolocator`, `mobile_scanner`, `flutter_map`, `latlong2`, `lottie`
       were added without verifying they resolve against the installed Flutter SDK), then run
       `flutter analyze --no-fatal-infos` and fix every reported issue under `client/lib/`.
