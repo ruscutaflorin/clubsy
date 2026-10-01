@@ -4,7 +4,6 @@ import prisma from "../prisma/client.js";
 export const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth middleware - Authorization header:', authHeader);
 
     if (!authHeader) {
       console.log('Auth middleware - No authorization header');
@@ -12,14 +11,12 @@ export const authMiddleware = async (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    console.log('Auth middleware - Token:', token);
     if (!token) {
       return res.status(401).json({ message: "No token provided" });
     }
 
     // Verify JWT token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Auth middleware - Decoded token:', decoded);
     if (!decoded) {
       return res.status(401).json({ message: "Invalid token" });
     }
