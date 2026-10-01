@@ -41,3 +41,25 @@ in this repo should reintroduce event/ticketing/cart concepts.
 - No Postgres is guaranteed to be running during a night-shift session. Any task that needs a live
   database (running `prisma migrate dev`, hitting an endpoint end-to-end) should say so plainly and
   end `BLOCKED: no database available` rather than guessing at a connection string.
+- To verify the server boots without crashing, run exactly `timeout 5 node server/src/index.js`
+  (that precise command, from the repo root) — it is the one allowlisted in `.claude/settings.json`.
+  A different timeout value or invocation form will be denied by the permission system, not by a
+  bug in the code.
+
+## Task sizing
+
+Every builder/reviewer attempt re-runs the full gate suite (`flutter pub get`, `dart format`,
+`flutter analyze`, `flutter test`, `pnpm install`, `pnpm test`) regardless of how small the task
+is — that is a fixed cost per session, not per line changed. Prefer fewer, larger tasks over many
+tiny ones:
+
+- When proposing or splitting backlog items into TASKS.md tasks, bundle one feature's schema +
+  backend + frontend work into a single task sized for roughly 45-75 minutes of agent time, rather
+  than one task per file or per layer. A task like "add the Rating model, migration, controller,
+  routes, and Flutter rating UI" is preferred over separate schema/backend/frontend tasks for the
+  same feature.
+- Still keep each task independently verifiable (one clear "Verified by:" check) and small enough
+  to fit one coherent diff — do not bundle unrelated features together just to save a gate cycle.
+- Up to 8 consecutive small/independent tasks may be batched into one session automatically (see
+  .nightshift/config.json's batch setting); writing tasks with that in mind (self-contained,
+  ordered so related ones are adjacent) helps the batcher combine them.
