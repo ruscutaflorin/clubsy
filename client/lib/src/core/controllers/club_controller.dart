@@ -14,6 +14,7 @@ class ClubController extends GetxController {
   final myCheckIns = <CheckInModel>[].obs;
   final Rxn<CheckInStatsModel> stats = Rxn<CheckInStatsModel>();
   final isLoading = false.obs;
+  final visitedOnly = false.obs;
 
   Set<String> get visitedClubIds => myCheckIns.map((c) => c.clubId).toSet();
 
