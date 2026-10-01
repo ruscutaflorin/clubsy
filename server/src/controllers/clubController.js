@@ -2,8 +2,12 @@ import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
 import { generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
-// qrSecret authenticates on-site check-ins; it must never reach regular clients.
-const withoutSecret = ({ qrSecret, ...club }) => club;
+// qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
+const forRole = (club, role) => {
+  if (role === "ADMIN") return club;
+  const { qrSecret, ...rest } = club;
+  return rest;
+};
 
 export const createClub = async (req, res) => {
   try {
@@ -62,7 +66,11 @@ export const getClubs = async (req, res) => {
       prisma.club.count({ where }),
     ]);
 
-    res.json({ clubs: clubs.map(withoutSecret), total, pages: Math.ceil(total / limit) });
+    res.json({
+      clubs: clubs.map((club) => forRole(club, req.user?.role)),
+      total,
+      pages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error("Get clubs error:", error);
     res.status(500).json({ message: "Error fetching clubs" });
@@ -75,11 +83,11 @@ export const getClubById = async (req, res) => {
 
     const club = await prisma.club.findUnique({ where: { id } });
 
-    if (!club) {
+    if (!club || (!club.isApproved && req.user?.role !== "ADMIN")) {
       return res.status(404).json({ message: "Club not found" });
     }
 
-    res.json(withoutSecret(club));
+    res.json(forRole(club, req.user?.role));
   } catch (error) {
     console.error("Get club error:", error);
     res.status(500).json({ message: "Error fetching club" });
