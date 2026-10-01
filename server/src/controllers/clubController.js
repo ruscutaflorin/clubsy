@@ -2,6 +2,9 @@ import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
 import { generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
+// qrSecret authenticates on-site check-ins; it must never reach regular clients.
+const withoutSecret = ({ qrSecret, ...club }) => club;
+
 export const createClub = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -59,7 +62,7 @@ export const getClubs = async (req, res) => {
       prisma.club.count({ where }),
     ]);
 
-    res.json({ clubs, total, pages: Math.ceil(total / limit) });
+    res.json({ clubs: clubs.map(withoutSecret), total, pages: Math.ceil(total / limit) });
   } catch (error) {
     console.error("Get clubs error:", error);
     res.status(500).json({ message: "Error fetching clubs" });
@@ -76,7 +79,7 @@ export const getClubById = async (req, res) => {
       return res.status(404).json({ message: "Club not found" });
     }
 
-    res.json(club);
+    res.json(withoutSecret(club));
   } catch (error) {
     console.error("Get club error:", error);
     res.status(500).json({ message: "Error fetching club" });
