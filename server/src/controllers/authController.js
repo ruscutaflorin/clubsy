@@ -1,9 +1,19 @@
 import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { validationResult } from "express-validator";
 
 export const signUp = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "Server is not configured to issue sessions" });
+    }
+
     const { email, password, name } = req.body;
 
     // Check if user already exists
@@ -53,6 +63,15 @@ export const signUp = async (req, res) => {
 
 export const signIn = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: "Server is not configured to issue sessions" });
+    }
+
     const { email, password } = req.body;
 
     // Find user

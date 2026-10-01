@@ -9,26 +9,36 @@ class AuthService {
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 
+  /// Reads the server's `{message}` error shape, or the first
+  /// express-validator `{errors: [{msg}]}` entry when `message` is absent.
+  static String _errorMessage(String body, String fallback) {
+    final decoded = json.decode(body);
+    if (decoded['message'] != null) return decoded['message'];
+    final errors = decoded['errors'] as List?;
+    if (errors != null && errors.isNotEmpty) {
+      return errors.first['msg'] ?? fallback;
+    }
+    return fallback;
+  }
+
   Future<Map<String, dynamic>> signIn(String email, String password) async {
+    final http.Response response;
     try {
-      final response = await http.post(
+      response = await http.post(
         Uri.parse('$baseUrl/auth/signin'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'password': password}),
       );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _saveAuthData(data['token'], data['user']);
-        return data;
-      } else {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Failed to sign in',
-        );
-      }
-    } catch (e) {
+    } catch (_) {
       throw Exception('Failed to connect to the server');
     }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      await _saveAuthData(data['token'], data['user']);
+      return data;
+    }
+    throw Exception(_errorMessage(response.body, 'Failed to sign in'));
   }
 
   Future<Map<String, dynamic>> signUp(
@@ -36,25 +46,23 @@ class AuthService {
     String password,
     String name,
   ) async {
+    final http.Response response;
     try {
-      final response = await http.post(
+      response = await http.post(
         Uri.parse('$baseUrl/auth/signup'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'password': password, 'name': name}),
       );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        await _saveAuthData(data['token'], data['user']);
-        return data;
-      } else {
-        throw Exception(
-          json.decode(response.body)['message'] ?? 'Failed to sign up',
-        );
-      }
-    } catch (e) {
+    } catch (_) {
       throw Exception('Failed to connect to the server');
     }
+
+    if (response.statusCode == 201) {
+      final data = json.decode(response.body);
+      await _saveAuthData(data['token'], data['user']);
+      return data;
+    }
+    throw Exception(_errorMessage(response.body, 'Failed to sign up'));
   }
 
   Future<void> signOut() async {

@@ -9,12 +9,23 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
 const bcrypt = (await import("bcryptjs")).default;
 const jwt = (await import("jsonwebtoken")).default;
 const { signUp, signIn, getCurrentUser } = await import("../controllers/authController.js");
+const { signUpValidation, signInValidation } = await import("../routes/authRoutes.js");
 
 const makeRes = () => {
   const res = {};
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   return res;
+};
+
+// Runs the route's real express-validator chain against a bare req, the way Express
+// would before the controller sees it, so validation is exercised end to end.
+const validated = async (validators, body) => {
+  const req = { body };
+  for (const validator of validators) {
+    await validator.run(req);
+  }
+  return req;
 };
 
 beforeEach(() => {
@@ -30,6 +41,66 @@ describe("signUp", () => {
     await signUp({ body: { email: "a@b.c", password: "pw", name: "A" } }, res);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 and creates no user when JWT_SECRET is unset", async () => {
+    delete process.env.JWT_SECRET;
+    const res = makeRes();
+    await signUp({ body: { email: "a@b.c", password: "password1", name: "A" } }, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a bad email with 400 {errors} and creates no user", async () => {
+    const req = await validated(signUpValidation, {
+      email: "not-an-email",
+      password: "password1",
+      name: "A",
+    });
+    const res = makeRes();
+    await signUp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].errors).toBeDefined();
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a short password with 400 {errors} and creates no user", async () => {
+    const req = await validated(signUpValidation, {
+      email: "a@b.c",
+      password: "short",
+      name: "A",
+    });
+    const res = makeRes();
+    await signUp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing name with 400 {errors} and creates no user", async () => {
+    const req = await validated(signUpValidation, {
+      email: "a@b.c",
+      password: "password1",
+      name: "",
+    });
+    const res = makeRes();
+    await signUp(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid input and returns 201 with a token", async () => {
+    findUnique.mockResolvedValue(null);
+    create.mockImplementation(async ({ data }) => ({ id: "u1", ...data }));
+    const req = await validated(signUpValidation, {
+      email: "a@b.com",
+      password: "password1",
+      name: "A",
+    });
+    const res = makeRes();
+    await signUp(req, res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json.mock.calls[0][0].token).toBeDefined();
   });
 
   it("stores a hashed password and never returns it", async () => {
@@ -54,6 +125,24 @@ describe("signIn", () => {
     const res = makeRes();
     await signIn({ body: { email: "a@b.c", password: "pw" } }, res);
     expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  it("rejects a missing password with 400 {errors}", async () => {
+    const req = await validated(signInValidation, { email: "a@b.c", password: "" });
+    const res = makeRes();
+    await signIn(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 and no token when JWT_SECRET is unset", async () => {
+    delete process.env.JWT_SECRET;
+    findUnique.mockResolvedValue({ id: "u1", password: await bcrypt.hash("pw", 4) });
+    const res = makeRes();
+    await signIn({ body: { email: "a@b.c", password: "pw" } }, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    const body = res.json.mock.calls[0][0];
+    expect(body.token).toBeUndefined();
   });
 
   it("returns 401 for a wrong password", async () => {
