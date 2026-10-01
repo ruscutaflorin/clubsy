@@ -39,9 +39,19 @@ export const createClub = async (req, res) => {
   }
 };
 
+// Clamps a query param to a positive integer, falling back when it isn't one
+// (missing, non-numeric, zero, or negative) - avoids NaN propagating into
+// Prisma's skip/take.
+const parsePositiveInt = (value, fallback) => {
+  const parsed = parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 export const getClubs = async (req, res) => {
   try {
-    const { page = 1, limit = 20, search, city } = req.query;
+    const { search, city } = req.query;
+    const page = parsePositiveInt(req.query.page, 1);
+    const limit = Math.min(parsePositiveInt(req.query.limit, 20), 50);
     const skip = (page - 1) * limit;
 
     const where = {
@@ -60,7 +70,7 @@ export const getClubs = async (req, res) => {
       prisma.club.findMany({
         where,
         skip,
-        take: parseInt(limit),
+        take: limit,
         orderBy: { name: "asc" },
       }),
       prisma.club.count({ where }),

@@ -78,6 +78,38 @@ describe("club read endpoints never expose the QR secret to non-admins", () => {
   });
 });
 
+describe("getClubs pagination clamping", () => {
+  beforeEach(() => {
+    findMany.mockResolvedValue([]);
+    count.mockResolvedValue(0);
+  });
+
+  it("falls back to a default limit of 20 when limit is non-numeric", async () => {
+    const res = makeRes();
+    await getClubs({ query: { limit: "abc" }, user: { role: "USER" } }, res);
+    expect(findMany.mock.calls[0][0].take).toBe(20);
+  });
+
+  it("clamps an oversized limit to 50", async () => {
+    const res = makeRes();
+    await getClubs({ query: { limit: "1000" }, user: { role: "USER" } }, res);
+    expect(findMany.mock.calls[0][0].take).toBe(50);
+  });
+
+  it("falls back to page 1 for a non-numeric or non-positive page", async () => {
+    const res = makeRes();
+    await getClubs({ query: { page: "0" }, user: { role: "USER" } }, res);
+    expect(findMany.mock.calls[0][0].skip).toBe(0);
+  });
+
+  it("computes skip from a valid page and limit", async () => {
+    const res = makeRes();
+    await getClubs({ query: { page: "3", limit: "10" }, user: { role: "USER" } }, res);
+    expect(findMany.mock.calls[0][0].skip).toBe(20);
+    expect(findMany.mock.calls[0][0].take).toBe(10);
+  });
+});
+
 describe("getClubQr", () => {
   it("returns a qrCode data URL for an admin", async () => {
     findUnique.mockResolvedValue(club);

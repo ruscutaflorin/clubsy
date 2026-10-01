@@ -4,7 +4,9 @@ import 'package:latlong2/latlong.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_map_filtering.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/src/core/controllers/club_search_controller.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
+import 'package:clubsy/views/pages/club_search_page.dart';
 
 class ClubMapPage extends StatelessWidget {
   const ClubMapPage({super.key});
@@ -73,17 +75,38 @@ class ClubMapPage extends StatelessWidget {
               ),
               SafeArea(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                    child: SegmentedButton<bool>(
-                      segments: const [
-                        ButtonSegment(value: false, label: Text('All')),
-                        ButtonSegment(value: true, label: Text('Visited')),
-                      ],
-                      selected: {visitedOnly},
-                      onSelectionChanged: (selection) =>
-                          clubController.visitedOnly.value = selection.first,
-                    ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: SegmentedButton<bool>(
+                            segments: const [
+                              ButtonSegment(value: false, label: Text('All')),
+                              ButtonSegment(value: true, label: Text('Visited')),
+                            ],
+                            selected: {visitedOnly},
+                            onSelectionChanged: (selection) =>
+                                clubController.visitedOnly.value = selection.first,
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: Theme.of(context).cardColor,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          icon: const Icon(Icons.search),
+                          tooltip: 'Search clubs',
+                          onPressed: () {
+                            Get.put(ClubSearchController());
+                            Get.to(() => const ClubSearchPage());
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
