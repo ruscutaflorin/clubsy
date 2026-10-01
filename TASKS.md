@@ -19,17 +19,17 @@ migration has been run yet. These tasks get Phase 1 to a genuinely working, test
       `flutter analyze --no-fatal-infos` and fix every reported issue under `client/lib/`.
       Verified by: `cd client && flutter pub get` and `cd client && flutter analyze --no-fatal-infos`
       both exit 0.
-- [ ] 1.2 Confirm `server/` boots without a live database connection (Prisma connects lazily, so
+- [x] 1.2 Confirm `server/` boots without a live database connection (Prisma connects lazily, so
       the process should log "Server is running on port 3000" immediately even with an empty
       `DATABASE_URL`). Fix anything that throws before that log line. Run it briefly with a timeout
       and kill it — never leave a long-running process. Verified by: the log line appears and the
       process exits cleanly when stopped.
-- [ ] 1.3 Add unit tests for the two DB-free pure pieces of server logic: `distanceInMeters` in
+- [x] 1.3 Add unit tests for the two DB-free pure pieces of server logic: `distanceInMeters` in
       `server/src/utils/geo.js` (a couple of coordinate pairs with known real-world distances,
       asserted within a reasonable tolerance) and `generateQrSecret`/`verifyClubQrPayload` in
       `server/src/services/venueQrService.js` (valid payload, wrong secret, malformed JSON).
       Verified by: `cd server && pnpm test` passes.
-- [ ] 1.4 Add Flutter widget tests for `ClubDetailsPage` and `CheckInHistoryPage` using fixture
+- [x] 1.4 Add Flutter widget tests for `ClubDetailsPage` and `CheckInHistoryPage` using fixture
       `ClubModel`/`CheckInModel` data — no real HTTP or GetX service calls; inject fixture data
       directly rather than hitting `ClubService`/`CheckInService`. Verified by:
       `cd client && flutter test` passes.
