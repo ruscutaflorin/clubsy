@@ -1,0 +1,4 @@
+
+# Night Shift runtime state
+.nightshift/state/
+.nightshift/STOP

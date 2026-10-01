@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String
+  role      Role      @default(USER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  checkIns  CheckIn[]
+}
+
+model Club {
+  id         String    @id @default(uuid())
+  name       String
+  address    String
+  city       String
+  latitude   Float
+  longitude  Float
+  qrSecret   String    @unique
+  imageUrl   String    @default("https://picsum.photos/400/200")
+  isApproved Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  checkIns   CheckIn[]
+}
+
+model CheckIn {
+  id                 String             @id @default(uuid())
+  userId             String
+  clubId             String
+  checkedInAt        DateTime           @default(now())
+  verificationMethod VerificationMethod
+  distanceMeters     Float
+  createdAt          DateTime           @default(now())
+  user               User               @relation(fields: [userId], references: [id])
+  club               Club               @relation(fields: [clubId], references: [id])
+
+  @@index([userId])
+  @@index([clubId])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum VerificationMethod {
+  QR
+  GPS
+}
