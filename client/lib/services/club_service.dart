@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/auth_service.dart';
@@ -27,7 +28,8 @@ class ClubService {
         'limit': '100',
       };
 
-      final uri = Uri.parse('$baseUrl/clubs').replace(queryParameters: queryParams);
+      final uri = Uri.parse('$baseUrl/clubs')
+          .replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
@@ -36,7 +38,9 @@ class ClubService {
             .map((club) => ClubModel.fromMap(club))
             .toList();
       } else {
-        throw Exception(json.decode(response.body)['message'] ?? 'Failed to fetch clubs');
+        throw Exception(
+          json.decode(response.body)['message'] ?? 'Failed to fetch clubs',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to the server: ${e.toString()}');
@@ -46,12 +50,17 @@ class ClubService {
   Future<ClubModel> getClubById(String id) async {
     try {
       final headers = await _authHeaders();
-      final response = await http.get(Uri.parse('$baseUrl/clubs/$id'), headers: headers);
+      final response = await http.get(
+        Uri.parse('$baseUrl/clubs/$id'),
+        headers: headers,
+      );
 
       if (response.statusCode == 200) {
         return ClubModel.fromMap(json.decode(response.body));
       } else {
-        throw Exception(json.decode(response.body)['message'] ?? 'Failed to fetch club');
+        throw Exception(
+          json.decode(response.body)['message'] ?? 'Failed to fetch club',
+        );
       }
     } catch (e) {
       throw Exception('Failed to connect to the server: ${e.toString()}');

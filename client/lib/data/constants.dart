@@ -6,9 +6,15 @@ class KConstants {
 
 class KTextStyle {
   static const TextStyle titleText = TextStyle(
-      fontSize: 20.0, color: Colors.teal, fontWeight: FontWeight.bold);
+    fontSize: 20.0,
+    color: Colors.teal,
+    fontWeight: FontWeight.bold,
+  );
   static const TextStyle descriptionText = TextStyle(
-      fontSize: 16.0, color: Colors.white, fontWeight: FontWeight.normal);
+    fontSize: 16.0,
+    color: Colors.white,
+    fontWeight: FontWeight.normal,
+  );
 }
 
 final ThemeData appTheme = ThemeData(

@@ -25,16 +25,31 @@ class ClubDetailsPage extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(club.imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover),
+                child: Image.network(
+                  club.imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(height: 16),
-              Text(club.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                club.name,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 4),
               Text('${club.address}, ${club.city}'),
               const SizedBox(height: 8),
               if (isVisited)
                 const Chip(
-                  avatar: Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  avatar: Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                   label: Text('Checked in before'),
                   backgroundColor: Colors.green,
                   labelStyle: TextStyle(color: Colors.white),

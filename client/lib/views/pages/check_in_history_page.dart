@@ -32,7 +32,9 @@ class CheckInHistoryPage extends StatelessWidget {
               return ListTile(
                 leading: const Icon(Icons.local_bar),
                 title: Text(checkIn.club.name),
-                subtitle: Text('${checkIn.club.city} · ${checkIn.checkedInAt.toLocal()}'),
+                subtitle: Text(
+                  '${checkIn.club.city} · ${checkIn.checkedInAt.toLocal()}',
+                ),
               );
             },
           );
