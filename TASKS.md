@@ -33,9 +33,9 @@ migration has been run yet. These tasks get Phase 1 to a genuinely working, test
       `ClubModel`/`CheckInModel` data — no real HTTP or GetX service calls; inject fixture data
       directly rather than hitting `ClubService`/`CheckInService`. Verified by:
       `cd client && flutter test` passes.
-- [>] 1.5 Provision a real PostgreSQL database for clubsy (local Postgres, Docker, or a hosted
+- [x] 1.5 Provision a real PostgreSQL database for clubsy (local Postgres, Docker, or a hosted
       instance) and set `server/.env`'s `DATABASE_URL` and `JWT_SECRET` — no local Postgres was
       running during scaffolding, and generating real secrets isn't something an agent should do.
-- [>] 1.6 Once 1.5 is done, run `cd server && npx prisma migrate dev --name init` yourself and
+- [x] 1.6 Once 1.5 is done, run `cd server && npx prisma migrate dev --name init` yourself and
       commit the generated `server/prisma/migrations/` folder, or reopen this as `[ ]` for the
       night shift to do it. Depends entirely on 1.5 — leave as `[>]` until then.
