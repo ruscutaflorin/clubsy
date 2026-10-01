@@ -19,7 +19,7 @@ migration has been run yet. These tasks get Phase 1 to a genuinely working, test
       `flutter analyze --no-fatal-infos` and fix every reported issue under `client/lib/`.
       Verified by: `cd client && flutter pub get` and `cd client && flutter analyze --no-fatal-infos`
       both exit 0.
-- [ ] 1.2 Confirm `server/` boots without a live database connection (Prisma connects lazily, so
+- [!] 1.2 Confirm `server/` boots without a live database connection (Prisma connects lazily, so <!-- failed 2026-10-01: BLOCKED: permission denied: `timeout 5 node server/src/index.js` (running the server briefly to confirm the "Server is running on port 3000" log line) -->
       the process should log "Server is running on port 3000" immediately even with an empty
       `DATABASE_URL`). Fix anything that throws before that log line. Run it briefly with a timeout
       and kill it — never leave a long-running process. Verified by: the log line appears and the
