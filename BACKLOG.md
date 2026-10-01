@@ -44,7 +44,7 @@ description.
     should get its own planning round, not a single task list.
   - Size: large; likely needs its own plan, not just backlog tasks.
 
-- [ ] B4 Points economy & subscriptions — status: approved
+- [!] B4 Points economy & subscriptions — status: approved <!-- failed 2026-10-01: BLOCKED: B4's acceptance criteria are "TBD" and what's being sold (perks, cosmetics, partner discounts, subscription tiers) hasn't been decided. It also require... -->
   - Why: monetization + a sink for the points balance from B1.
   - Scope: ways to spend accumulated points (perks, cosmetic profile features, club-partner
     discounts — TBD with the business side); subscription tiers on top. Reintroduce a Stripe
