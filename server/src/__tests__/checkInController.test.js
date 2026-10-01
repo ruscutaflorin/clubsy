@@ -8,7 +8,9 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
   default: { club: { findUnique }, checkIn: { create, findMany, findFirst } },
 }));
 
-const { checkIn, getMyCheckIns } = await import("../controllers/checkInController.js");
+const { checkIn, getMyCheckIns, getMyCheckInStats } = await import(
+  "../controllers/checkInController.js"
+);
 
 const makeRes = () => {
   const res = {};
@@ -125,5 +127,30 @@ describe("getMyCheckIns", () => {
     await getMyCheckIns({ user: { id: "u1" } }, res);
     expect(findMany.mock.calls[0][0].where).toEqual({ userId: "u1" });
     expect(res.json).toHaveBeenCalledWith({ checkIns: [] });
+  });
+});
+
+describe("getMyCheckInStats", () => {
+  it("returns aggregated stats for the caller only", async () => {
+    findMany.mockResolvedValue([
+      { clubId: "c1", club: { id: "c1", name: "Club", city: "Cluj" }, checkedInAt: "2026-09-01T20:00:00Z" },
+    ]);
+    const res = makeRes();
+    await getMyCheckInStats({ user: { id: "u1" } }, res);
+    expect(findMany.mock.calls[0][0].where).toEqual({ userId: "u1" });
+    expect(res.json).toHaveBeenCalledWith({
+      totalCheckIns: 1,
+      uniqueClubs: 1,
+      uniqueCities: 1,
+      mostVisitedClub: { id: "c1", name: "Club", visits: 1 },
+      firstCheckInAt: "2026-09-01T20:00:00Z",
+    });
+  });
+
+  it("returns 500 when the database fails", async () => {
+    findMany.mockRejectedValue(new Error("db"));
+    const res = makeRes();
+    await getMyCheckInStats({ user: { id: "u1" } }, res);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });

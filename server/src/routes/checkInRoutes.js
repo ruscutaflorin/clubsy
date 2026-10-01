@@ -1,6 +1,6 @@
 import express from "express";
 import { body } from "express-validator";
-import { checkIn, getMyCheckIns } from "../controllers/checkInController.js";
+import { checkIn, getMyCheckIns, getMyCheckInStats } from "../controllers/checkInController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -13,6 +13,7 @@ const checkInValidation = [
 ];
 
 router.post("/", authMiddleware, checkInValidation, checkIn);
+router.get("/me/stats", authMiddleware, getMyCheckInStats);
 router.get("/me", authMiddleware, getMyCheckIns);
 
 export default router;

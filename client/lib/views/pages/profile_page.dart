@@ -1,7 +1,81 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
+import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
+
+/// A single stat in the Profile stats card: a number and the label under it.
+class ProfileStatTile extends StatelessWidget {
+  final String value;
+  final String label;
+
+  const ProfileStatTile({super.key, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// Summary of a user's personal map: clubs visited, cities, and their favourite
+/// spot. Renders nothing meaningful from an empty-history [CheckInStatsModel]
+/// beyond zeros, which is the correct state for a brand-new user.
+class ProfileStatsCard extends StatelessWidget {
+  final CheckInStatsModel stats;
+
+  const ProfileStatsCard({super.key, required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('profileStatsCard'),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Theme.of(context).cardColor,
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              ProfileStatTile(
+                value: '${stats.totalCheckIns}',
+                label: 'Check-ins',
+              ),
+              ProfileStatTile(
+                value: '${stats.uniqueClubs}',
+                label: 'Clubs',
+              ),
+              ProfileStatTile(
+                value: '${stats.uniqueCities}',
+                label: 'Cities',
+              ),
+            ],
+          ),
+          if (stats.mostVisitedClub != null) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Most visited: ${stats.mostVisitedClub!.name} '
+              '(${stats.mostVisitedClub!.visits} visits)',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -10,6 +84,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final authController = Get.find<AuthController>();
     final themeController = Get.find<ThemeController>();
+    final clubController = Get.find<ClubController>();
 
     return Scaffold(
       appBar: AppBar(
@@ -62,6 +137,12 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          Obx(() {
+            final stats = clubController.stats.value;
+            if (stats == null) return const SizedBox.shrink();
+            return ProfileStatsCard(stats: stats);
+          }),
           const SizedBox(height: 24),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/services/auth_service.dart';
 
 class CheckInService {
@@ -66,6 +67,26 @@ class CheckInService {
       } else {
         throw Exception(
           json.decode(response.body)['message'] ?? 'Failed to fetch check-ins',
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to connect to the server: ${e.toString()}');
+    }
+  }
+
+  Future<CheckInStatsModel> getMyStats() async {
+    try {
+      final headers = await _authHeaders();
+      final response = await http.get(
+        Uri.parse('$baseUrl/check-ins/me/stats'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 200) {
+        return CheckInStatsModel.fromMap(json.decode(response.body));
+      } else {
+        throw Exception(
+          json.decode(response.body)['message'] ?? 'Failed to fetch stats',
         );
       }
     } catch (e) {

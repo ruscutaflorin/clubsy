@@ -3,6 +3,7 @@ import { validationResult } from "express-validator";
 import { verifyClubQrPayload } from "../services/venueQrService.js";
 import { distanceInMeters } from "../utils/geo.js";
 import { nightStart, nightEnd } from "../utils/night.js";
+import { computeCheckInStats } from "../services/statsService.js";
 
 const MAX_CHECK_IN_DISTANCE_METERS = 150;
 
@@ -77,5 +78,19 @@ export const getMyCheckIns = async (req, res) => {
   } catch (error) {
     console.error("Get check-ins error:", error);
     res.status(500).json({ message: "Error fetching check-ins" });
+  }
+};
+
+export const getMyCheckInStats = async (req, res) => {
+  try {
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: req.user.id },
+      include: { club: true },
+    });
+
+    res.json(computeCheckInStats(checkIns));
+  } catch (error) {
+    console.error("Get check-in stats error:", error);
+    res.status(500).json({ message: "Error fetching check-in stats" });
   }
 };

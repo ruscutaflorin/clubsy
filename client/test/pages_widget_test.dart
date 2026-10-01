@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
 import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/views/pages/check_in_history_page.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
+import 'package:clubsy/views/pages/profile_page.dart';
 
 ClubModel fixtureClub(String id, String name) => ClubModel(
   id: id,
@@ -82,6 +84,48 @@ void main() {
       expect(find.text('Club Alpha'), findsOneWidget);
       expect(find.text('Club Beta'), findsOneWidget);
       expect(find.text('No check-ins yet. Go find a club!'), findsNothing);
+    });
+  });
+
+  group('ProfileStatsCard', () {
+    testWidgets('shows the personal-map summary from fixture stats', (
+      tester,
+    ) async {
+      final stats = CheckInStatsModel.fromMap({
+        'totalCheckIns': 5,
+        'uniqueClubs': 3,
+        'uniqueCities': 2,
+        'mostVisitedClub': {'id': 'a', 'name': 'Club Alpha', 'visits': 3},
+        'firstCheckInAt': '2026-01-01T20:00:00Z',
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: ProfileStatsCard(stats: stats))),
+      );
+
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('Most visited: Club Alpha (3 visits)'), findsOneWidget);
+    });
+
+    testWidgets('omits the most-visited line with no history', (
+      tester,
+    ) async {
+      final stats = CheckInStatsModel.fromMap({
+        'totalCheckIns': 0,
+        'uniqueClubs': 0,
+        'uniqueCities': 0,
+        'mostVisitedClub': null,
+        'firstCheckInAt': null,
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(home: Scaffold(body: ProfileStatsCard(stats: stats))),
+      );
+
+      expect(find.byKey(const Key('profileStatsCard')), findsOneWidget);
+      expect(find.textContaining('Most visited'), findsNothing);
     });
   });
 }
