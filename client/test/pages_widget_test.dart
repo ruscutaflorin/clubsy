@@ -55,7 +55,7 @@ void main() {
       expect(find.text('Checked in before'), findsNothing);
     });
 
-    testWidgets('shows visited chip once the club has a check-in', (
+    testWidgets('shows visited chip and a 1-visit summary with one check-in', (
       tester,
     ) async {
       controller.myCheckIns.add(fixtureCheckIn('1', club));
@@ -63,6 +63,20 @@ void main() {
       tester.takeException();
 
       expect(find.text('Checked in before'), findsOneWidget);
+      expect(find.textContaining('1 visit ·'), findsOneWidget);
+    });
+
+    testWidgets('shows a plural visit count with multiple check-ins', (
+      tester,
+    ) async {
+      controller.myCheckIns.addAll([
+        fixtureCheckIn('1', club),
+        fixtureCheckIn('2', club),
+      ]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      expect(find.textContaining('2 visits · last on'), findsOneWidget);
     });
   });
 

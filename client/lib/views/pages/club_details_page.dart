@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/views/pages/check_in_page.dart';
 
@@ -16,7 +17,8 @@ class ClubDetailsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: Text(club.name)),
       body: Obx(() {
-        final isVisited = clubController.visitedClubIds.contains(club.id);
+        final summary = clubController.visitSummaryFor(club.id);
+        final isVisited = summary != null;
 
         return Padding(
           padding: const EdgeInsets.all(16),
@@ -43,7 +45,7 @@ class ClubDetailsPage extends StatelessWidget {
               const SizedBox(height: 4),
               Text('${club.address}, ${club.city}'),
               const SizedBox(height: 8),
-              if (isVisited)
+              if (isVisited) ...[
                 const Chip(
                   avatar: Icon(
                     Icons.check_circle,
@@ -54,6 +56,15 @@ class ClubDetailsPage extends StatelessWidget {
                   backgroundColor: Colors.green,
                   labelStyle: TextStyle(color: Colors.white),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  summary.visits == 1
+                      ? '1 visit · on ${formatShortDate(summary.firstVisit)}'
+                      : '${summary.visits} visits · last on '
+                          '${formatShortDate(summary.lastVisit)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
               const Spacer(),
               SizedBox(
                 width: double.infinity,

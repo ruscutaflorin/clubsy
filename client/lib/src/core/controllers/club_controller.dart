@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/services/club_service.dart';
 import 'package:clubsy/services/check_in_service.dart';
 
@@ -15,6 +16,9 @@ class ClubController extends GetxController {
   final isLoading = false.obs;
 
   Set<String> get visitedClubIds => myCheckIns.map((c) => c.clubId).toSet();
+
+  VisitSummary? visitSummaryFor(String clubId) =>
+      visitSummaryForClub(clubId, myCheckIns);
 
   @override
   Future<void> refresh() async {
