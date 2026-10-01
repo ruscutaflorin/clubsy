@@ -16,7 +16,7 @@ The full product roadmap agreed with the user before Phase 1 was scaffolded (see
 Phases 2-5 are genuine future work; Phase 6 carries a hard safety constraint, not just a feature
 description.
 
-- [ ] B1 Gamification: visit streaks, weekly challenges, points balance — status: approved
+- [!] B1 Gamification: visit streaks, weekly challenges, points balance — status: approved <!-- failed 2026-10-01: BLOCKED: no database available — B1 needs a schema change and `prisma migrate dev`, and it is also too large for a single task. -->
   - Why: core retention loop once check-in itself works.
   - Scope: a `Streak`/points-balance concept on `User` or a new `UserStats` model, computed from
     `CheckIn` history (consecutive nights/weeks with a check-in); a handful of static weekly
