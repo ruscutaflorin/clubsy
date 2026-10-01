@@ -1,14 +1,21 @@
 {
-    "baseBranch":  "develop",
-    "stopAt":  "07:00",
-    "gates":  [
-
-              ],
-    "services":  {
-
-                 },
-    "protectedPaths":  {
-
-                       },
-    "name":  "clubsy"
+    "name": "clubsy",
+    "baseBranch": "develop",
+    "stopAt": "07:00",
+    "gates": [
+        { "name": "client-pub-get", "run": "cd client && flutter pub get", "when": { "fileExists": "client/pubspec.yaml" } },
+        { "name": "client-format", "run": "cd client && dart format .", "when": { "fileExists": "client/pubspec.yaml" }, "autoFix": true },
+        { "name": "client-analyze", "run": "cd client && flutter analyze --no-fatal-infos", "when": { "fileExists": "client/pubspec.yaml" } },
+        { "name": "client-test", "run": "cd client && flutter test --coverage", "when": { "fileExists": ["client/pubspec.yaml", "client/test"] }, "countTests": true },
+        { "name": "server-install", "run": "cd server && pnpm install", "when": { "fileExists": "server/package.json" } },
+        { "name": "server-test", "run": "cd server && pnpm test -- --passWithNoTests", "when": { "fileExists": "server/package.json" }, "countTests": true, "testCountPattern": "Tests:\\s+(?:\\d+ \\w+, )*(\\d+) passed" }
+    ],
+    "services": {},
+    "protectedPaths": {},
+    "reviewExclude": [
+        ":(exclude)client/pubspec.lock",
+        ":(exclude)server/pnpm-lock.yaml",
+        ":(exclude)**/*.png",
+        ":(exclude)**/*.jpg"
+    ]
 }
