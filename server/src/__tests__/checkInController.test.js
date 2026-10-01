@@ -3,8 +3,9 @@ import { jest } from "@jest/globals";
 const findUnique = jest.fn();
 const create = jest.fn();
 const findMany = jest.fn();
+const findFirst = jest.fn();
 jest.unstable_mockModule("../prisma/client.js", () => ({
-  default: { club: { findUnique }, checkIn: { create, findMany } },
+  default: { club: { findUnique }, checkIn: { create, findMany, findFirst } },
 }));
 
 const { checkIn, getMyCheckIns } = await import("../controllers/checkInController.js");
@@ -33,6 +34,7 @@ describe("checkIn", () => {
     findUnique.mockReset();
     create.mockReset();
     findMany.mockReset();
+    findFirst.mockReset().mockResolvedValue(null);
     jest.spyOn(console, "error").mockImplementation(() => {});
   });
   afterEach(() => jest.restoreAllMocks());
@@ -81,6 +83,31 @@ describe("checkIn", () => {
       clubId: "c1",
       verificationMethod: "QR",
     });
+  });
+
+  it("rejects a second check-in at the same club the same night with 409", async () => {
+    findUnique.mockResolvedValue(club);
+    findFirst.mockResolvedValue({ id: "ci-earlier" });
+    const res = makeRes();
+    await checkIn(makeReq(), res);
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("allows a check-in at a different club the same night", async () => {
+    const club2 = { ...club, id: "c2" };
+    findUnique.mockResolvedValue(club2);
+    findFirst.mockResolvedValue(null);
+    create.mockResolvedValue({ id: "ci2" });
+    const res = makeRes();
+    await checkIn(
+      makeReq({
+        clubId: "c2",
+        qrPayload: JSON.stringify({ clubId: "c2", secret: "s3cret" }),
+      }),
+      res
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it("returns 500 when the database fails", async () => {

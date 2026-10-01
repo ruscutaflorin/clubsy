@@ -2,6 +2,7 @@ import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
 import { verifyClubQrPayload } from "../services/venueQrService.js";
 import { distanceInMeters } from "../utils/geo.js";
+import { nightStart, nightEnd } from "../utils/night.js";
 
 const MAX_CHECK_IN_DISTANCE_METERS = 150;
 
@@ -32,6 +33,19 @@ export const checkIn = async (req, res) => {
         message: "You're too far from this club to check in",
         distanceMeters: distance,
       });
+    }
+
+    const now = new Date();
+    const existingTonight = await prisma.checkIn.findFirst({
+      where: {
+        userId,
+        clubId,
+        checkedInAt: { gte: nightStart(now), lt: nightEnd(now) },
+      },
+    });
+
+    if (existingTonight) {
+      return res.status(409).json({ message: "You've already checked in at this club tonight" });
     }
 
     const checkInRecord = await prisma.checkIn.create({

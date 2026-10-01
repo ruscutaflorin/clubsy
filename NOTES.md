@@ -9,3 +9,5 @@ reads this file, so keep it short; the human prunes.
   resolves.
 - 1.2/1.3/1.6: no Postgres is running in this environment; don't add code that assumes
   `DATABASE_URL` is reachable at build/test time.
+- B8: `server/src/utils/night.js` defines a "night" as 06:00-06:00 **UTC**, not local/venue time.
+  Fine for a single-country pilot; revisit if clubs ever span multiple timezones.
