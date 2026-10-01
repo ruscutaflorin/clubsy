@@ -34,7 +34,7 @@ description.
     average shows on the rated user's profile.
   - Size: likely 4-5 tasks.
 
-- [ ] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: approved
+- [!] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: approved <!-- failed 2026-10-01: BLOCKED: B3 needs a dedicated design and privacy pass first, and its schema migration needs a live database (no database available). -->
   - Why: the original pitch's "algorithm similar to Tinder" for clubgoers.
   - Scope: a swipe/like/match model scoped to users who share a current or recent check-in at the
     same club; a match unlocks some form of contact (chat is out of scope unless separately
