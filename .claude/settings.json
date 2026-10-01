@@ -30,7 +30,11 @@
                                       "Bash(find:*)",
                                       "Bash(grep:*)",
                                       "Bash(mv:*)",
-                                      "Bash(cp:*)"
+                                      "Bash(cp:*)",
+				      "Bash(flutter pub get:*)", "Bash(flutter analyze:*)", "Bash(flutter test:*)",
+                                      "Bash(flutter format:*)", "Bash(dart format:*)", "Bash(dart analyze:*)", "Bash(dart test:*)",
+                                      "Bash(pnpm install:*)", "Bash(pnpm test:*)", "Bash(pnpm exec:*)",
+                                      "Bash(npx prisma:*)", "Bash(npx jest:*)", "Bash(node -e:*)", "Bash(node --check:*)"
                                   ],
                         "deny":  [
                                      "Edit(.nightshift/**)",
