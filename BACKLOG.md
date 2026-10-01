@@ -16,7 +16,7 @@ The full product roadmap agreed with the user before Phase 1 was scaffolded (see
 Phases 2-5 are genuine future work; Phase 6 carries a hard safety constraint, not just a feature
 description.
 
-- [ ] B1 Gamification: visit streaks, weekly challenges, points balance — status: proposed
+- [ ] B1 Gamification: visit streaks, weekly challenges, points balance — status: approved
   - Why: core retention loop once check-in itself works.
   - Scope: a `Streak`/points-balance concept on `User` or a new `UserStats` model, computed from
     `CheckIn` history (consecutive nights/weeks with a check-in); a handful of static weekly
@@ -26,7 +26,7 @@ description.
     accrue from check-ins and challenge completions.
   - Size: likely 4-6 tasks (schema, backend computation, Flutter UI).
 
-- [ ] B2 Ratings: post-visit behavior ratings between users — status: proposed
+- [ ] B2 Ratings: post-visit behavior ratings between users — status: approved
   - Why: requested as a safety/quality signal for who you'll meet at a club.
   - Scope: a `Rating` model (rater, ratee, optional note, 1-5 score), only submittable between two
     users who checked into the same club on the same night; an average rating surfaced on profile.
@@ -34,7 +34,7 @@ description.
     average shows on the rated user's profile.
   - Size: likely 4-5 tasks.
 
-- [ ] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: proposed
+- [ ] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: approved
   - Why: the original pitch's "algorithm similar to Tinder" for clubgoers.
   - Scope: a swipe/like/match model scoped to users who share a current or recent check-in at the
     same club; a match unlocks some form of contact (chat is out of scope unless separately
@@ -44,7 +44,7 @@ description.
     should get its own planning round, not a single task list.
   - Size: large; likely needs its own plan, not just backlog tasks.
 
-- [ ] B4 Points economy & subscriptions — status: proposed
+- [ ] B4 Points economy & subscriptions — status: approved
   - Why: monetization + a sink for the points balance from B1.
   - Scope: ways to spend accumulated points (perks, cosmetic profile features, club-partner
     discounts — TBD with the business side); subscription tiers on top. Reintroduce a Stripe
@@ -53,7 +53,7 @@ description.
   - Acceptance: TBD — needs a decision on what's actually being sold before tasks can be written.
   - Size: large.
 
-- [ ] B5 Live presence map ("who's out tonight") — status: proposed
+- [ ] B5 Live presence map ("who's out tonight") — status: approved
   - Why: the original "Snapchat map" pitch. **Deferred deliberately** for real safety reasons
     (stalking/unwanted-contact risk in a nightlife context), not because it's low value.
   - Scope, non-negotiable before any build: opt-in per session (not a standing setting), visible
