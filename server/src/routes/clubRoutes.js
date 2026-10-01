@@ -6,6 +6,8 @@ import {
   getClubById,
   approveClub,
   unapproveClub,
+  getClubQr,
+  rotateClubQr,
 } from "../controllers/clubController.js";
 import { authMiddleware, adminMiddleware } from "../middlewares/authMiddleware.js";
 
@@ -24,5 +26,7 @@ router.get("/:id", authMiddleware, getClubById);
 router.post("/", authMiddleware, adminMiddleware, clubValidation, createClub);
 router.patch("/:id/approve", authMiddleware, adminMiddleware, approveClub);
 router.patch("/:id/unapprove", authMiddleware, adminMiddleware, unapproveClub);
+router.get("/:id/qr", authMiddleware, adminMiddleware, getClubQr);
+router.post("/:id/qr/rotate", authMiddleware, adminMiddleware, rotateClubQr);
 
 export default router;

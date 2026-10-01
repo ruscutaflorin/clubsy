@@ -125,3 +125,46 @@ export const unapproveClub = async (req, res) => {
     res.status(500).json({ message: "Error unapproving club" });
   }
 };
+
+export const getClubQr = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const club = await prisma.club.findUnique({ where: { id } });
+
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    const qrCode = await generateClubQr(club);
+
+    res.json({ qrCode });
+  } catch (error) {
+    console.error("Get club QR error:", error);
+    res.status(500).json({ message: "Error fetching club QR" });
+  }
+};
+
+export const rotateClubQr = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const club = await prisma.club.findUnique({ where: { id } });
+
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    const rotated = await prisma.club.update({
+      where: { id },
+      data: { qrSecret: generateQrSecret() },
+    });
+
+    const qrCode = await generateClubQr(rotated);
+
+    res.json({ qrCode });
+  } catch (error) {
+    console.error("Rotate club QR error:", error);
+    res.status(500).json({ message: "Error rotating club QR" });
+  }
+};
