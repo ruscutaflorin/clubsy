@@ -53,7 +53,7 @@ description.
   - Acceptance: TBD — needs a decision on what's actually being sold before tasks can be written.
   - Size: large.
 
-- [ ] B5 Live presence map ("who's out tonight") — status: approved
+- [!] B5 Live presence map ("who's out tonight") — status: approved <!-- failed 2026-10-01: BLOCKED: B5 has no defined acceptance criteria or safety/blocking design, and the project rules forbid building the presence map without an explicit scope. -->
   - Why: the original "Snapchat map" pitch. **Deferred deliberately** for real safety reasons
     (stalking/unwanted-contact risk in a nightlife context), not because it's low value.
   - Scope, non-negotiable before any build: opt-in per session (not a standing setting), visible
