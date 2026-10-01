@@ -3,7 +3,19 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+
+/// The message CheckInPage shows for a failed check-in: the distance to the
+/// venue when the server reported one, otherwise the exception's own message.
+String checkInFailureMessage(Object error) {
+  if (error is CheckInException && error.distanceMeters != null) {
+    final rounded = error.distanceMeters!.round();
+    return "You're ~$rounded m away — get within 150 m of the entrance";
+  }
+  if (error is CheckInException) return error.message;
+  return error.toString().replaceFirst('Exception: ', '');
+}
 
 class CheckInPage extends StatefulWidget {
   final ClubModel club;
@@ -69,9 +81,7 @@ class _CheckInPageState extends State<CheckInPage> {
       Get.back();
       Get.snackbar('Checked in!', 'Welcome to ${widget.club.name}');
     } catch (e) {
-      setState(
-        () => _statusMessage = e.toString().replaceFirst('Exception: ', ''),
-      );
+      setState(() => _statusMessage = checkInFailureMessage(e));
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
