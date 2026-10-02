@@ -2,6 +2,7 @@ import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
+import config from "../config.js";
 
 export const signUp = async (req, res) => {
   try {
@@ -10,7 +11,7 @@ export const signUp = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (!process.env.JWT_SECRET) {
+    if (!config.JWT_SECRET) {
       return res.status(500).json({ message: "Server is not configured to issue sessions" });
     }
 
@@ -41,8 +42,8 @@ export const signUp = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -68,7 +69,7 @@ export const signIn = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (!process.env.JWT_SECRET) {
+    if (!config.JWT_SECRET) {
       return res.status(500).json({ message: "Server is not configured to issue sessions" });
     }
 
@@ -92,8 +93,8 @@ export const signIn = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.json({

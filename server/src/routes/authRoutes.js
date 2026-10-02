@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { getCurrentUser, signIn, signUp } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { authLimiter } from '../middlewares/rateLimiters.js';
 
 const router = express.Router();
 
@@ -17,10 +18,10 @@ export const signInValidation = [
 ];
 
 // Sign up
-router.post('/signup', signUpValidation, signUp);
+router.post('/signup', authLimiter, signUpValidation, signUp);
 
 // Sign in
-router.post('/signin', signInValidation, signIn);
+router.post('/signin', authLimiter, signInValidation, signIn);
 
 // Current user
 router.get('/me', authMiddleware, getCurrentUser);

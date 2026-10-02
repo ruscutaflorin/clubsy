@@ -107,7 +107,7 @@ defaults, and a one-command local dev setup. No schema changes.
       - Verified by: `cd server && pnpm test` runs the new suites with `DATABASE_URL` unset, with no
         open-handle warning. `timeout 5 node server/src/index.js` still prints the boot line.
 
-- [ ] 2.3 Production-safe server configuration: config module, security headers, CORS
+- [x] 2.3 Production-safe server configuration: config module, security headers, CORS
       allowlist, rate limits, quieter logs, longer sessions.
       - Goal: the pilot backend can face the internet. Today CORS is open to every origin, there's
         no brute-force protection on sign-in, Prisma logs every SQL query, and sessions expire
