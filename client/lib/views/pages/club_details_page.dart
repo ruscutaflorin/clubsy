@@ -11,6 +11,8 @@ import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/views/pages/check_in_primer_page.dart';
 
+const _maxNightRows = 20;
+
 class ClubDetailsPage extends StatefulWidget {
   final ClubModel club;
 
@@ -71,7 +73,11 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
         final summary = clubController.visitSummaryFor(club.id);
         final isVisited = summary != null;
 
-        return Padding(
+        final nights = isVisited
+            ? nightsAtClub(club.id, clubController.myCheckIns)
+            : <DateTime>[];
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,8 +137,24 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                             '${formatShortDate(summary.lastVisit)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
+                ExpansionTile(
+                  key: const Key('nightsHereTile'),
+                  tilePadding: EdgeInsets.zero,
+                  title: Text('Your nights here (${nights.length})'),
+                  children: [
+                    for (final night in nights.take(_maxNightRows))
+                      ListTile(dense: true, title: Text(formatNightRow(night))),
+                    if (nights.length > _maxNightRows)
+                      ListTile(
+                        dense: true,
+                        title: Text(
+                          '+${nights.length - _maxNightRows} earlier nights',
+                        ),
+                      ),
+                  ],
+                ),
               ],
-              const Spacer(),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
