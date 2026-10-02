@@ -114,6 +114,43 @@ void main() {
     });
   });
 
+  group('ClubDetailsPage pairings', () {
+    final a = fixtureClub('a', 'Club Alpha');
+    final b = fixtureClub('b', 'Club Beta');
+
+    CheckInModel at(String id, ClubModel c, DateTime when) => CheckInModel(
+      id: id,
+      clubId: c.id,
+      checkedInAt: when,
+      verificationMethod: 'QR_GPS',
+      distanceMeters: 10,
+      club: c,
+    );
+
+    testWidgets('shows often paired with partners', (tester) async {
+      controller.myCheckIns.addAll([
+        at('1', a, DateTime(2026, 3, 6, 22)),
+        at('2', b, DateTime(2026, 3, 6, 23)),
+        at('3', a, DateTime(2026, 3, 13, 22)),
+        at('4', b, DateTime(2026, 3, 13, 23)),
+      ]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('pairedClubs')), findsOneWidget);
+      expect(find.text('Often paired with'), findsOneWidget);
+      expect(find.text('2 nights together'), findsOneWidget);
+    });
+
+    testWidgets('hides the section without shared nights', (tester) async {
+      controller.myCheckIns.add(at('1', a, DateTime(2026, 3, 6, 22)));
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('pairedClubs')), findsNothing);
+    });
+  });
+
   group('CheckInHistoryPage', () {
     testWidgets('shows empty state without check-ins', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));

@@ -99,4 +99,74 @@ void main() {
       expect(formatShortDate(DateTime.utc(2026, 9, 12)), contains('Sep'));
     });
   });
+
+  group('pairedClubs', () {
+    CheckInModel at(String id, DateTime when) => CheckInModel(
+      id: '$id-$when',
+      clubId: id,
+      checkedInAt: when,
+      verificationMethod: 'QR',
+      distanceMeters: 10,
+      club: fixtureClub(id),
+    );
+
+    final n1 = DateTime(2026, 3, 6, 22);
+    final n2 = DateTime(2026, 3, 13, 22);
+    final n3 = DateTime(2026, 3, 20, 22);
+
+    test('ranks partners by shared nights', () {
+      final result = pairedClubs('a', [
+        at('a', n1),
+        at('b', n1),
+        at('a', n2),
+        at('b', n2),
+        at('a', n3),
+        at('c', n3),
+      ]);
+      expect(result.map((p) => p.club.id), ['b', 'c']);
+      expect(result.map((p) => p.nights), [2, 1]);
+    });
+
+    test('a small-hours check-in joins the previous evening', () {
+      final result = pairedClubs('a', [
+        at('a', DateTime(2026, 3, 6, 23)),
+        at('b', DateTime(2026, 3, 7, 2)),
+      ]);
+      expect(result.single.nights, 1);
+    });
+
+    test('two check-ins at the partner on one night count once', () {
+      final result = pairedClubs('a', [
+        at('a', n1),
+        at('b', DateTime(2026, 3, 6, 23)),
+        at('b', DateTime(2026, 3, 7, 1)),
+      ]);
+      expect(result.single.nights, 1);
+    });
+
+    test('ignores nights without the club and never returns itself', () {
+      final result = pairedClubs('a', [
+        at('a', n1),
+        at('a', DateTime(2026, 3, 6, 23)),
+        at('b', n2),
+        at('c', n2),
+      ]);
+      expect(result, isEmpty);
+    });
+
+    test('respects limit', () {
+      final result = pairedClubs('a', [
+        at('a', n1),
+        at('b', n1),
+        at('c', n1),
+        at('d', n1),
+      ], limit: 2);
+      expect(result, hasLength(2));
+    });
+
+    test('empty without shared nights', () {
+      expect(pairedClubs('a', [at('a', n1)]), isEmpty);
+      expect(pairedClubs('a', []), isEmpty);
+    });
+  });
 }
