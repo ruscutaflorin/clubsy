@@ -110,3 +110,52 @@ export const computeClubFootfall = ({
     byWeekday,
   };
 };
+
+// Pure ranking of clubs by check-ins in the last `weeks` weeks vs the same span before; aggregates only, never ids.
+// `clubs` is [{ id, name, city }] (approved only); `checkIns` is [{ clubId, userId, checkedInAt }].
+export const computeClubRanking = ({ clubs = [], checkIns = [], now = new Date(), weeks = 4 }) => {
+  const end = new Date(now).getTime();
+  const span = weeks * WEEK_MS;
+  const entries = new Map(
+    clubs.map((c) => [
+      c.id,
+      {
+        id: c.id,
+        name: c.name,
+        city: c.city,
+        checkIns: 0,
+        visitors: new Set(),
+        previousCheckIns: 0,
+      },
+    ])
+  );
+
+  for (const c of checkIns) {
+    const entry = entries.get(c.clubId);
+    if (!entry) continue;
+    const at = new Date(c.checkedInAt).getTime();
+    if (at > end - span && at <= end) {
+      entry.checkIns += 1;
+      entry.visitors.add(c.userId);
+    } else if (at > end - 2 * span && at <= end - span) {
+      entry.previousCheckIns += 1;
+    }
+  }
+
+  const ranked = [...entries.values()].map((e) => ({
+    id: e.id,
+    name: e.name,
+    city: e.city,
+    checkIns: e.checkIns,
+    uniqueVisitors: e.visitors.size,
+    previousCheckIns: e.previousCheckIns,
+    change: e.checkIns - e.previousCheckIns,
+  }));
+  ranked.sort(
+    (a, b) =>
+      b.checkIns - a.checkIns ||
+      b.uniqueVisitors - a.uniqueVisitors ||
+      (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+  );
+  return { weeks, clubs: ranked };
+};
