@@ -39,14 +39,20 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ClubMapPage()));
     tester.takeException(); // tile layer has no network in tests
 
-    expect(find.text('No check-ins yet'), findsNothing);
+    expect(
+      find.text("No check-ins yet — scan a club's QR to add your first pin"),
+      findsNothing,
+    );
 
     await tester.tap(find.text('Visited'));
     await tester.pump();
     tester.takeException();
 
     expect(controller.visitedOnly.value, isTrue);
-    expect(find.text('No check-ins yet'), findsOneWidget);
+    expect(
+      find.text("No check-ins yet — scan a club's QR to add your first pin"),
+      findsOneWidget,
+    );
   });
 
   testWidgets('toggling to Visited with a check-in hides the empty state', (
@@ -72,6 +78,9 @@ void main() {
     await tester.pump();
     tester.takeException();
 
-    expect(find.text('No check-ins yet'), findsNothing);
+    expect(
+      find.text("No check-ins yet — scan a club's QR to add your first pin"),
+      findsNothing,
+    );
   });
 }

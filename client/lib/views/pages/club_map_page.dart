@@ -7,6 +7,7 @@ import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/club_search_controller.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/views/pages/club_search_page.dart';
+import 'package:clubsy/widgets/error_banner_widget.dart';
 
 class ClubMapPage extends StatelessWidget {
   const ClubMapPage({super.key});
@@ -121,9 +122,22 @@ class ClubMapPage extends StatelessWidget {
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
-                      'No check-ins yet',
+                      "No check-ins yet — scan a club's QR to add your first pin",
                       style: TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              if (clubController.loadError.value != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SafeArea(
+                    child: ErrorBanner(
+                      error: clubController.loadError.value!,
+                      savedAt: clubController.dataSavedAt.value,
+                      onRetry: clubController.refresh,
                     ),
                   ),
                 ),

@@ -84,7 +84,10 @@ void main() {
     testWidgets('shows empty state without check-ins', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
 
-      expect(find.text('No check-ins yet. Go find a club!'), findsOneWidget);
+      expect(
+        find.text("No check-ins yet — scan a club's QR to add your first pin"),
+        findsOneWidget,
+      );
     });
 
     testWidgets('lists a tile per check-in', (tester) async {
@@ -97,7 +100,10 @@ void main() {
       expect(find.byType(ListTile), findsNWidgets(2));
       expect(find.text('Club Alpha'), findsOneWidget);
       expect(find.text('Club Beta'), findsOneWidget);
-      expect(find.text('No check-ins yet. Go find a club!'), findsNothing);
+      expect(
+        find.text("No check-ins yet — scan a club's QR to add your first pin"),
+        findsNothing,
+      );
     });
   });
 
