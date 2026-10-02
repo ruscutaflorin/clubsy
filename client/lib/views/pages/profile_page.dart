@@ -86,12 +86,19 @@ class ProfileStatsCard extends StatelessWidget {
   }
 }
 
-Future<void> _exportMyData() async {
+Future<void> _exportMyData() => _runExport((s) => s.exportMyData());
+
+Future<void> _exportMyCheckInsCsv() =>
+    _runExport((s) => s.exportMyCheckInsCsv());
+
+Future<void> _runExport(
+  Future<void> Function(DataExportService service) run,
+) async {
   final service = Get.isRegistered<DataExportService>()
       ? Get.find<DataExportService>()
       : DataExportService();
   try {
-    await service.exportMyData();
+    await run(service);
   } catch (e) {
     Get.snackbar(
       'Export failed',
@@ -333,6 +340,13 @@ class ProfilePage extends StatelessWidget {
             title: const Text('Download my data'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _exportMyData,
+          ),
+          ListTile(
+            key: const Key('exportCsvTile'),
+            leading: const Icon(Icons.table_chart_outlined),
+            title: const Text('Download as spreadsheet (CSV)'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _exportMyCheckInsCsv,
           ),
           ListTile(
             key: const Key('changePasswordTile'),
