@@ -391,7 +391,7 @@ already enforces `adminMiddleware`, so the UI gate is only for convenience.
         `Image` from a fixture 1×1 PNG data URL. `flutter test` passes.
       - Depends on: 3.1 (2.4 for clean 404s, but not required to start).
 
-- [ ] 4.2 Admin create and edit club form, with "use my location", a map preview and QR sharing
+- [x] 4.2 Admin create and edit club form, with "use my location", a map preview and QR sharing
       for printing.
       - Scope: `client/lib/views/pages/admin/admin_club_form_page.dart`, used for both create
         (`POST /api/clubs`) and edit (`PATCH /api/clubs/:id`, task 2.4). Fields: name, address,
