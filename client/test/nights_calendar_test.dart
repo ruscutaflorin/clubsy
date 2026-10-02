@@ -59,6 +59,45 @@ void main() {
     expect(r.longestGapDays, 0);
   });
 
+  test('the same club twice in one night is listed once', () {
+    final r = nightsCalendar([
+      _ci('a', DateTime(2026, 6, 6, 22)),
+      _ci('a', DateTime(2026, 6, 7, 3)),
+    ], 2026);
+    expect(r.nightsOut, 1);
+    expect(r.nights[DateTime(2026, 6, 6)], ['Club a']);
+  });
+
+  testWidgets('cells cover the year and shade by club count', (tester) async {
+    await tester.pumpWidget(
+      GetMaterialApp(
+        home: Scaffold(
+          body: NightsCalendar(
+            checkIns: [
+              _ci('a', DateTime(2026, 1, 3, 23)),
+              _ci('a', DateTime(2026, 1, 10, 23)),
+              _ci('b', DateTime(2026, 1, 11, 1)),
+            ],
+            year: 2026,
+          ),
+        ),
+      ),
+    );
+    Color colorOf(String key) {
+      final box = tester.widget<Container>(find.byKey(Key(key)));
+      return (box.decoration! as BoxDecoration).color!;
+    }
+
+    expect(find.byKey(const Key('night_2026-01-01')), findsOneWidget);
+    expect(find.byKey(const Key('night_2026-01-02')), findsOneWidget);
+    final empty = colorOf('night_2026-01-02');
+    final one = colorOf('night_2026-01-03');
+    final many = colorOf('night_2026-01-10');
+    expect(one, isNot(empty));
+    expect(many, isNot(one));
+    expect(many, isNot(empty));
+  });
+
   testWidgets('tapping a night lists its clubs', (tester) async {
     final checkIns = [
       _ci('a', DateTime(2026, 3, 14, 23)),
