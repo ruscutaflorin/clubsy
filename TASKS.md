@@ -371,7 +371,7 @@ pilot metrics) can be done from an admin's phone, with no curl. Admin screens ar
 `Get.to()` from Profile and are only visible when `AuthController.isAdmin` is true. The server
 already enforces `adminMiddleware`, so the UI gate is only for convenience.
 
-- [ ] 4.1 Admin club list: pending/approved filter, approve and unapprove, and view the venue QR.
+- [x] 4.1 Admin club list: pending/approved filter, approve and unapprove, and view the venue QR.
       - Scope: `client/lib/services/admin_service.dart` (via `ApiClient`) with `listAllClubs()`
         (`GET /api/clubs?limit=50`, paginated until `pages` is reached; admins already receive
         unapproved clubs and `qrSecret`), `approve(id)`, `unapprove(id)`, `getQr(id)` and

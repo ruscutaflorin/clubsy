@@ -4,6 +4,7 @@ import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
+import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
@@ -158,6 +159,17 @@ class ProfilePage extends StatelessWidget {
             );
           }),
           const SizedBox(height: 24),
+          Obx(
+            () => authController.isAdmin
+                ? ListTile(
+                    key: const Key('adminTile'),
+                    leading: const Icon(Icons.admin_panel_settings),
+                    title: const Text('Admin'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Get.to(() => const AdminClubsPage()),
+                  )
+                : const SizedBox.shrink(),
+          ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
