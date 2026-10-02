@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/location_problem.dart';
 import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
@@ -27,8 +31,22 @@ class CheckInPage extends StatefulWidget {
 }
 
 class _CheckInPageState extends State<CheckInPage> {
+  final MobileScannerController _scanner = MobileScannerController();
   bool _isProcessing = false;
+  bool _torchOn = false;
   String? _statusMessage;
+  LocationProblem? _problem;
+
+  @override
+  void dispose() {
+    _scanner.dispose();
+    super.dispose();
+  }
+
+  void _fail(LocationProblem problem) {
+    _problem = problem;
+    _statusMessage = locationProblemMessage(problem);
+  }
 
   Future<Position?> _getCurrentPosition() async {
     var permission = await Geolocator.checkPermission();
@@ -36,20 +54,31 @@ class _CheckInPageState extends State<CheckInPage> {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) {
-      setState(
-        () => _statusMessage = 'Location permission is required to check in',
-      );
+    if (permission == LocationPermission.deniedForever) {
+      setState(() => _fail(LocationProblem.permissionDeniedForever));
+      return null;
+    }
+    if (permission == LocationPermission.denied) {
+      setState(() => _fail(LocationProblem.permissionDenied));
       return null;
     }
 
     if (!await Geolocator.isLocationServiceEnabled()) {
-      setState(() => _statusMessage = 'Please enable location services');
+      setState(() => _fail(LocationProblem.servicesDisabled));
       return null;
     }
 
-    return Geolocator.getCurrentPosition();
+    try {
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 12),
+        ),
+      );
+    } on TimeoutException {
+      setState(() => _fail(LocationProblem.timeout));
+      return null;
+    }
   }
 
   Future<void> _handleDetect(BarcodeCapture capture) async {
@@ -57,17 +86,20 @@ class _CheckInPageState extends State<CheckInPage> {
     final rawValue = capture.barcodes.firstOrNull?.rawValue;
     if (rawValue == null) return;
 
-    setState(() {
-      _isProcessing = true;
-      _statusMessage = null;
-    });
+    _isProcessing = true;
+    HapticFeedback.mediumImpact();
+    await _scanner.stop();
+    if (mounted) {
+      setState(() {
+        _statusMessage = null;
+        _problem = null;
+      });
+    }
 
+    var succeeded = false;
     try {
       final position = await _getCurrentPosition();
-      if (position == null) {
-        setState(() => _isProcessing = false);
-        return;
-      }
+      if (position == null) return;
 
       final clubController = Get.find<ClubController>();
       await clubController.checkIn(
@@ -75,25 +107,64 @@ class _CheckInPageState extends State<CheckInPage> {
         qrPayload: rawValue,
         latitude: position.latitude,
         longitude: position.longitude,
+        isMocked: position.isMocked,
+        accuracyMeters: position.accuracy,
       );
 
+      succeeded = true;
       if (!mounted) return;
       Get.back();
       Get.snackbar('Checked in!', 'Welcome to ${widget.club.name}');
     } catch (e) {
-      setState(() => _statusMessage = checkInFailureMessage(e));
+      if (mounted) setState(() => _statusMessage = checkInFailureMessage(e));
     } finally {
-      if (mounted) setState(() => _isProcessing = false);
+      _isProcessing = false;
+      if (mounted) {
+        setState(() {});
+        if (!succeeded) await _scanner.start();
+      }
+    }
+  }
+
+  Future<void> _toggleTorch() async {
+    await _scanner.toggleTorch();
+    if (mounted) setState(() => _torchOn = !_torchOn);
+  }
+
+  Widget? _problemAction() {
+    switch (_problem) {
+      case LocationProblem.permissionDeniedForever:
+        return TextButton(
+          onPressed: Geolocator.openAppSettings,
+          child: const Text('Open app settings'),
+        );
+      case LocationProblem.servicesDisabled:
+        return TextButton(
+          onPressed: Geolocator.openLocationSettings,
+          child: const Text('Open location settings'),
+        );
+      default:
+        return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final action = _problemAction();
     return Scaffold(
-      appBar: AppBar(title: Text('Check in at ${widget.club.name}')),
+      appBar: AppBar(
+        title: Text('Check in at ${widget.club.name}'),
+        actions: [
+          IconButton(
+            tooltip: 'Torch',
+            icon: Icon(_torchOn ? Icons.flash_on : Icons.flash_off),
+            onPressed: _toggleTorch,
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          MobileScanner(onDetect: _handleDetect),
+          MobileScanner(controller: _scanner, onDetect: _handleDetect),
           if (_isProcessing) const Center(child: CircularProgressIndicator()),
           if (_statusMessage != null)
             Positioned(
@@ -106,10 +177,16 @@ class _CheckInPageState extends State<CheckInPage> {
                   color: Colors.black87,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  _statusMessage!,
-                  style: const TextStyle(color: Colors.white),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _statusMessage!,
+                      style: const TextStyle(color: Colors.white),
+                      textAlign: TextAlign.center,
+                    ),
+                    ?action,
+                  ],
                 ),
               ),
             ),

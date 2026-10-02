@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
 CheckInModel checkIn(String id, String clubId) => CheckInModel(
@@ -22,6 +24,8 @@ CheckInModel checkIn(String id, String clubId) => CheckInModel(
   }),
 );
 
+CheckInModel _record(String id, String clubId) => checkIn(id, clubId);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -36,6 +40,41 @@ void main() {
       expect(controller.visitedClubIds, {'a', 'b'});
     });
 
+    test('checkIn re-fetches stats afterwards', () async {
+      final fake = _FakeCheckInService();
+      final controller = ClubController(checkInService: fake);
+      expect(controller.stats.value, isNull);
+
+      await controller.checkIn(
+        clubId: 'a',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+        isMocked: false,
+        accuracyMeters: 7,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(fake.statsCalls, 1);
+      expect(fake.lastAccuracy, 7);
+      expect(controller.myCheckIns.single.clubId, 'a');
+      expect(controller.stats.value?.totalCheckIns, 5);
+    });
+
+    test('a failing stats re-fetch does not fail the check-in', () async {
+      final fake = _FakeCheckInService(statsFail: true);
+      final controller = ClubController(checkInService: fake);
+      final record = await controller.checkIn(
+        clubId: 'a',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(record.clubId, 'a');
+      expect(controller.stats.value, isNull);
+    });
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -45,4 +84,35 @@ void main() {
       expect(controller.myCheckIns, isEmpty);
     });
   });
+}
+
+class _FakeCheckInService implements CheckInService {
+  final bool statsFail;
+  int statsCalls = 0;
+  double? lastAccuracy;
+
+  _FakeCheckInService({this.statsFail = false});
+
+  @override
+  Future<CheckInModel> checkIn({
+    required String clubId,
+    required String qrPayload,
+    required double latitude,
+    required double longitude,
+    bool? isMocked,
+    double? accuracyMeters,
+  }) async {
+    lastAccuracy = accuracyMeters;
+    return _record('new', clubId);
+  }
+
+  @override
+  Future<CheckInStatsModel> getMyStats() async {
+    statsCalls++;
+    if (statsFail) throw Exception('boom');
+    return CheckInStatsModel(totalCheckIns: 5, uniqueClubs: 3, uniqueCities: 1);
+  }
+
+  @override
+  Future<List<CheckInModel>> getMyCheckIns() async => [];
 }

@@ -7,6 +7,9 @@ import { computeCheckInStats } from "../services/statsService.js";
 
 const MAX_CHECK_IN_DISTANCE_METERS = 150;
 
+const logFailure = (reason, userId, clubId) =>
+  console.warn(JSON.stringify({ evt: "checkin_failed", reason, userId, clubId }));
+
 export const checkIn = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -14,22 +17,31 @@ export const checkIn = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { clubId, qrPayload, latitude, longitude } = req.body;
+    const { clubId, qrPayload, latitude, longitude, isMocked } = req.body;
     const userId = req.user.id;
+
+    // Checked before anything else so the attempt reveals nothing about the QR.
+    if (isMocked === true) {
+      logFailure("mock_location", userId, clubId);
+      return res.status(400).json({ message: "Mock locations aren't allowed for check-ins" });
+    }
 
     const club = await prisma.club.findUnique({ where: { id: clubId } });
 
     if (!club || !club.isApproved) {
+      logFailure("club_not_found", userId, clubId);
       return res.status(404).json({ message: "Club not found" });
     }
 
     if (!verifyClubQrPayload(qrPayload, club)) {
+      logFailure("invalid_qr", userId, clubId);
       return res.status(400).json({ message: "Invalid QR code for this club" });
     }
 
     const distance = distanceInMeters(latitude, longitude, club.latitude, club.longitude);
 
     if (distance > MAX_CHECK_IN_DISTANCE_METERS) {
+      logFailure("too_far", userId, clubId);
       return res.status(400).json({
         message: "You're too far from this club to check in",
         distanceMeters: distance,
@@ -46,6 +58,7 @@ export const checkIn = async (req, res) => {
     });
 
     if (existingTonight) {
+      logFailure("already_checked_in", userId, clubId);
       return res.status(409).json({ message: "You've already checked in at this club tonight" });
     }
 
