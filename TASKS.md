@@ -510,7 +510,7 @@ work; 5.5-5.7 are yours.
         filled. `pnpm test` and `flutter test` pass.
       - Depends on: 3.1, 3.3 (cache clear). 5.2 is linked from the dialog if it has landed.
 
-- [ ] 5.4 Remove a single check-in from my map (absorbs `BACKLOG.md` B20).
+- [x] 5.4 Remove a single check-in from my map (absorbs `BACKLOG.md` B20).
       - Goal: a personal map is only personal if the user controls it. Someone may want to drop a
         visit (a bad night, a place they'd rather not have on their record) without deleting their
         whole account.

@@ -136,6 +136,22 @@ class ClubController extends GetxController {
     return (record: checkInRecord, outcome: outcome);
   }
 
+  /// Removes a check-in from the map. Optimistic: the list updates at once and
+  /// is restored (rethrowing) if the server call fails.
+  Future<void> removeCheckIn(String id) async {
+    final index = myCheckIns.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+    final removed = myCheckIns[index];
+    myCheckIns.removeAt(index);
+    try {
+      await _checkInService.deleteCheckIn(id);
+    } catch (_) {
+      myCheckIns.insert(index.clamp(0, myCheckIns.length), removed);
+      rethrow;
+    }
+    await _refreshStats();
+  }
+
   Future<void> _refreshStats() async {
     try {
       stats.value = await _checkInService.getMyStats();
