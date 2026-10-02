@@ -44,6 +44,17 @@ String lastMonthName(DateTime now) => _months[(now.month + 10) % 12];
   DateTime(now.year, now.month, 1, 6),
 );
 
+/// Period [from, to) of the month before the last complete month.
+(DateTime, DateTime) previousMonthRange(DateTime now) {
+  var year = now.year;
+  var month = now.month - 2;
+  if (month < 1) {
+    month += 12;
+    year--;
+  }
+  return (DateTime(year, month, 1, 6), lastMonthRange(now).$1);
+}
+
 (DateTime, DateTime) yearRange(int year) =>
     (DateTime(year, 1, 1, 6), DateTime(year + 1, 1, 1, 6));
 
@@ -165,6 +176,12 @@ class _RecapPageState extends State<RecapPage> {
     final controller = Get.find<ClubController>();
     final years = List.generate(5, (i) => _now.year - i);
     final range = _year == null ? lastMonthRange(_now) : yearRange(_year!);
+    final prevRange = _year == null
+        ? previousMonthRange(_now)
+        : yearRange(_year! - 1);
+    final prevLabel = _year == null
+        ? _months[(_now.month + 9) % 12]
+        : '${_year! - 1}';
     final title = _year == null ? 'Your ${lastMonthName(_now)}' : 'Your $_year';
     return Scaffold(
       appBar: AppBar(title: const Text('Your nights')),
@@ -173,6 +190,17 @@ class _RecapPageState extends State<RecapPage> {
           controller.myCheckIns,
           from: range.$1,
           to: range.$2,
+        );
+        final comparison = comparisonLine(
+          compareRecaps(
+            recap,
+            buildRecap(
+              controller.myCheckIns,
+              from: prevRange.$1,
+              to: prevRange.$2,
+            ),
+          ),
+          prevLabel,
         );
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -206,6 +234,15 @@ class _RecapPageState extends State<RecapPage> {
                 ),
               )
             else ...[
+              if (comparison != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    comparison,
+                    key: const Key('recapComparison'),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               if (_year != null) ...[
                 NightsCalendar(checkIns: controller.myCheckIns, year: _year!),
                 const SizedBox(height: 4),
