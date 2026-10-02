@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/views/pages/city_checklist_page.dart';
 
 /// Per-city collection progress: visited vs. listed clubs.
 class MyCitiesPage extends StatelessWidget {
@@ -43,19 +44,23 @@ class _CityRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(city.city, style: Theme.of(context).textTheme.titleMedium),
-            Text('${city.visitedClubs} of ${city.totalClubs} clubs'),
-          ],
-        ),
-        const SizedBox(height: 8),
-        LinearProgressIndicator(value: city.fraction),
-      ],
+    return InkWell(
+      key: Key('city_${city.city}'),
+      onTap: () => Get.to(() => CityChecklistPage(city: city.city)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(city.city, style: Theme.of(context).textTheme.titleMedium),
+              Text('${city.visitedClubs} of ${city.totalClubs} clubs'),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: city.fraction),
+        ],
+      ),
     );
   }
 }
