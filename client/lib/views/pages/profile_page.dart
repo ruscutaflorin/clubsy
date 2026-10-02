@@ -9,6 +9,7 @@ import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
+import 'package:clubsy/views/pages/recap_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
@@ -275,6 +276,13 @@ class ProfilePage extends StatelessWidget {
               ),
             );
           }),
+          ListTile(
+            key: const Key('recapTile'),
+            leading: const Icon(Icons.auto_awesome),
+            title: Text('Your ${lastMonthName(DateTime.now())}'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const RecapPage()),
+          ),
           const SizedBox(height: 24),
           Obx(
             () => authController.isAdmin
