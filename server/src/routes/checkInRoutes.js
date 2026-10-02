@@ -2,6 +2,7 @@ import express from "express";
 import { body } from "express-validator";
 import { checkIn, getMyCheckIns, getMyCheckInStats } from "../controllers/checkInController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
+import { checkInLimiter } from "../middlewares/rateLimiters.js";
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ const checkInValidation = [
   body("longitude").isFloat({ min: -180, max: 180 }).withMessage("Valid longitude is required"),
 ];
 
-router.post("/", authMiddleware, checkInValidation, checkIn);
+router.post("/", authMiddleware, checkInLimiter, checkInValidation, checkIn);
 router.get("/me/stats", authMiddleware, getMyCheckInStats);
 router.get("/me", authMiddleware, getMyCheckIns);
 

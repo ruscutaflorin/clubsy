@@ -2,6 +2,7 @@ import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
+import config from "../config.js";
 
 export const signUp = async (req, res) => {
   try {
@@ -42,7 +43,7 @@ export const signUp = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -93,7 +94,7 @@ export const signIn = async (req, res) => {
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.json({
