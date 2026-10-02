@@ -168,7 +168,27 @@ describe("signIn", () => {
   });
 });
 
+describe("signIn email normalization", () => {
+  it("looks the user up by the lowercased email", async () => {
+    findUnique.mockResolvedValue(null);
+    const req = await validated(signInValidation, { email: "ANA@X.COM", password: "pw" });
+    await signIn(req, makeRes());
+    expect(findUnique).toHaveBeenCalledWith({ where: { email: "ana@x.com" } });
+  });
+});
+
 describe("getCurrentUser", () => {
+  it("returns the user without a password", async () => {
+    const user = { id: "u1", email: "a@b.c", name: "A", role: "USER", createdAt: new Date() };
+    findUnique.mockResolvedValue(user);
+    const res = makeRes();
+    await getCurrentUser({ user: { id: "u1" } }, res);
+    expect(res.json).toHaveBeenCalledWith(user);
+    const select = findUnique.mock.calls[0][0].select;
+    expect(select.password).toBeUndefined();
+    expect(select.createdAt).toBe(true);
+  });
+
   it("returns 404 when the user no longer exists", async () => {
     findUnique.mockResolvedValue(null);
     const res = makeRes();

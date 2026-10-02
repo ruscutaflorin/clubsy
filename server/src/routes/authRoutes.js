@@ -1,6 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signIn, signUp } from '../controllers/authController.js';
+import { getCurrentUser, signIn, signUp } from '../controllers/authController.js';
+import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { authLimiter } from '../middlewares/rateLimiters.js';
 
 const router = express.Router();
 
@@ -11,14 +13,17 @@ export const signUpValidation = [
 ];
 
 export const signInValidation = [
-  body('email').notEmpty().withMessage('Email is required'),
+  body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
   body('password').notEmpty().withMessage('Password is required'),
 ];
 
 // Sign up
-router.post('/signup', signUpValidation, signUp);
+router.post('/signup', authLimiter, signUpValidation, signUp);
 
 // Sign in
-router.post('/signin', signInValidation, signIn);
+router.post('/signin', authLimiter, signInValidation, signIn);
+
+// Current user
+router.get('/me', authMiddleware, getCurrentUser);
 
 export default router;

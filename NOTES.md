@@ -11,3 +11,5 @@ reads this file, so keep it short; the human prunes.
   `DATABASE_URL` is reachable at build/test time.
 - B8: `server/src/utils/night.js` defines a "night" as 06:00-06:00 **UTC**, not local/venue time.
   Fine for a single-country pilot; revisit if clubs ever span multiple timezones.
+
+- Night Shift test gate: the engine keeps one passing-test baseline, so exactly one gate may have `countTests`. Client (flutter) and server (jest) suites run together in the `tests` gate (`node .nightshift/test-all.mjs`), which prints `TOTAL PASSED TESTS: N` (client + server). Run it yourself to see the combined count.

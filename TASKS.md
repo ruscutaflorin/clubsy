@@ -59,7 +59,7 @@ migration has been run yet. These tasks get Phase 1 to a genuinely working, test
 Goal: no 500s for normal mistakes, every route testable without a database, safe production
 defaults, and a one-command local dev setup. No schema changes.
 
-- [ ] 2.1 Fix the auth failure modes: return 401 for expired or invalid tokens, make sign-in
+- [x] 2.1 Fix the auth failure modes: return 401 for expired or invalid tokens, make sign-in
       case-insensitive, and expose `GET /api/auth/me`.
       - Goal: today an expired JWT makes `authMiddleware` return **500** (`jwt.verify` throws into
         the generic catch), so the app can't tell "log in again" from "server broken". The
@@ -83,7 +83,7 @@ defaults, and a one-command local dev setup. No schema changes.
         `signInValidation` chain against a fake req with `express-validator`'s `run()`. `pnpm test`
         passes.
 
-- [ ] 2.2 Finish the route-level safety net: JSON 404s, a 400 for malformed JSON, and supertest
+- [x] 2.2 Finish the route-level safety net: JSON 404s, a 400 for malformed JSON, and supertest
       coverage for auth, clubs and stats.
       - Goal: B7 split `server/src/app.js` from `index.js` and covered `POST /api/check-ins` and
         `GET /api/check-ins/me` in `server/src/__tests__/app.test.js`. The other route groups still
@@ -107,7 +107,7 @@ defaults, and a one-command local dev setup. No schema changes.
       - Verified by: `cd server && pnpm test` runs the new suites with `DATABASE_URL` unset, with no
         open-handle warning. `timeout 5 node server/src/index.js` still prints the boot line.
 
-- [ ] 2.3 Production-safe server configuration: config module, security headers, CORS
+- [x] 2.3 Production-safe server configuration: config module, security headers, CORS
       allowlist, rate limits, quieter logs, longer sessions.
       - Goal: the pilot backend can face the internet. Today CORS is open to every origin, there's
         no brute-force protection on sign-in, Prisma logs every SQL query, and sessions expire
@@ -133,7 +133,7 @@ defaults, and a one-command local dev setup. No schema changes.
         still prints the boot line.
       - Depends on: 2.2.
 
-- [ ] 2.4 Admin club endpoints: 404 instead of 500 for unknown ids, editing a club, and stricter
+- [x] 2.4 Admin club endpoints: 404 instead of 500 for unknown ids, editing a club, and stricter
       validation.
       - Goal: the admin console (Phase 4) needs reliable endpoints. Approving a deleted or mistyped
         club id currently returns 500 (Prisma `P2025`), and a club with a typo in its coordinates
@@ -156,7 +156,7 @@ defaults, and a one-command local dev setup. No schema changes.
         `prisma.club.update` with only the provided fields. `pnpm test` passes.
       - Depends on: 2.2.
 
-- [ ] 2.5 One-command local dev environment: Postgres in Docker, `.env.example`, seed data with
+- [x] 2.5 One-command local dev environment: Postgres in Docker, `.env.example`, seed data with
       venue QR images, and a README.
       - Goal: anyone (human or agent with Docker) can go from clone to a working map with clubs in
         minutes. Today the database is empty and the only way to add a club is curl as an admin
@@ -183,18 +183,21 @@ defaults, and a one-command local dev setup. No schema changes.
         output across calls, and no field named `qrSecret` in the pure output (secrets are added at
         write time). `node --check server/prisma/seed.js` exits 0. `pnpm test` passes.
 
-- [ ] 2.6 Continuous integration on GitHub Actions mirroring the night-shift gates.
+- [x] 2.6 Continuous integration on GitHub Actions mirroring the night-shift gates.
       - Goal: every push and PR to `develop`/`main` runs the same checks the night shift trusts, so
         human commits can't silently break the gates.
       - Scope: `.github/workflows/ci.yml` with two jobs. **server**: `pnpm/action-setup` (version
         from `packageManager` in `server/package.json`), Node 20, `pnpm install
         --frozen-lockfile`, `pnpm test`, and `npx prisma validate` with a dummy `DATABASE_URL`.
-        **client**: `subosito/flutter-action` pinned to the Flutter version that satisfies
-        `client/pubspec.yaml` (`sdk: ^3.13.3`; read the exact version from `flutter --version` in
-        the session), then `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter
+        **client**: `subosito/flutter-action` with `channel: stable` and `flutter-version: 3.47.3`
+        (the local toolchain: Flutter 3.47.3 / Dart 3.13.3, satisfies `sdk: ^3.13.3`), then `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter
         analyze --no-fatal-infos` and `flutter test`. Cache the pnpm store and the pub cache.
-        Trigger on push and pull_request for `develop` and `main`. Add a CI badge line to the
-        README if 2.5 has landed.
+        Trigger on push and pull_request for `develop` and `main`. The CI is deliberately
+        stricter than the local gates: keep `npx prisma validate` and
+        `dart format --set-exit-if-changed .` exactly as listed; use plain `pnpm test` (never
+        `pnpm test -- ...`, which makes Jest find no tests). No README badge: the repo has no
+        GitHub remote yet, so the owner adds it after the first push; README may get one plain
+        sentence saying CI lives in `.github/workflows/ci.yml`.
       - Out: deploy jobs, building release artifacts, publishing.
       - Verified by: the workflow file parses (`npx --yes yaml-lint .github/workflows/ci.yml`, or
         a `node -e` YAML parse with the `yaml` package if that's easier). Every command in it is

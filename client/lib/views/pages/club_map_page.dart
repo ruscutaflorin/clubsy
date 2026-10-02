@@ -50,7 +50,8 @@ class ClubMapPage extends StatelessWidget {
                 ),
                 children: [
                   TileLayer(
-                    urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.clubsy.app',
                   ),
                   MarkerLayer(
@@ -61,7 +62,8 @@ class ClubMapPage extends StatelessWidget {
                         width: 44,
                         height: 44,
                         child: GestureDetector(
-                          onTap: () => Get.to(() => ClubDetailsPage(club: club)),
+                          onTap: () =>
+                              Get.to(() => ClubDetailsPage(club: club)),
                           child: Icon(
                             Icons.location_on,
                             size: 40,
@@ -86,11 +88,15 @@ class ClubMapPage extends StatelessWidget {
                           child: SegmentedButton<bool>(
                             segments: const [
                               ButtonSegment(value: false, label: Text('All')),
-                              ButtonSegment(value: true, label: Text('Visited')),
+                              ButtonSegment(
+                                value: true,
+                                label: Text('Visited'),
+                              ),
                             ],
                             selected: {visitedOnly},
                             onSelectionChanged: (selection) =>
-                                clubController.visitedOnly.value = selection.first,
+                                clubController.visitedOnly.value =
+                                    selection.first,
                           ),
                         ),
                       ),

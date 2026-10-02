@@ -57,20 +57,21 @@ void main() {
     expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
   });
 
-  testWidgets('shows a prompt before typing and "No clubs found" for an empty result', (
-    tester,
-  ) async {
-    Get.put(ClubController());
-    final searchController = Get.put(
-      ClubSearchController(fetch: ({search, city}) async => []),
-    );
+  testWidgets(
+    'shows a prompt before typing and "No clubs found" for an empty result',
+    (tester) async {
+      Get.put(ClubController());
+      final searchController = Get.put(
+        ClubSearchController(fetch: ({search, city}) async => []),
+      );
 
-    await tester.pumpWidget(const MaterialApp(home: ClubSearchPage()));
-    expect(find.text('Start typing to search clubs'), findsOneWidget);
+      await tester.pumpWidget(const MaterialApp(home: ClubSearchPage()));
+      expect(find.text('Start typing to search clubs'), findsOneWidget);
 
-    searchController.search('nothing');
-    await tester.pump(const Duration(milliseconds: 500));
+      searchController.search('nothing');
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('No clubs found'), findsOneWidget);
-  });
+      expect(find.text('No clubs found'), findsOneWidget);
+    },
+  );
 }
