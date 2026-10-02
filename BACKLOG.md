@@ -667,3 +667,78 @@ Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue windo
     - Keep this proposed until a human tries it at a venue. Someone needs to confirm on a real device that the extra GPS request doesn't slow the scan, and widget tests can't cover the camera.
   - Acceptance: unit tests for the three messages and the boundary at exactly 150 m; a widget test with a fake position provider and a stubbed scanner that finds the banner text.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data quality for onboarding, a richer personal map, and editing my name.
+
+- [ ] B72 Admin club data health: near-duplicate clubs, pins far from their city, and invalid coordinates — status: approved
+  - Why: the plan's top door risk is the 150 m GPS check failing at a real venue, and during pilot onboarding (step 5.6) admins type clubs in by hand. A pin in the wrong street, a club entered twice or a `0,0` coordinate quietly breaks check-ins. A duplicate also splits a venue's footfall across two records, so the partner pitch looks wrong. One admin screen that lists these problems lets the team fix them before users hit them at the door.
+  - Scope: no schema change; admin-only; read-only.
+    - Server function: in a new `server/src/services/clubDataService.js`, add a pure `findClubDataIssues(clubs, { duplicateMeters = 75, outlierKm = 30 } = {})`. `clubs` is `[{id, name, city, latitude, longitude, isApproved}]`. It covers approved and pending clubs, because pending ones are where mistakes get caught. Use `distanceInMeters` from `server/src/utils/geo.js`. City matching is case-insensitive after trimming. It returns three lists:
+      - `invalidCoordinates: [{id, name, city}]` lists clubs whose latitude and longitude are both 0, whose latitude is outside -90..90 or longitude outside -180..180, or that have a non-finite value. These clubs are left out of the other two checks.
+      - `nearDuplicates: [{a: {id, name}, b: {id, name}, meters, sameName}]` lists each unordered pair once. A pair qualifies when the two clubs are within `duplicateMeters`, or when they are in the same city with the same normalised name (lowercase, non-alphanumerics removed, so "Club  X!" equals "club x"). `meters` is rounded to a whole number. Sort by `meters` ascending.
+      - `farFromCity: [{id, name, city, km}]` covers only cities with at least 3 clubs. A club is listed when it is more than `outlierKm` from the point at the median latitude and median longitude of the *other* clubs in its city. `km` is rounded to one decimal. Sort by `km` descending.
+    - Route: add `GET /api/admin/clubs/data-health` (authMiddleware + adminMiddleware) in `server/src/controllers/adminController.js` and `server/src/routes/adminRoutes.js`. Register it next to `/clubs/ranking`, before `/clubs/:id/footfall`. It loads `prisma.club.findMany({ select: { id, name, city, latitude, longitude, isApproved } })`, never `qrSecret`. It returns `findClubDataIssues(...)`, or 500 `{message}` on error.
+    - Client service and model: add `getClubDataHealth()` in `client/lib/services/admin_service.dart`, and a `ClubDataHealthModel` in a new `client/lib/data/classes/club_data_health_model.dart` (`fromJson`; each list defaults to empty when its key is missing).
+    - Client page: add a new `client/lib/views/pages/admin/admin_club_data_health_page.dart` with three sections:
+      - "Invalid coordinates".
+      - "Possible duplicates", with rows like "Club X ↔ Club X Bar · 12 m", plus "same name" when `sameName` is true.
+      - "Far from its city", with rows like "Club Y · Cluj-Napoca · 41.3 km away".
+      Hide empty sections, and show "No data issues found" when all three are empty. Let the page take the service through an optional constructor parameter so tests can pass a fake. Push it with `Get.to` from an app-bar `IconButton` (`Key('openClubDataHealth')`, tooltip "Data health") on `client/lib/views/pages/admin/admin_clubs_page.dart`.
+    - Out: auto-merging or deleting duplicates, editing from this page (fixes stay in the existing club form), geocoding addresses.
+  - Acceptance:
+    - Jest unit tests in a new `server/src/__tests__/clubDataService.test.js`:
+      - Two clubs 40 m apart form one near-duplicate pair, listed once, with `meters` 40 (±1).
+      - "Club  X!" in "Cluj" and "club x" in " cluj ", 5 km apart, form a pair with `sameName` true.
+      - A club at `0,0` appears in `invalidCoordinates` and in no other list.
+      - In a city with 3 clubs, one 50 km away is in `farFromCity` and the two close ones aren't.
+      - A city with only 2 clubs never produces `farFromCity` entries.
+      - An empty input gives three empty lists.
+    - Mocked-Prisma route tests in `server/src/__tests__/routes.test.js`: no token gives 401, a non-admin gets 403, an admin gets 200 with the three keys, and the body contains no `qrSecret`.
+    - A Flutter model test in `client/test/models_test.dart` parses a fixture and defaults missing lists to empty.
+    - A widget test in a new `client/test/admin_club_data_health_test.dart` pumps the page with a fake service (no HTTP) and finds "Possible duplicates" and "12 m". With an all-empty fixture it finds "No data issues found".
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B73 Map pins that show my nights: a count badge on clubs I've been to more than once — status: approved
+  - Why: the personal map is the product's centrepiece, but a club visited once and a club visited twenty times look identical (one green pin). A small night count on each pin lets the map tell the regular's story at a glance. It also shows the explorer which pins are a ticked box and which is a home club. It uses only verified pins (principle 5) and only the user's own data (principle 2).
+  - Scope: client only, no server or schema change.
+    - Pure logic: add `Map<String, int> nightsPerClub(List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`. It maps each `club.id` to its number of distinct nights, using `nightOf` from `client/lib/data/classes/check_in_grouping.dart` on `checkedInAt.toLocal()`. A check-in at 23:00 and one at 02:00 the next morning at one club count as 1 night.
+    - UI: in `client/lib/views/pages/club_map_page.dart`, compute `nightsPerClub(clubController.myCheckIns)` once per build inside the existing `Obx` and pass each club's count into its `Marker`. Extract the pin into a small `ClubPin` widget, in the same file or a new `client/lib/widgets/club_pin.dart`. It keeps the current icon, size and green/red colours. When the count is 2 or more, it overlays a small circular badge (`Key('pinCount_<clubId>')`) with the number at the top-right of the icon, showing "99+" above 99. Keep the marker at 44×44 so taps and layout don't change, and keep tap-to-open `ClubDetailsPage`.
+    - Out: clustering and dark styles (B28), sizing pins by count, showing counts for other users.
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`: check-ins at club A on two nights and club B on one give `{A: 2, B: 1}`; check-ins at A at 23:00 and at 02:00 the next morning count as 1; an empty list gives an empty map.
+    - Widget tests in `client/test/club_map_page_test.dart` pump `ClubMapPage` with a fixture `ClubController` (no HTTP), the same way the existing tests there do:
+      - A club with 3 nights shows `Key('pinCount_<id>')` with the text "3".
+      - A club visited on one night and an unvisited club show no count badge.
+      - A club with 120 nights shows "99+".
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B74 Change my display name from Profile — status: approved
+  - Why: the name is set once at signup and can never be fixed. It is what the profile, the recap share card and (later) the Phase 8 social layer show. A user who typed a nickname, a typo or their full legal name at signup can only change it by deleting the account, which throws away their verified history. This completes the account basics next to change password (B43) and delete account (5.3).
+  - Scope: no schema change (`User.name` already exists).
+    - Server: add `updateMyProfile` in `server/src/controllers/authController.js`, mirroring `changePassword`'s shape: `validationResult` first, 404 `{message: "User not found"}` when the user is gone, 500 `{message}` on error. It updates only `name` for `req.user.id` and returns `{user: {id, email, name, role}}` with an explicit `select` (never `password`). Register it in `server/src/routes/authRoutes.js` as `router.patch('/me', authMiddleware, body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 50 }).withMessage('Name must be at most 50 characters'), updateMyProfile)`. It ignores any other body fields (`email`, `role`, `password`) and never writes them.
+    - Client service and controller: add `Future<Map<String, dynamic>> updateName(String name)` in `client/lib/services/auth_service.dart`. It calls `_api.patch('/auth/me', ...)` with `expireSession: false`, like `changePassword`, and rewrites the cached user under `userKey` while keeping the stored token. Add `updateName(String name)` to `client/lib/src/core/controllers/auth_controller.dart`. It calls the service and sets `_user.value` so the Profile header updates at once.
+    - Client UI: on `client/lib/views/pages/profile_page.dart`, add an edit `IconButton` (`Key('editName')`) next to the name. It opens a dialog with a `TextField` (`Key('nameField')`) prefilled with the current name.
+      - Empty or whitespace-only input shows "Name is required".
+      - More than 50 characters shows "Name must be at most 50 characters".
+      - A successful save shows a "Name updated" snackbar; a server error shows the error in a snackbar.
+    - Out: changing email (needs verification and the email provider, open decision 4), avatars and profiles (Phase 7).
+  - Acceptance:
+    - Jest tests in a new `server/src/__tests__/updateMyProfile.test.js` using mocked Prisma (mirror `changePassword.test.js`):
+      - No token gives 401.
+      - `{name: "  Ana  "}` gives 200, and `prisma.user.update` is called with `data: { name: "Ana" }` only.
+      - `{name: "Ana", role: "ADMIN", email: "x@y.z"}` still writes only `name`.
+      - An empty name and a 51-character name give 400 without calling `update`.
+      - The response body contains no `password`.
+    - Flutter widget tests in a new `client/test/edit_name_test.dart` pump `ProfilePage` with fixture controllers and a fake auth service (no HTTP), the same way `client/test/change_password_test.dart` does. They tap `Key('editName')`, submit "   " and find "Name is required", then submit "Ana" and find "Name updated" and "Ana" on the page.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B75 Yearly goal on the check-in success sheet: "Night 23 of 30 for 2026" — status: proposed
+  - Why: B68's yearly goal lives on the Recap page, so the check-in at the door (core loop step 2), where it matters most, doesn't mention it. When a check-in starts a new night, a line on the success sheet ("Night 23 of 30 for 2026 · 2 ahead of pace") turns the goal into an immediate reward.
+  - Scope: client only, no server or schema change. In `client/lib/widgets/check_in_success_sheet.dart`, read the stored `yearly_goal_<year>` preference the way `YearlyGoalCard` does. Show a line only when a goal is set and the check-in is the first one of its night, built with `yearlyGoalProgress` and `goalPaceLine` from `client/lib/data/classes/yearly_goal.dart`. Show nothing without a goal or for a second club on the same night. Check the success sheet's existing tests before changing its constructor. Out: notifications, server goals.
+  - Acceptance: widget tests pump the success sheet with `SharedPreferences.setMockInitialValues({'yearly_goal_2026': 30})` and fixture check-ins. A first check-in of the night finds "of 30 for 2026"; a second club on the same night finds nothing; no stored goal finds nothing. `node .nightshift/test-all.mjs` passes.
+  - Size: S
