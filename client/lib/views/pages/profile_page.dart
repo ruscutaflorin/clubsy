@@ -9,6 +9,7 @@ import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
+import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
@@ -256,7 +257,11 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
                 if (stats != null)
-                  ProfileStatsCard(stats: stats)
+                  GestureDetector(
+                    key: const Key('profileStatsCardTap'),
+                    onTap: () => Get.to(() => const MyCitiesPage()),
+                    child: ProfileStatsCard(stats: stats),
+                  )
                 else if (error == null)
                   const Text(
                     "No stats yet — scan a club's QR to add your first pin",

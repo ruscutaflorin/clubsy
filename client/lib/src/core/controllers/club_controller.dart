@@ -6,6 +6,7 @@ import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_outcome.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/club_service.dart';
@@ -30,6 +31,7 @@ class ClubController extends GetxController {
   final myCheckIns = <CheckInModel>[].obs;
   final Rxn<CheckInStatsModel> stats = Rxn<CheckInStatsModel>();
   final Rxn<AchievementsModel> achievements = Rxn<AchievementsModel>();
+  final cityProgress = <CityProgressModel>[].obs;
   final isLoading = false.obs;
   final visitedOnly = false.obs;
 
@@ -80,12 +82,15 @@ class ClubController extends GetxController {
         _checkInService.getMyCheckIns(),
         _checkInService.getMyStats(),
         _loadAchievements(),
+        _loadCityProgress(),
       ]);
       clubs.value = results[0] as List<ClubModel>;
       myCheckIns.value = results[1] as List<CheckInModel>;
       stats.value = results[2] as CheckInStatsModel;
       achievements.value =
           results[3] as AchievementsModel? ?? achievements.value;
+      cityProgress.value =
+          results[4] as List<CityProgressModel>? ?? cityProgress.toList();
       loadError.value = null;
       isOffline.value = false;
       dataSavedAt.value = DateTime.now();
@@ -179,9 +184,20 @@ class ClubController extends GetxController {
     }
   }
 
+  /// Null when city progress can't be loaded: not worth failing a refresh over.
+  Future<List<CityProgressModel>?> _loadCityProgress() async {
+    try {
+      return await _checkInService.getMyCities();
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _refreshStats() async {
     try {
       stats.value = await _checkInService.getMyStats();
+      final cities = await _loadCityProgress();
+      if (cities != null) cityProgress.value = cities;
     } catch (_) {
       // Stale stats are fixed by the next full refresh().
     }

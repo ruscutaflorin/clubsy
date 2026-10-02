@@ -1,6 +1,7 @@
 import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/auth_service.dart';
 
@@ -86,6 +87,13 @@ class CheckInService {
   Future<CheckInStatsModel> getMyStats() async {
     final data = await _api.get('/check-ins/me/stats');
     return CheckInStatsModel.fromMap(data);
+  }
+
+  Future<List<CityProgressModel>> getMyCities() async {
+    final data = await _api.get('/check-ins/me/cities');
+    return (data as List)
+        .map((c) => CityProgressModel.fromMap(c as Map<String, dynamic>))
+        .toList();
   }
 
   Future<AchievementsModel> getMyAchievements() async {

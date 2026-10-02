@@ -251,6 +251,27 @@ describe("stats, health and fallbacks", () => {
     expect(res.body.uniqueCities).toBe(1);
   });
 
+  it("GET /api/check-ins/me/cities requires a token", async () => {
+    const res = await request(app).get("/api/check-ins/me/cities");
+    expect(res.status).toBe(401);
+  });
+
+  it("GET /api/check-ins/me/cities returns per-city progress", async () => {
+    const when = new Date("2026-09-01T22:00:00.000Z");
+    checkInFindMany.mockResolvedValue([
+      { clubId: "c1", checkedInAt: when, club: { id: "c1", city: "X" } },
+    ]);
+    clubFindMany.mockResolvedValue([
+      { id: "c1", city: "X" },
+      { id: "c2", city: "X" },
+    ]);
+    const res = await request(app).get("/api/check-ins/me/cities").set(auth(userToken));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { city: "X", visitedClubs: 1, totalClubs: 2, lastVisitedAt: when.toISOString() },
+    ]);
+  });
+
   it("GET /health returns ok", async () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
