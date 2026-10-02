@@ -71,7 +71,8 @@ void main() {
         longitude: 2,
       );
       await Future<void>.delayed(Duration.zero);
-      expect(record.clubId, 'a');
+      expect(record.record.clubId, 'a');
+      expect(record.outcome.isFirstVisit, isTrue);
       expect(controller.stats.value, isNull);
     });
 

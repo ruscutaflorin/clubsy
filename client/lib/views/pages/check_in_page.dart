@@ -9,6 +9,8 @@ import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/location_problem.dart';
 import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/src/core/controllers/navigation_controller.dart';
+import 'package:clubsy/widgets/check_in_success_sheet.dart';
 
 /// The message CheckInPage shows for a failed check-in: the distance to the
 /// venue when the server reported one, otherwise the exception's own message.
@@ -102,7 +104,7 @@ class _CheckInPageState extends State<CheckInPage> {
       if (position == null) return;
 
       final clubController = Get.find<ClubController>();
-      await clubController.checkIn(
+      final result = await clubController.checkIn(
         clubId: widget.club.id,
         qrPayload: rawValue,
         latitude: position.latitude,
@@ -113,8 +115,18 @@ class _CheckInPageState extends State<CheckInPage> {
 
       succeeded = true;
       if (!mounted) return;
-      Get.back();
-      Get.snackbar('Checked in!', 'Welcome to ${widget.club.name}');
+      final viewOnMap = await showCheckInSuccessSheet(
+        context,
+        outcome: result.outcome,
+        club: widget.club,
+      );
+      if (viewOnMap) {
+        clubController.focusedClub.value = widget.club;
+        Get.find<NavigationController>().changePage(0);
+        Get.until((route) => route.isFirst);
+      } else if (mounted) {
+        Get.back();
+      }
     } catch (e) {
       if (mounted) setState(() => _statusMessage = checkInFailureMessage(e));
     } finally {

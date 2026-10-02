@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/check_in_outcome.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/services/api_client.dart';
@@ -38,6 +39,10 @@ class ClubController extends GetxController {
 
   /// When the data currently shown was last fetched from the server.
   final Rxn<DateTime> dataSavedAt = Rxn<DateTime>();
+
+  /// Set by the check-in success sheet's "View on map"; the map page centres
+  /// on it and clears it.
+  final Rxn<ClubModel> focusedClub = Rxn<ClubModel>();
 
   Set<String> get visitedClubIds => myCheckIns.map((c) => c.clubId).toSet();
 
@@ -103,7 +108,7 @@ class ClubController extends GetxController {
     }
   }
 
-  Future<CheckInModel> checkIn({
+  Future<({CheckInModel record, CheckInOutcome outcome})> checkIn({
     required String clubId,
     required String qrPayload,
     required double latitude,
@@ -119,10 +124,16 @@ class ClubController extends GetxController {
       isMocked: isMocked,
       accuracyMeters: accuracyMeters,
     );
+    // Computed before the new record joins the history.
+    final outcome = checkInOutcome(
+      clubId,
+      myCheckIns.toList(),
+      city: checkInRecord.club.city,
+    );
     myCheckIns.insert(0, checkInRecord);
     // Fire and forget: the success UI must not wait on (or fail with) stats.
     unawaited(_refreshStats());
-    return checkInRecord;
+    return (record: checkInRecord, outcome: outcome);
   }
 
   Future<void> _refreshStats() async {
