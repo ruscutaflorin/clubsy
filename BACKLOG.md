@@ -672,7 +672,7 @@ Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue windo
 
 Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data quality for onboarding, a richer personal map, and editing my name.
 
-- [ ] B72 Admin club data health: near-duplicate clubs, pins far from their city, and invalid coordinates — status: approved
+- [x] B72 Admin club data health: near-duplicate clubs, pins far from their city, and invalid coordinates — status: done
   - Why: the plan's top door risk is the 150 m GPS check failing at a real venue, and during pilot onboarding (step 5.6) admins type clubs in by hand. A pin in the wrong street, a club entered twice or a `0,0` coordinate quietly breaks check-ins. A duplicate also splits a venue's footfall across two records, so the partner pitch looks wrong. One admin screen that lists these problems lets the team fix them before users hit them at the door.
   - Scope: no schema change; admin-only; read-only.
     - Server function: in a new `server/src/services/clubDataService.js`, add a pure `findClubDataIssues(clubs, { duplicateMeters = 75, outlierKm = 30 } = {})`. `clubs` is `[{id, name, city, latitude, longitude, isApproved}]`. It covers approved and pending clubs, because pending ones are where mistakes get caught. Use `distanceInMeters` from `server/src/utils/geo.js`. City matching is case-insensitive after trimming. It returns three lists:
