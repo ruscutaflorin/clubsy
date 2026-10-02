@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:clubsy/data/classes/footfall_summary.dart';
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/admin_service.dart';
@@ -106,7 +108,28 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
   Widget build(BuildContext context) {
     final data = _footfall;
     return Scaffold(
-      appBar: AppBar(title: Text('Footfall · ${widget.club.name}')),
+      appBar: AppBar(
+        title: Text('Footfall · ${widget.club.name}'),
+        actions: [
+          if (data != null)
+            IconButton(
+              key: const Key('copyFootfallSummary'),
+              icon: const Icon(Icons.copy),
+              tooltip: 'Copy summary',
+              onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                await Clipboard.setData(
+                  ClipboardData(
+                    text: footfallSummaryText(widget.club.name, data),
+                  ),
+                );
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Summary copied')),
+                );
+              },
+            ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
