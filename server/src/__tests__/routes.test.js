@@ -179,6 +179,21 @@ describe("club routes", () => {
 });
 
 describe("stats, health and fallbacks", () => {
+  it("POST /api/check-ins returns 400 {errors} when isMocked is not a boolean", async () => {
+    const res = await request(app)
+      .post("/api/check-ins")
+      .set(auth(userToken))
+      .send({
+        clubId: "c1",
+        qrPayload: "x",
+        latitude: 45,
+        longitude: 25,
+        isMocked: "yes",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeDefined();
+  });
+
   it("GET /api/check-ins/me/stats returns aggregated stats", async () => {
     checkInFindMany.mockResolvedValue([
       { clubId: "c1", checkedInAt: new Date(), club: { id: "c1", city: "X" } },

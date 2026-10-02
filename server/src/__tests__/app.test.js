@@ -46,6 +46,7 @@ beforeEach(() => {
   checkInFindFirst.mockResolvedValue(null);
   jest.spyOn(console, "log").mockImplementation(() => {});
   jest.spyOn(console, "error").mockImplementation(() => {});
+  jest.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterEach(() => jest.restoreAllMocks());
@@ -94,6 +95,17 @@ describe("POST /api/check-ins", () => {
       .send(validBody);
     expect(res.status).toBe(201);
     expect(checkInCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 400 for isMocked true without touching the club", async () => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await request(app)
+      .post("/api/check-ins")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ ...validBody, isMocked: true, accuracyMeters: 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/Mock locations/);
+    expect(clubFindUnique).not.toHaveBeenCalled();
   });
 
   it("returns 400 for a missing required field", async () => {

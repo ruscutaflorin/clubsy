@@ -48,6 +48,8 @@ class CheckInService {
     required String qrPayload,
     required double latitude,
     required double longitude,
+    bool? isMocked,
+    double? accuracyMeters,
   }) async {
     try {
       final data = await _api.post(
@@ -57,6 +59,8 @@ class CheckInService {
           'qrPayload': qrPayload,
           'latitude': latitude,
           'longitude': longitude,
+          'isMocked': ?isMocked,
+          'accuracyMeters': ?accuracyMeters,
         },
       );
       return CheckInModel.fromMap(data);

@@ -38,6 +38,7 @@ describe("checkIn", () => {
     findMany.mockReset();
     findFirst.mockReset().mockResolvedValue(null);
     jest.spyOn(console, "error").mockImplementation(() => {});
+    jest.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => jest.restoreAllMocks());
 
@@ -54,6 +55,31 @@ describe("checkIn", () => {
     const res = makeRes();
     await checkIn(makeReq(), res);
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("rejects a mocked location before looking up the club", async () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const res = makeRes();
+    await checkIn(makeReq({ isMocked: true }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Mock locations aren't allowed for check-ins",
+    });
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(JSON.parse(warn.mock.calls[0][0])).toEqual({
+      evt: "checkin_failed",
+      reason: "mock_location",
+      userId: "u1",
+      clubId: "c1",
+    });
+  });
+
+  it("accepts isMocked false with an accuracy", async () => {
+    findUnique.mockResolvedValue(club);
+    create.mockResolvedValue({ id: "ci1" });
+    const res = makeRes();
+    await checkIn(makeReq({ isMocked: false, accuracyMeters: 8.5 }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it("rejects a wrong QR secret", async () => {

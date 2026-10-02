@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
@@ -7,8 +9,12 @@ import 'package:clubsy/services/club_service.dart';
 import 'package:clubsy/services/check_in_service.dart';
 
 class ClubController extends GetxController {
-  final _clubService = ClubService();
-  final _checkInService = CheckInService();
+  final ClubService _clubService;
+  final CheckInService _checkInService;
+
+  ClubController({ClubService? clubService, CheckInService? checkInService})
+    : _clubService = clubService ?? ClubService(),
+      _checkInService = checkInService ?? CheckInService();
 
   final clubs = <ClubModel>[].obs;
   final myCheckIns = <CheckInModel>[].obs;
@@ -46,14 +52,28 @@ class ClubController extends GetxController {
     required String qrPayload,
     required double latitude,
     required double longitude,
+    bool? isMocked,
+    double? accuracyMeters,
   }) async {
     final checkInRecord = await _checkInService.checkIn(
       clubId: clubId,
       qrPayload: qrPayload,
       latitude: latitude,
       longitude: longitude,
+      isMocked: isMocked,
+      accuracyMeters: accuracyMeters,
     );
     myCheckIns.insert(0, checkInRecord);
+    // Fire and forget: the success UI must not wait on (or fail with) stats.
+    unawaited(_refreshStats());
     return checkInRecord;
+  }
+
+  Future<void> _refreshStats() async {
+    try {
+      stats.value = await _checkInService.getMyStats();
+    } catch (_) {
+      // Stale stats are fixed by the next full refresh().
+    }
   }
 }

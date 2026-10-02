@@ -237,7 +237,7 @@ history) feel finished. No schema changes.
         Existing `check_in_exception_test.dart` still passes. `flutter test` and `flutter analyze
         --no-fatal-infos` pass.
 
-- [ ] 3.2 Make check-ins robust at the door: accurate location, mock-location rejection, a usable
+- [x] 3.2 Make check-ins robust at the door: accurate location, mock-location rejection, a usable
       scanner, and fresh stats afterwards.
       - Goal: the check-in is the product, and it happens in a dark, crowded street with a phone at
         10% battery. Today the scanner keeps firing during a request, location has no timeout or
