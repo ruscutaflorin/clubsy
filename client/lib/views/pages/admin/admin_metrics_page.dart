@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:clubsy/data/classes/club_ranking_model.dart';
 import 'package:clubsy/data/classes/pilot_metrics_model.dart';
 import 'package:clubsy/data/classes/pilot_scorecard_model.dart';
 import 'package:clubsy/services/admin_service.dart';
@@ -18,6 +19,7 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
   int _days = 7;
   PilotMetricsModel? _metrics;
   PilotScorecardModel? _scorecard;
+  ClubRankingModel? _ranking;
   String? _error;
   bool _loading = false;
 
@@ -26,6 +28,16 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
     super.initState();
     _load();
     _loadScorecard();
+    _loadRanking();
+  }
+
+  Future<void> _loadRanking() async {
+    try {
+      final ranking = await _service.getClubRanking();
+      if (mounted) setState(() => _ranking = ranking);
+    } catch (_) {
+      // The ranking is supplementary; the metrics below still load.
+    }
   }
 
   Future<void> _loadScorecard() async {
@@ -65,6 +77,10 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
         children: [
           if (_scorecard != null) ...[
             PilotScorecardSection(scorecard: _scorecard!),
+            const SizedBox(height: 24),
+          ],
+          if (_ranking != null) ...[
+            ClubRankingSection(ranking: _ranking!),
             const SizedBox(height: 24),
           ],
           SegmentedButton<int>(
@@ -176,6 +192,50 @@ class PilotScorecardSection extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+}
+
+class ClubRankingSection extends StatelessWidget {
+  final ClubRankingModel ranking;
+
+  const ClubRankingSection({super.key, required this.ranking});
+
+  static String _change(int change) => change > 0
+      ? '+$change'
+      : change < 0
+      ? '$change'
+      : '±0';
+
+  @override
+  Widget build(BuildContext context) {
+    final quiet = ranking.clubs.every(
+      (c) => c.checkIns == 0 && c.previousCheckIns == 0,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Club ranking', style: Theme.of(context).textTheme.titleMedium),
+        if (quiet)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('No check-ins in the last 4 weeks'),
+          )
+        else
+          for (var i = 0; i < ranking.clubs.length; i++)
+            ListTile(
+              key: Key('rankingRow_${ranking.clubs[i].id}'),
+              dense: true,
+              title: Text(
+                '${i + 1}. ${ranking.clubs[i].name} · ${ranking.clubs[i].city}',
+              ),
+              subtitle: Text(
+                '${ranking.clubs[i].checkIns} check-ins · '
+                '${ranking.clubs[i].uniqueVisitors} visitors',
+              ),
+              trailing: Text(_change(ranking.clubs[i].change)),
+            ),
       ],
     );
   }

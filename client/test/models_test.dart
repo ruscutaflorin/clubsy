@@ -1,5 +1,6 @@
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/club_ranking_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Map<String, dynamic> clubMap() => {
@@ -50,6 +51,33 @@ void main() {
       expect(checkIn.distanceMeters, 42.0);
       expect(checkIn.checkedInAt.toUtc().hour, 22);
       expect(checkIn.club.id, 'c1');
+    });
+  });
+
+  group('ClubRankingModel', () {
+    test('parses a fixture', () {
+      final m = ClubRankingModel.fromJson({
+        'weeks': 4,
+        'clubs': [
+          {
+            'id': 'c1',
+            'name': 'Club A',
+            'city': 'Cluj-Napoca',
+            'checkIns': 84,
+            'uniqueVisitors': 51,
+            'previousCheckIns': 72,
+            'change': 12,
+          },
+        ],
+      });
+      expect(m.weeks, 4);
+      expect(m.clubs.single.name, 'Club A');
+      expect(m.clubs.single.uniqueVisitors, 51);
+      expect(m.clubs.single.change, 12);
+    });
+
+    test('defaults to an empty list without clubs', () {
+      expect(ClubRankingModel.fromJson({}).clubs, isEmpty);
     });
   });
 }

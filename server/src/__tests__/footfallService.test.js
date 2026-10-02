@@ -1,4 +1,8 @@
-import { computeClubFootfall, computeDistanceHealth } from "../services/footfallService.js";
+import {
+  computeClubFootfall,
+  computeClubRanking,
+  computeDistanceHealth,
+} from "../services/footfallService.js";
 
 describe("computeDistanceHealth", () => {
   it("is insufficient with null numbers for no data", () => {
@@ -83,5 +87,82 @@ describe("computeClubFootfall", () => {
       now,
     });
     expect(JSON.stringify(out)).not.toMatch(/userId|secret-user/);
+  });
+});
+
+describe("computeClubRanking", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const ago = (days) => new Date(now.getTime() - days * DAY);
+  const clubs = [
+    { id: "a", name: "Alpha", city: "Cluj" },
+    { id: "b", name: "Beta", city: "Cluj" },
+    { id: "c", name: "Gamma", city: "Iasi" },
+  ];
+
+  it("lists a club with no check-ins with zeros", () => {
+    const out = computeClubRanking({ clubs, checkIns: [], now });
+    expect(out.weeks).toBe(4);
+    expect(out.clubs).toHaveLength(3);
+    expect(out.clubs[0]).toEqual({
+      id: "a",
+      name: "Alpha",
+      city: "Cluj",
+      checkIns: 0,
+      uniqueVisitors: 0,
+      previousCheckIns: 0,
+      change: 0,
+    });
+  });
+
+  it("counts two check-ins by one user as 2 check-ins, 1 visitor", () => {
+    const out = computeClubRanking({
+      clubs,
+      checkIns: [
+        { clubId: "a", userId: "u1", checkedInAt: ago(1) },
+        { clubId: "a", userId: "u1", checkedInAt: ago(2) },
+      ],
+      now,
+    });
+    expect(out.clubs[0]).toMatchObject({ id: "a", checkIns: 2, uniqueVisitors: 1 });
+  });
+
+  it("counts 5 weeks ago as previous and 9 weeks ago nowhere", () => {
+    const out = computeClubRanking({
+      clubs,
+      checkIns: [
+        { clubId: "a", userId: "u1", checkedInAt: ago(35) },
+        { clubId: "a", userId: "u2", checkedInAt: ago(63) },
+        { clubId: "zzz", userId: "u3", checkedInAt: ago(1) },
+      ],
+      now,
+    });
+    const a = out.clubs.find((c) => c.id === "a");
+    expect(a).toMatchObject({ checkIns: 0, previousCheckIns: 1, change: -1 });
+  });
+
+  it("sorts by check-ins, then visitors, then name", () => {
+    const ci = (clubId, userId) => ({ clubId, userId, checkedInAt: ago(1) });
+    const out = computeClubRanking({
+      clubs,
+      checkIns: [
+        ci("c", "u1"),
+        ci("c", "u2"),
+        ci("b", "u1"),
+        ci("b", "u1"),
+        ci("a", "u1"),
+        ci("a", "u1"),
+      ],
+      now,
+    });
+    expect(out.clubs.map((c) => c.id)).toEqual(["c", "a", "b"]);
+  });
+
+  it("never outputs user ids", () => {
+    const out = computeClubRanking({
+      clubs,
+      checkIns: [{ clubId: "a", userId: "secret-user-id", checkedInAt: ago(1) }],
+      now,
+    });
+    expect(JSON.stringify(out)).not.toMatch(/userId|secret-user-id/);
   });
 });
