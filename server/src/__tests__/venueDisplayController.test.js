@@ -21,10 +21,11 @@ afterEach(() => jest.restoreAllMocks());
 
 describe("GET /venue-display/:clubId/qr", () => {
   it("returns a QR data URL and expiry for a valid key", async () => {
+    const before = Date.now();
     const res = await request(app).get(`/venue-display/c1/qr?key=${key}`);
     expect(res.status).toBe(200);
     expect(res.body.qrCode).toMatch(/^data:image\/png;base64,/);
-    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(before);
     expect(res.headers["cache-control"]).toBe("no-store");
   });
 
