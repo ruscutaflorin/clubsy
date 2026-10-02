@@ -344,7 +344,7 @@ history) feel finished. No schema changes.
         pumps `CheckInHistoryPage` with fixture `myCheckIns` across two nights and finds both
         headers and an `HH:mm` time. `flutter test` and `flutter analyze --no-fatal-infos` pass.
 
-- [ ] 3.6 The check-in success moment: "New place on your map!" or "Visit #N" (absorbs
+- [x] 3.6 The check-in success moment: "New place on your map!" or "Visit #N" (absorbs
       `BACKLOG.md` B17).
       - Goal: a successful check-in, the product's core action, ends with a generic snackbar and
         `Get.back()`. Celebrating a first visit (a new pin) rewards exactly the behaviour the product
