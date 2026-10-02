@@ -629,7 +629,7 @@ Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue windo
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B69 "Often paired with": the clubs I combine with this one on the same night, on its page — status: approved
+- [x] B69 "Often paired with": the clubs I combine with this one on the same night, on its page — status: done
   - Why: regulars hop between venues ("we start at A, end at B"), but the club page shows only this club's own history (B13, B54). A line like "Often paired with: Club B · 4 nights" tells the story of a user's usual route and leads straight to the partner club. It is computed from verified pins (principle 5), and only the user sees it (principle 2).
   - Scope: client only, no server or schema change.
     - Pure logic: add `List<ClubPairing> pairedClubs(String clubId, List<CheckInModel> checkIns, {int limit = 3})` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`.
