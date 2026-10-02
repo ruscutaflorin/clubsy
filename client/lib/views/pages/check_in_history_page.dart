@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/data/classes/check_in_grouping.dart';
+import 'package:clubsy/data/classes/on_this_night.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
@@ -74,6 +75,7 @@ class CheckInHistoryPage extends StatelessWidget {
 
           final groups = groupByNight(checkIns);
           final summary = monthSummary(checkIns);
+          final memories = onThisNight(checkIns, DateTime.now().toLocal());
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
@@ -84,6 +86,40 @@ class CheckInHistoryPage extends StatelessWidget {
                   child: Text(
                     summary,
                     style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+              if (memories.isNotEmpty)
+                Card(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'On this night',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        for (final memory in memories) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            memory.label,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          for (final club in memory.clubs)
+                            InkWell(
+                              onTap: () =>
+                                  Get.to(() => ClubDetailsPage(club: club)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                child: Text(club.name),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               for (final group in groups) ...[
