@@ -12,6 +12,8 @@ class MostVisitedClub {
       visits: map['visits'],
     );
   }
+
+  Map<String, dynamic> toMap() => {'id': id, 'name': name, 'visits': visits};
 }
 
 class CheckInStatsModel {
@@ -42,4 +44,12 @@ class CheckInStatsModel {
           : null,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'totalCheckIns': totalCheckIns,
+    'uniqueClubs': uniqueClubs,
+    'uniqueCities': uniqueCities,
+    'mostVisitedClub': mostVisitedClub?.toMap(),
+    'firstCheckInAt': firstCheckInAt?.toIso8601String(),
+  };
 }

@@ -4,6 +4,7 @@ import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
+import 'package:clubsy/widgets/error_banner_widget.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
 class ProfileStatTile extends StatelessWidget {
@@ -134,8 +135,27 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 16),
           Obx(() {
             final stats = clubController.stats.value;
-            if (stats == null) return const SizedBox.shrink();
-            return ProfileStatsCard(stats: stats);
+            final error = clubController.loadError.value;
+            return Column(
+              children: [
+                if (error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: ErrorBanner(
+                      error: error,
+                      savedAt: clubController.dataSavedAt.value,
+                      onRetry: clubController.refresh,
+                    ),
+                  ),
+                if (stats != null)
+                  ProfileStatsCard(stats: stats)
+                else if (error == null)
+                  const Text(
+                    "No stats yet — scan a club's QR to add your first pin",
+                    textAlign: TextAlign.center,
+                  ),
+              ],
+            );
           }),
           const SizedBox(height: 24),
           ListTile(

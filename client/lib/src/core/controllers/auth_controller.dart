@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/services/auth_service.dart';
+import 'package:clubsy/services/local_cache.dart';
 
 class AuthController extends GetxController {
   final _isAuthenticated = false.obs;
@@ -61,6 +62,8 @@ class AuthController extends GetxController {
   Future<void> signOut() async {
     debugPrint('AuthController: Signing out user...');
     await _authService.signOut();
+    // Another user must never see the previous user's map.
+    await LocalCache().clear();
     _isAuthenticated.value = false;
     _user.value = null;
     debugPrint('AuthController: Sign out complete, auth state cleared');
