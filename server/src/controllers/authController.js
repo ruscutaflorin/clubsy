@@ -141,3 +141,49 @@ export const getCurrentUser = async (req, res) => {
     res.status(500).json({ message: "Error fetching user" });
   }
 };
+
+// GDPR access/portability: the user's profile and full check-in history as a JSON download.
+// Explicit selects only; never password or qrSecret.
+export const exportMyData = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: req.user.id },
+      orderBy: { checkedInAt: "asc" },
+      select: {
+        id: true,
+        checkedInAt: true,
+        distanceMeters: true,
+        verificationMethod: true,
+        club: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+      },
+    });
+
+    const exportedAt = new Date();
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="clubsy-export-${exportedAt.toISOString().slice(0, 10)}.json"`
+    );
+    res.json({ exportedAt: exportedAt.toISOString(), user, checkIns });
+  } catch (error) {
+    console.error("Export data error:", error);
+    res.status(500).json({ message: "Error exporting data" });
+  }
+};

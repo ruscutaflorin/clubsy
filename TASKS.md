@@ -466,7 +466,7 @@ work; 5.5-5.7 are yours.
         the Terms link pushes `LegalPage`. The primer shows on the first navigation to check-in and
         not on the second (`SharedPreferences.setMockInitialValues`). `flutter test` passes.
 
-- [ ] 5.2 "Download my data": export my profile and full check-in history as JSON.
+- [x] 5.2 "Download my data": export my profile and full check-in history as JSON.
       - Goal: the user owns their location history (GDPR access/portability). It pairs with 5.3
         (delete account) and 5.4 (remove a check-in), so users can take their data with them
         before deleting.

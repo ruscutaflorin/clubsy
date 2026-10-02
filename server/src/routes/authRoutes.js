@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { getCurrentUser, signIn, signUp } from '../controllers/authController.js';
+import { exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { authLimiter } from '../middlewares/rateLimiters.js';
 
@@ -25,5 +25,8 @@ router.post('/signin', authLimiter, signInValidation, signIn);
 
 // Current user
 router.get('/me', authMiddleware, getCurrentUser);
+
+// Download my data (GDPR export)
+router.get('/me/export', authMiddleware, exportMyData);
 
 export default router;
