@@ -50,6 +50,11 @@ class AuthService {
     return user;
   }
 
+  /// The user's profile and full check-in history (`GET /auth/me/export`).
+  Future<Map<String, dynamic>> exportData() async {
+    return await _api.get('/auth/me/export') as Map<String, dynamic>;
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(tokenKey);

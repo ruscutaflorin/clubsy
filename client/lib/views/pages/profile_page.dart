@@ -4,6 +4,8 @@ import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
+import 'package:clubsy/services/api_client.dart';
+import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
@@ -184,6 +186,25 @@ class ProfilePage extends StatelessWidget {
             title: const Text('Terms of Use'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Get.to(() => const LegalPage.terms()),
+          ),
+          ListTile(
+            key: const Key('exportTile'),
+            leading: const Icon(Icons.download_outlined),
+            title: const Text('Download my data'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final service = Get.isRegistered<DataExportService>()
+                  ? Get.find<DataExportService>()
+                  : DataExportService();
+              try {
+                await service.exportMyData();
+              } catch (e) {
+                Get.snackbar(
+                  'Export failed',
+                  e is ApiException ? e.message : "Couldn't export your data",
+                );
+              }
+            },
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
