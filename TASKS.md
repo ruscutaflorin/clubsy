@@ -192,8 +192,12 @@ defaults, and a one-command local dev setup. No schema changes.
         **client**: `subosito/flutter-action` with `channel: stable` and `flutter-version: 3.47.3`
         (the local toolchain: Flutter 3.47.3 / Dart 3.13.3, satisfies `sdk: ^3.13.3`), then `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter
         analyze --no-fatal-infos` and `flutter test`. Cache the pnpm store and the pub cache.
-        Trigger on push and pull_request for `develop` and `main`. Add a CI badge line to the
-        README if 2.5 has landed.
+        Trigger on push and pull_request for `develop` and `main`. The CI is deliberately
+        stricter than the local gates: keep `npx prisma validate` and
+        `dart format --set-exit-if-changed .` exactly as listed; use plain `pnpm test` (never
+        `pnpm test -- ...`, which makes Jest find no tests). No README badge: the repo has no
+        GitHub remote yet, so the owner adds it after the first push; README may get one plain
+        sentence saying CI lives in `.github/workflows/ci.yml`.
       - Out: deploy jobs, building release artifacts, publishing.
       - Verified by: the workflow file parses (`npx --yes yaml-lint .github/workflows/ci.yml`, or
         a `node -e` YAML parse with the `yaml` package if that's easier). Every command in it is

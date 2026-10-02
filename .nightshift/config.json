@@ -44,7 +44,7 @@
                   },
                   {
                       "name":  "server-test",
-                      "run":  "cd server \u0026\u0026 pnpm test -- --passWithNoTests",
+                      "run":  "cd server \u0026\u0026 pnpm test",
                       "when":  {
                                    "fileExists":  "server/package.json"
                                },
