@@ -413,7 +413,7 @@ already enforces `adminMiddleware`, so the UI gate is only for convenience.
         test`, `flutter test` and `flutter analyze --no-fatal-infos` pass.
       - Depends on: 4.1, 2.4.
 
-- [ ] 4.3 Pilot metrics for admins: a server aggregation endpoint and a dashboard card.
+- [x] 4.3 Pilot metrics for admins: a server aggregation endpoint and a dashboard card.
       - Goal: decide from data whether the pilot works (see the north-star metric and exit criteria
         in `PLAN.md`) without running SQL by hand.
       - Scope: `server/src/services/metricsService.js` with a pure
