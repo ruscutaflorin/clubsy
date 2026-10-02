@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/data/classes/check_in_grouping.dart';
+import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
 class CheckInHistoryPage extends StatelessWidget {
@@ -40,22 +42,40 @@ class CheckInHistoryPage extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            itemCount: checkIns.length + (banner == null ? 0 : 1),
-            itemBuilder: (context, index) {
-              if (banner != null) {
-                if (index == 0) return banner;
-                index -= 1;
-              }
-              final checkIn = checkIns[index];
-              return ListTile(
-                leading: const Icon(Icons.local_bar),
-                title: Text(checkIn.club.name),
-                subtitle: Text(
-                  '${checkIn.club.city} · ${checkIn.checkedInAt.toLocal()}',
+          final groups = groupByNight(checkIns);
+          final summary = monthSummary(checkIns);
+          return ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              ?banner,
+              if (summary != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    summary,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                 ),
-              );
-            },
+              for (final group in groups) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Text(
+                    formatGroupHeader(group),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                for (final checkIn in group.checkIns)
+                  ListTile(
+                    leading: const Icon(Icons.local_bar),
+                    title: Text(checkIn.club.name),
+                    subtitle: Text(
+                      '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                    ),
+                    onTap: () =>
+                        Get.to(() => ClubDetailsPage(club: checkIn.club)),
+                  ),
+              ],
+            ],
           );
         }),
       ),
