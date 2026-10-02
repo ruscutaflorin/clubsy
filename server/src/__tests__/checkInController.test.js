@@ -138,6 +138,44 @@ describe("checkIn", () => {
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
+  describe("impossible travel", () => {
+    // ~300 km north of the club at (45, 25)
+    const farClub = { latitude: 47.7, longitude: 25 };
+
+    it("rejects a check-in 300 km from one 30 minutes earlier", async () => {
+      findUnique.mockResolvedValue(club);
+      findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ checkedInAt: new Date(Date.now() - 30 * 60000), club: farClub });
+      const res = makeRes();
+      await checkIn(makeReq(), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "This check-in doesn't match your previous one. Try again later.",
+      });
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it("allows a check-in 300 km from one 2 days earlier", async () => {
+      findUnique.mockResolvedValue(club);
+      findFirst
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ checkedInAt: new Date(Date.now() - 48 * 3600000), club: farClub });
+      create.mockResolvedValue({ id: "ci1" });
+      const res = makeRes();
+      await checkIn(makeReq(), res);
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it("allows a first check-in", async () => {
+      findUnique.mockResolvedValue(club);
+      create.mockResolvedValue({ id: "ci1" });
+      const res = makeRes();
+      await checkIn(makeReq(), res);
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+  });
+
   it("returns 500 when the database fails", async () => {
     findUnique.mockRejectedValue(new Error("db"));
     const res = makeRes();
