@@ -7,6 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import clubRoutes from "./routes/clubRoutes.js";
 import checkInRoutes from "./routes/checkInRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import venueDisplayRoutes from "./routes/venueDisplayRoutes.js";
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/clubs", clubRoutes);
 app.use("/api/check-ins", checkInRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/venue-display", venueDisplayRoutes);
 
 // Health check
 app.get("/health", (req, res) => {

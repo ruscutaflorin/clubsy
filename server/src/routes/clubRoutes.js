@@ -9,6 +9,7 @@ import {
   unapproveClub,
   getClubQr,
   rotateClubQr,
+  getDisplayLink,
 } from "../controllers/clubController.js";
 import { authMiddleware, adminMiddleware } from "../middlewares/authMiddleware.js";
 
@@ -68,6 +69,7 @@ router.patch("/:id", authMiddleware, adminMiddleware, clubUpdateValidation, upda
 router.patch("/:id/approve", authMiddleware, adminMiddleware, approveClub);
 router.patch("/:id/unapprove", authMiddleware, adminMiddleware, unapproveClub);
 router.get("/:id/qr", authMiddleware, adminMiddleware, getClubQr);
+router.get("/:id/display-link", authMiddleware, adminMiddleware, getDisplayLink);
 router.post("/:id/qr/rotate", authMiddleware, adminMiddleware, rotateClubQr);
 
 export default router;

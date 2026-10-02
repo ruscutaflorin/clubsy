@@ -56,6 +56,11 @@ class AdminService {
     return PilotMetricsModel.fromMap(Map<String, dynamic>.from(data));
   }
 
+  Future<String> getDisplayLink(String id) async {
+    final data = await _api.get('/clubs/$id/display-link');
+    return data['url'] as String;
+  }
+
   Future<String> rotateQr(String id) async {
     final data = await _api.post('/clubs/$id/qr/rotate');
     return data['qrCode'] as String;

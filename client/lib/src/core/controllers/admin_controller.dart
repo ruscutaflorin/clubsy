@@ -114,6 +114,8 @@ class AdminController extends GetxController {
     return qr;
   }
 
+  Future<String> loadDisplayLink(String id) => _service.getDisplayLink(id);
+
   Future<String> rotateQr(String id) async {
     final qr = await _service.rotateQr(id);
     qrCodes[id] = qr;

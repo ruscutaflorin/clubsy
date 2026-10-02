@@ -1,6 +1,6 @@
 import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
-import { generateClubQr, generateQrSecret } from "../services/venueQrService.js";
+import { displayKey, generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
 // qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
 const forRole = (club, role) => {
@@ -208,5 +208,23 @@ export const rotateClubQr = async (req, res) => {
   } catch (error) {
     console.error("Rotate club QR error:", error);
     res.status(500).json({ message: "Error rotating club QR" });
+  }
+};
+
+export const getDisplayLink = async (req, res) => {
+  try {
+    const club = await prisma.club.findUnique({ where: { id: req.params.id } });
+
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    const base = `${req.protocol}://${req.get("host")}`;
+    const url = `${base}/venue-display/${encodeURIComponent(club.id)}?key=${displayKey(club)}`;
+
+    res.json({ url });
+  } catch (error) {
+    console.error("Get display link error:", error);
+    res.status(500).json({ message: "Error building display link" });
   }
 };
