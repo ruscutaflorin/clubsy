@@ -12,6 +12,7 @@ import 'package:clubsy/views/pages/change_password_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
+import 'package:clubsy/widgets/been_a_while_card.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/next_goals_card.dart';
 import 'package:clubsy/widgets/personal_records_card.dart';
@@ -288,6 +289,7 @@ class ProfilePage extends StatelessWidget {
           }),
           NextGoalsCard(onTap: () => Get.to(() => const AchievementsPage())),
           const PersonalRecordsCard(),
+          const BeenAWhileCard(),
           ListTile(
             key: const Key('recapTile'),
             leading: const Icon(Icons.auto_awesome),
