@@ -65,6 +65,16 @@ class AuthService {
     );
   }
 
+  /// Changes the password (`POST /auth/me/password`). A wrong current
+  /// password is a 401 that must not end the session.
+  Future<void> changePassword(String current, String next) async {
+    await _api.post(
+      '/auth/me/password',
+      body: {'currentPassword': current, 'newPassword': next},
+      expireSession: false,
+    );
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(tokenKey);

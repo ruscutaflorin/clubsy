@@ -8,6 +8,7 @@ import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
+import 'package:clubsy/views/pages/change_password_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
@@ -322,6 +323,13 @@ class ProfilePage extends StatelessWidget {
             title: const Text('Download my data'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _exportMyData,
+          ),
+          ListTile(
+            key: const Key('changePasswordTile'),
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Change password'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const ChangePasswordPage()),
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

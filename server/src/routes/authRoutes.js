@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
+import { changePassword, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { authLimiter } from '../middlewares/rateLimiters.js';
 
@@ -28,6 +28,16 @@ router.get('/me', authMiddleware, getCurrentUser);
 
 // Download my data (GDPR export)
 router.get('/me/export', authMiddleware, exportMyData);
+
+// Change my password
+router.post(
+  '/me/password',
+  authMiddleware,
+  authLimiter,
+  body('currentPassword').notEmpty().withMessage('Current password is required'),
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  changePassword
+);
 
 // Delete my account and all my check-ins
 router.delete(
