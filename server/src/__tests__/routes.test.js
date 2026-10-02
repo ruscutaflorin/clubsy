@@ -10,6 +10,7 @@ const clubFindMany = jest.fn();
 const clubCount = jest.fn();
 const clubUpdate = jest.fn();
 const checkInFindMany = jest.fn();
+const checkInGroupBy = jest.fn();
 
 jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
@@ -20,7 +21,7 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
       count: clubCount,
       update: clubUpdate,
     },
-    checkIn: { findMany: checkInFindMany },
+    checkIn: { findMany: checkInFindMany, groupBy: checkInGroupBy },
   },
 }));
 
@@ -291,5 +292,29 @@ describe("stats, health and fallbacks", () => {
       .send("{bad json");
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ message: "Malformed JSON body" });
+  });
+});
+
+describe("admin club footfall route", () => {
+  it("returns 403 for a non-admin", async () => {
+    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(userToken));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 404 for an unknown club", async () => {
+    clubFindUnique.mockResolvedValue(null);
+    const res = await request(app).get("/api/admin/clubs/nope/footfall").set(auth(adminToken));
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBeDefined();
+  });
+
+  it("returns 200 with 12 weekly buckets for an admin", async () => {
+    clubFindUnique.mockResolvedValue({ id: "c1" });
+    checkInFindMany.mockResolvedValue([{ userId: "u1", checkedInAt: new Date() }]);
+    checkInGroupBy.mockResolvedValue([{ userId: "u1", _min: { checkedInAt: new Date() } }]);
+    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.weekly).toHaveLength(12);
+    expect(JSON.stringify(res.body)).not.toContain("u1");
   });
 });

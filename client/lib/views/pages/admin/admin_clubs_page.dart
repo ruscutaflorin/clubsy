@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/admin_controller.dart';
+import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_qr_page.dart';
 import 'package:clubsy/views/pages/admin/admin_metrics_page.dart';
@@ -130,6 +131,13 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            key: Key('adminFootfall-${club.id}'),
+                            icon: const Icon(Icons.bar_chart),
+                            tooltip: 'Footfall',
+                            onPressed: () =>
+                                Get.to(() => AdminClubFootfallPage(club: club)),
+                          ),
                           IconButton(
                             key: Key('adminEdit-${club.id}'),
                             icon: const Icon(Icons.edit),

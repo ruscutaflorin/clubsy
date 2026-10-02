@@ -1,5 +1,6 @@
 import prisma from "../prisma/client.js";
 import { computePilotMetrics } from "../services/metricsService.js";
+import { computeClubFootfall } from "../services/footfallService.js";
 
 const ALLOWED_DAYS = [7, 30, 90];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -31,5 +32,41 @@ export const getMetrics = async (req, res) => {
   } catch (error) {
     console.error("Metrics error:", error);
     res.status(500).json({ message: "Failed to compute metrics" });
+  }
+};
+
+const FOOTFALL_WEEKS = 12;
+
+export const getClubFootfall = async (req, res) => {
+  try {
+    const club = await prisma.club.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!club) return res.status(404).json({ message: "Club not found" });
+
+    const now = new Date();
+    // One extra week of slack so the oldest Monday-aligned bucket is fully covered.
+    const since = new Date(now.getTime() - (FOOTFALL_WEEKS + 1) * 7 * DAY_MS);
+    const checkIns = await prisma.checkIn.findMany({
+      where: { clubId: club.id, checkedInAt: { gte: since } },
+      select: { userId: true, checkedInAt: true },
+    });
+    const visitorIds = [...new Set(checkIns.map((c) => c.userId))];
+    const firsts = visitorIds.length
+      ? await prisma.checkIn.groupBy({
+          by: ["userId"],
+          where: { clubId: club.id, userId: { in: visitorIds } },
+          _min: { checkedInAt: true },
+        })
+      : [];
+    const firstVisits = firsts.map((f) => ({
+      userId: f.userId,
+      firstCheckInAt: f._min.checkedInAt,
+    }));
+    res.json(computeClubFootfall({ checkIns, firstVisits, now, weeks: FOOTFALL_WEEKS }));
+  } catch (error) {
+    console.error("Club footfall error:", error);
+    res.status(500).json({ message: "Failed to compute footfall" });
   }
 };

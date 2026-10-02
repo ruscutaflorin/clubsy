@@ -1,3 +1,4 @@
+import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/pilot_metrics_model.dart';
 import 'package:clubsy/services/api_client.dart';
@@ -54,6 +55,11 @@ class AdminService {
   Future<PilotMetricsModel> getMetrics(int days) async {
     final data = await _api.get('/admin/metrics', query: {'days': '$days'});
     return PilotMetricsModel.fromMap(Map<String, dynamic>.from(data));
+  }
+
+  Future<ClubFootfallModel> getClubFootfall(String id) async {
+    final data = await _api.get('/admin/clubs/$id/footfall');
+    return ClubFootfallModel.fromMap(Map<String, dynamic>.from(data));
   }
 
   Future<String> getDisplayLink(String id) async {
