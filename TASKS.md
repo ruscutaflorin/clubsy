@@ -272,7 +272,7 @@ history) feel finished. No schema changes.
         `pnpm test`, `flutter test` and `flutter analyze --no-fatal-infos` pass.
       - Depends on: 3.1 (uses `ApiClient`).
 
-- [ ] 3.3 Visible error states and an offline cache for the map, history and profile.
+- [x] 3.3 Visible error states and an offline cache for the map, history and profile.
       - Goal: `ClubController.refresh()` catches every error silently, so a server outage, an
         expired session and "you have no check-ins" all look the same: an empty screen. In a club
         basement with no signal, the map should still show the user's pins.
