@@ -59,7 +59,7 @@ migration has been run yet. These tasks get Phase 1 to a genuinely working, test
 Goal: no 500s for normal mistakes, every route testable without a database, safe production
 defaults, and a one-command local dev setup. No schema changes.
 
-- [ ] 2.1 Fix the auth failure modes: return 401 for expired or invalid tokens, make sign-in
+- [x] 2.1 Fix the auth failure modes: return 401 for expired or invalid tokens, make sign-in
       case-insensitive, and expose `GET /api/auth/me`.
       - Goal: today an expired JWT makes `authMiddleware` return **500** (`jwt.verify` throws into
         the generic catch), so the app can't tell "log in again" from "server broken". The
