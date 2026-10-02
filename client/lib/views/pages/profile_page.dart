@@ -6,6 +6,7 @@ import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/data_export_service.dart';
+import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
@@ -261,6 +262,17 @@ class ProfilePage extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
               ],
+            );
+          }),
+          Obx(() {
+            final a = clubController.achievements.value;
+            if (a == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: AchievementsSummaryTile(
+                achievements: a,
+                onTap: () => Get.to(() => const AchievementsPage()),
+              ),
             );
           }),
           const SizedBox(height: 24),

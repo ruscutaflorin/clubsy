@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
@@ -119,6 +120,17 @@ class _CheckInPageState extends State<CheckInPage> {
         context,
         outcome: result.outcome,
         club: widget.club,
+        extras: [
+          for (final badge in result.unlocked)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                badgeUnlockedText(badge),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
       );
       if (viewOnMap) {
         clubController.focusedClub.value = widget.club;
