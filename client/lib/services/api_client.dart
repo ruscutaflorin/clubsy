@@ -59,6 +59,10 @@ class ApiException implements Exception {
 }
 
 class ApiClient {
+  /// Fallback for clients without their own [onUnauthorized]; the
+  /// AuthController registers it so every service signs out on a 401.
+  static void Function()? globalOnUnauthorized;
+
   final http.Client _client;
   final Future<String?> Function() tokenProvider;
   final void Function()? onUnauthorized;
@@ -134,7 +138,9 @@ class ApiClient {
         throw ApiException(response.statusCode, 'Unexpected server response');
       }
     }
-    if (response.statusCode == 401 && authenticated) onUnauthorized?.call();
+    if (response.statusCode == 401 && authenticated) {
+      (onUnauthorized ?? globalOnUnauthorized)?.call();
+    }
     throw ApiException.fromResponse(response.statusCode, response.body);
   }
 }

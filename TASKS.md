@@ -297,7 +297,7 @@ history) feel finished. No schema changes.
         test` passes.
       - Depends on: 3.1.
 
-- [ ] 3.4 Session lifecycle: sign out cleanly on any 401, and validate the stored session at
+- [x] 3.4 Session lifecycle: sign out cleanly on any 401, and validate the stored session at
       startup (absorbs `BACKLOG.md` B18).
       - Goal: JWTs expire. Today an expired token makes every call fail with a generic "Failed to …",
         so the map and history look empty or broken, and the only way out is to log out by hand.
