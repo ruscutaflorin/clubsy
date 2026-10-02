@@ -2,6 +2,7 @@ import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -37,6 +38,34 @@ void main() {
     expect(find.text('41'), findsOneWidget);
     expect(find.text('25%'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
+  });
+
+  testWidgets('copy summary puts the text on the clipboard', (tester) async {
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String?;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(club: club, footfall: fixture),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('copyFootfallSummary')));
+    await tester.pump();
+    expect(find.text('Summary copied'), findsOneWidget);
+    expect(copied, contains('Unique visitors'));
   });
 
   test('parses distance and defaults to null without it', () {
