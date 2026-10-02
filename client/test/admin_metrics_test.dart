@@ -1,3 +1,4 @@
+import 'package:clubsy/data/classes/club_ranking_model.dart';
 import 'package:clubsy/data/classes/pilot_metrics_model.dart';
 import 'package:clubsy/views/pages/admin/admin_metrics_page.dart';
 import 'package:flutter/material.dart';
@@ -39,5 +40,54 @@ void main() {
     expect(find.text('34'), findsOneWidget);
     expect(find.text('50%'), findsOneWidget);
     expect(find.text('5'), findsOneWidget);
+  });
+
+  testWidgets('ClubRankingSection shows rows and the empty state', (
+    tester,
+  ) async {
+    final ranking = ClubRankingModel.fromJson({
+      'weeks': 4,
+      'clubs': [
+        {
+          'id': 'c1',
+          'name': 'Club A',
+          'city': 'Cluj-Napoca',
+          'checkIns': 84,
+          'uniqueVisitors': 51,
+          'previousCheckIns': 72,
+          'change': 12,
+        },
+      ],
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ClubRankingSection(ranking: ranking)),
+      ),
+    );
+    expect(find.text('Club ranking'), findsOneWidget);
+    expect(find.text('1. Club A · Cluj-Napoca'), findsOneWidget);
+    expect(find.text('84 check-ins · 51 visitors'), findsOneWidget);
+    expect(find.text('+12'), findsOneWidget);
+
+    final empty = ClubRankingModel.fromJson({
+      'weeks': 4,
+      'clubs': [
+        {
+          'id': 'c1',
+          'name': 'Club A',
+          'city': 'Cluj-Napoca',
+          'checkIns': 0,
+          'uniqueVisitors': 0,
+          'previousCheckIns': 0,
+          'change': 0,
+        },
+      ],
+    });
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ClubRankingSection(ranking: empty)),
+      ),
+    );
+    expect(find.text('No check-ins in the last 4 weeks'), findsOneWidget);
   });
 }

@@ -296,6 +296,31 @@ describe("stats, health and fallbacks", () => {
   });
 });
 
+describe("admin club ranking route", () => {
+  it("returns 401 without a token", async () => {
+    const res = await request(app).get("/api/admin/clubs/ranking");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a non-admin", async () => {
+    const res = await request(app).get("/api/admin/clubs/ranking").set(auth(userToken));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with ranked clubs and no user ids for an admin", async () => {
+    clubFindMany.mockResolvedValue([
+      { id: "c1", name: "Alpha", city: "X" },
+      { id: "c2", name: "Beta", city: "Y" },
+    ]);
+    checkInFindMany.mockResolvedValue([{ clubId: "c2", userId: "u1", checkedInAt: new Date() }]);
+    const res = await request(app).get("/api/admin/clubs/ranking").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.clubs.map((c) => c.id)).toEqual(["c2", "c1"]);
+    expect(JSON.stringify(res.body)).not.toContain("userId");
+    expect(JSON.stringify(res.body)).not.toContain("u1");
+  });
+});
+
 describe("admin club footfall route", () => {
   it("returns 403 for a non-admin", async () => {
     const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(userToken));

@@ -1,6 +1,10 @@
 import prisma from "../prisma/client.js";
 import { computePilotMetrics, computePilotScorecard } from "../services/metricsService.js";
-import { computeClubFootfall, computeDistanceHealth } from "../services/footfallService.js";
+import {
+  computeClubFootfall,
+  computeClubRanking,
+  computeDistanceHealth,
+} from "../services/footfallService.js";
 
 const ALLOWED_DAYS = [7, 30, 90];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -86,5 +90,28 @@ export const getClubFootfall = async (req, res) => {
   } catch (error) {
     console.error("Club footfall error:", error);
     res.status(500).json({ message: "Failed to compute footfall" });
+  }
+};
+
+const RANKING_WEEKS = 4;
+
+export const getClubRanking = async (req, res) => {
+  try {
+    const now = new Date();
+    const since = new Date(now.getTime() - 2 * RANKING_WEEKS * 7 * DAY_MS);
+    const [clubs, checkIns] = await Promise.all([
+      prisma.club.findMany({
+        where: { isApproved: true },
+        select: { id: true, name: true, city: true },
+      }),
+      prisma.checkIn.findMany({
+        where: { checkedInAt: { gte: since } },
+        select: { clubId: true, userId: true, checkedInAt: true },
+      }),
+    ]);
+    res.json(computeClubRanking({ clubs, checkIns, now, weeks: RANKING_WEEKS }));
+  } catch (error) {
+    console.error("Club ranking error:", error);
+    res.status(500).json({ message: "Failed to compute club ranking" });
   }
 };
