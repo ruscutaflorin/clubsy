@@ -25,6 +25,22 @@ class AdminService {
     return clubs;
   }
 
+  /// Creates a club; the response also carries its freshly generated QR.
+  Future<({ClubModel club, String? qrCode})> createClub(
+    Map<String, dynamic> fields,
+  ) async {
+    final data = await _api.post('/clubs', body: fields);
+    return (
+      club: ClubModel.fromMap(Map<String, dynamic>.from(data)),
+      qrCode: data['qrCode'] as String?,
+    );
+  }
+
+  Future<ClubModel> updateClub(String id, Map<String, dynamic> fields) async {
+    final data = await _api.patch('/clubs/$id', body: fields);
+    return ClubModel.fromMap(Map<String, dynamic>.from(data));
+  }
+
   Future<void> approve(String id) => _api.patch('/clubs/$id/approve');
 
   Future<void> unapprove(String id) => _api.patch('/clubs/$id/unapprove');

@@ -1,4 +1,4 @@
-import { generateQrSecret, verifyClubQrPayload } from "../services/venueQrService.js";
+import { generateClubQr, generateQrSecret, verifyClubQrPayload } from "../services/venueQrService.js";
 
 describe("venueQrService", () => {
   const club = { id: "club-1", qrSecret: "s3cret" };
@@ -18,6 +18,13 @@ describe("venueQrService", () => {
     expect(verifyClubQrPayload(payloadFor("club-1", "x"), club)).toBe(false);
     expect(verifyClubQrPayload(payloadFor("club-2", "s3cret"), club)).toBe(false);
   });
+
+  it("renders a 1024px PNG for printing", async () => {
+    const url = await generateClubQr(club);
+    expect(url.startsWith("data:image/png;base64,")).toBe(true);
+    const png = Buffer.from(url.split(",")[1], "base64");
+    expect(png.readUInt32BE(16)).toBe(1024);
+  }, 30000);
 
   it("rejects malformed or null payloads", () => {
     expect(verifyClubQrPayload("not json", club)).toBe(false);

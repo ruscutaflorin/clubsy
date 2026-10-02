@@ -125,7 +125,7 @@ describe("getClubQr", () => {
     await getClubQr({ params: { id: "c1" } }, res);
     const body = res.json.mock.calls[0][0];
     expect(body.qrCode).toMatch(/^data:image\/png;base64,/);
-  });
+  }, 30000);
 
   it("404s for an unknown club", async () => {
     findUnique.mockResolvedValue(null);
