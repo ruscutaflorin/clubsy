@@ -133,7 +133,7 @@ defaults, and a one-command local dev setup. No schema changes.
         still prints the boot line.
       - Depends on: 2.2.
 
-- [ ] 2.4 Admin club endpoints: 404 instead of 500 for unknown ids, editing a club, and stricter
+- [x] 2.4 Admin club endpoints: 404 instead of 500 for unknown ids, editing a club, and stricter
       validation.
       - Goal: the admin console (Phase 4) needs reliable endpoints. Approving a deleted or mistyped
         club id currently returns 500 (Prisma `P2025`), and a club with a typo in its coordinates

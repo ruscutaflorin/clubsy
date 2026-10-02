@@ -8,7 +8,15 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
   default: { club: { findUnique, findMany, count, update } },
 }));
 
-const { getClubs, getClubById, getClubQr, rotateClubQr } = await import(
+const {
+  getClubs,
+  getClubById,
+  getClubQr,
+  rotateClubQr,
+  approveClub,
+  unapproveClub,
+  updateClub,
+} = await import(
   "../controllers/clubController.js"
 );
 const { verifyClubQrPayload } = await import("../services/venueQrService.js");
@@ -153,5 +161,41 @@ describe("rotateClubQr", () => {
     await rotateClubQr({ params: { id: "missing" } }, res);
     expect(res.status).toHaveBeenCalledWith(404);
     expect(update).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin club mutations", () => {
+  const notFound = Object.assign(new Error("missing"), { code: "P2025" });
+
+  beforeEach(() => jest.spyOn(console, "error").mockImplementation(() => {}));
+
+  it.each([
+    ["approveClub", approveClub],
+    ["unapproveClub", unapproveClub],
+    ["updateClub", updateClub],
+  ])("%s maps P2025 to 404", async (_name, handler) => {
+    update.mockRejectedValue(notFound);
+    const res = makeRes();
+    await handler({ params: { id: "nope" }, body: { name: "X" } }, res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({ message: "Club not found" });
+  });
+
+  it("approveClub still 500s on other errors", async () => {
+    update.mockRejectedValue(new Error("db down"));
+    const res = makeRes();
+    await approveClub({ params: { id: "c1" } }, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it("updateClub updates only the provided fields", async () => {
+    update.mockResolvedValue(club);
+    const res = makeRes();
+    await updateClub({ params: { id: "c1" }, body: { city: "Cluj", latitude: 46.7 } }, res);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { city: "Cluj", latitude: 46.7 },
+    });
+    expect(res.json).toHaveBeenCalledWith(club);
   });
 });

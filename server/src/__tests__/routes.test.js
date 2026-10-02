@@ -103,6 +103,74 @@ describe("club routes", () => {
     expect(res.status).toBe(404);
   });
 
+  const p2025 = () => Object.assign(new Error("x"), { code: "P2025" });
+
+  it.each(["approve", "unapprove"])(
+    "PATCH /api/clubs/:id/%s returns 404 for an unknown id",
+    async (action) => {
+      clubUpdate.mockRejectedValue(p2025());
+      const res = await request(app).patch(`/api/clubs/nope/${action}`).set(auth(adminToken));
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ message: "Club not found" });
+    },
+  );
+
+  it("PATCH /api/clubs/:id returns 404 for an unknown id", async () => {
+    clubUpdate.mockRejectedValue(p2025());
+    const res = await request(app)
+      .patch("/api/clubs/nope")
+      .set(auth(adminToken))
+      .send({ name: "N" });
+    expect(res.status).toBe(404);
+  });
+
+  it("PATCH /api/clubs/:id returns 403 for USER", async () => {
+    const res = await request(app).patch("/api/clubs/c1").set(auth(userToken)).send({ name: "N" });
+    expect(res.status).toBe(403);
+    expect(clubUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /api/clubs/:id rejects latitude 200", async () => {
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ latitude: 200 });
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeDefined();
+    expect(clubUpdate).not.toHaveBeenCalled();
+  });
+
+  it.each(["qrSecret", "isApproved", "id"])("PATCH /api/clubs/:id rejects %s", async (field) => {
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ name: "N", [field]: "x" });
+    expect(res.status).toBe(400);
+    expect(clubUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /api/clubs/:id rejects a non-https imageUrl", async () => {
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ imageUrl: "http://x.com/a.png" });
+    expect(res.status).toBe(400);
+  });
+
+  it("PATCH /api/clubs/:id applies a partial update and returns qrSecret", async () => {
+    clubUpdate.mockResolvedValue(club);
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ name: "  New  ", latitude: 44.4, imageUrl: "https://x.com/a.png" });
+    expect(res.status).toBe(200);
+    expect(res.body.qrSecret).toBe("s3cret");
+    expect(clubUpdate).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { name: "New", latitude: 44.4, imageUrl: "https://x.com/a.png" },
+    });
+  });
+
   it("PATCH /api/clubs/:id/approve returns 403 for USER", async () => {
     const res = await request(app).patch("/api/clubs/c1/approve").set(auth(userToken));
     expect(res.status).toBe(403);
