@@ -27,6 +27,34 @@ class Recap {
   bool get isEmpty => nightsOut == 0;
 }
 
+class RecapComparison {
+  final int nightsDelta;
+  final int clubsDelta;
+  final bool previousEmpty;
+
+  const RecapComparison({
+    required this.nightsDelta,
+    required this.clubsDelta,
+    required this.previousEmpty,
+  });
+}
+
+RecapComparison compareRecaps(Recap current, Recap previous) => RecapComparison(
+  nightsDelta: current.nightsOut - previous.nightsOut,
+  clubsDelta: current.distinctClubs - previous.distinctClubs,
+  previousEmpty: previous.isEmpty,
+);
+
+/// e.g. "+2 nights vs August"; null when there is nothing to compare against.
+String? comparisonLine(RecapComparison c, String previousLabel) {
+  if (c.previousEmpty) return null;
+  final d = c.nightsDelta;
+  if (d == 0) return 'Same number of nights as $previousLabel';
+  final n = d.abs();
+  final unit = n == 1 ? 'night' : 'nights';
+  return '${d > 0 ? '+' : '-'}$n $unit vs $previousLabel';
+}
+
 const _nightStartHour = 6;
 
 /// A night runs 06:00-06:00 local, so shifting back 6h gives its calendar day.
