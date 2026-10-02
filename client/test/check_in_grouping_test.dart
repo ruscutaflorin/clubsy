@@ -37,7 +37,61 @@ class _NoCheckIns implements CheckInService {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+CheckInModel _named(String id, String name, String city, DateTime at) =>
+    CheckInModel(
+      id: id,
+      clubId: id,
+      checkedInAt: at,
+      verificationMethod: 'QR_GPS',
+      distanceMeters: 10,
+      club: ClubModel.fromMap({
+        'id': id,
+        'name': name,
+        'address': '1 Main St',
+        'city': city,
+        'latitude': 46,
+        'longitude': 23.5,
+        'imageUrl': 'http://img',
+      }),
+    );
+
 void main() {
+  group('filterNightGroups', () {
+    final groups = groupByNight([
+      _named('1', 'Techno Hall', 'Cluj', DateTime(2026, 9, 12, 23)),
+      _named('2', 'Pop Bar', 'Bucharest', DateTime(2026, 9, 13, 1)),
+      _named('3', 'Disco', 'Iasi', DateTime(2026, 8, 1, 23)),
+    ]);
+
+    test('matches club name case-insensitively', () {
+      final r = filterNightGroups(groups, 'techno');
+      expect(r.length, 1);
+      expect(r.first.checkIns.single.club.name, 'Techno Hall');
+    });
+
+    test('matches city', () {
+      final r = filterNightGroups(groups, ' CLUJ ');
+      expect(r.length, 1);
+      expect(r.first.checkIns.single.club.city, 'Cluj');
+    });
+
+    test('keeps only matching check-ins in a night', () {
+      final r = filterNightGroups(groups, 'pop');
+      expect(r.length, 1);
+      expect(r.first.checkIns.length, 1);
+      expect(r.first.checkIns.single.club.name, 'Pop Bar');
+    });
+
+    test('empty or blank query returns all groups', () {
+      expect(filterNightGroups(groups, ''), groups);
+      expect(filterNightGroups(groups, '   '), groups);
+    });
+
+    test('no match returns empty list', () {
+      expect(filterNightGroups(groups, 'nowhere'), isEmpty);
+    });
+  });
+
   test('23:00 and 02:00 next day share a night, 07:00 starts a new one', () {
     final groups = groupByNight([
       _ci('1', 'a', DateTime(2026, 9, 12, 23)),

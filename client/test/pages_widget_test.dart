@@ -110,6 +110,27 @@ void main() {
     });
   });
 
+  group('CheckInHistoryPage search', () {
+    testWidgets('filters by query and shows counts', (tester) async {
+      controller.myCheckIns.addAll([
+        fixtureCheckIn('1', fixtureClub('a', 'Club Alpha')),
+        fixtureCheckIn('2', fixtureClub('b', 'Club Beta')),
+      ]);
+      await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
+
+      await tester.enterText(find.byKey(const Key('history_search')), 'beta');
+      await tester.pump();
+      expect(find.text('Club Beta'), findsOneWidget);
+      expect(find.text('Club Alpha'), findsNothing);
+      expect(find.text('1 night matches'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('history_search')), 'zzz');
+      await tester.pump();
+      expect(find.textContaining('No nights match'), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    });
+  });
+
   group('ProfileStatsCard', () {
     testWidgets('shows the personal-map summary from fixture stats', (
       tester,

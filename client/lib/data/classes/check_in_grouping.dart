@@ -52,6 +52,25 @@ List<NightGroup> groupByNight(List<CheckInModel> checkIns) {
   return groups;
 }
 
+/// Keeps the check-ins whose club name or city contains the trimmed [query]
+/// (case-insensitive) and drops nights left empty. An empty query keeps all.
+List<NightGroup> filterNightGroups(List<NightGroup> groups, String query) {
+  final q = query.trim().toLowerCase();
+  if (q.isEmpty) return groups;
+  final result = <NightGroup>[];
+  for (final group in groups) {
+    final matches = group.checkIns
+        .where(
+          (c) =>
+              c.club.name.toLowerCase().contains(q) ||
+              c.club.city.toLowerCase().contains(q),
+        )
+        .toList();
+    if (matches.isNotEmpty) result.add(NightGroup(group.night, matches));
+  }
+  return result;
+}
+
 /// "Sat 12 Sep", with a year suffix ("Sat 12 Sep 2025") outside [now]'s year.
 String formatNightLabel(DateTime night, {DateTime? now}) {
   final year = (now ?? DateTime.now()).year;

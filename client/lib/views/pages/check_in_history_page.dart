@@ -6,8 +6,22 @@ import 'package:clubsy/data/classes/on_this_night.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
-class CheckInHistoryPage extends StatelessWidget {
+class CheckInHistoryPage extends StatefulWidget {
   const CheckInHistoryPage({super.key});
+
+  @override
+  State<CheckInHistoryPage> createState() => _CheckInHistoryPageState();
+}
+
+class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<bool> _confirmRemove(BuildContext context) async {
     final ok = await showDialog<bool>(
@@ -73,13 +87,50 @@ class CheckInHistoryPage extends StatelessWidget {
             );
           }
 
-          final groups = groupByNight(checkIns);
-          final summary = monthSummary(checkIns);
-          final memories = onThisNight(checkIns, DateTime.now().toLocal());
+          final searching = _query.trim().isNotEmpty;
+          final groups = filterNightGroups(groupByNight(checkIns), _query);
+          final summary = searching ? null : monthSummary(checkIns);
+          final memories = searching
+              ? <NightMemory>[]
+              : onThisNight(checkIns, DateTime.now().toLocal());
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
               ?banner,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: TextField(
+                  key: const Key('history_search'),
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search clubs or cities',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _query.isNotEmpty
+                        ? IconButton(
+                            key: const Key('history_search_clear'),
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                          )
+                        : null,
+                  ),
+                  onChanged: (value) => setState(() => _query = value),
+                ),
+              ),
+              if (searching)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    groups.isEmpty
+                        ? 'No nights match "${_query.trim()}"'
+                        : groups.length == 1
+                        ? '1 night matches'
+                        : '${groups.length} nights match',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
               if (summary != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
