@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:clubsy/data/classes/pilot_metrics_model.dart';
+import 'package:clubsy/data/classes/pilot_scorecard_model.dart';
 import 'package:clubsy/services/admin_service.dart';
 import 'package:clubsy/services/api_client.dart';
 
@@ -16,6 +17,7 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
   late final AdminService _service = widget.service ?? AdminService();
   int _days = 7;
   PilotMetricsModel? _metrics;
+  PilotScorecardModel? _scorecard;
   String? _error;
   bool _loading = false;
 
@@ -23,6 +25,16 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
   void initState() {
     super.initState();
     _load();
+    _loadScorecard();
+  }
+
+  Future<void> _loadScorecard() async {
+    try {
+      final scorecard = await _service.getPilotScorecard();
+      if (mounted) setState(() => _scorecard = scorecard);
+    } catch (_) {
+      // The scorecard is supplementary; the metrics below still load.
+    }
   }
 
   Future<void> _load() async {
@@ -51,6 +63,10 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_scorecard != null) ...[
+            PilotScorecardSection(scorecard: _scorecard!),
+            const SizedBox(height: 24),
+          ],
           SegmentedButton<int>(
             key: const Key('metricsDays'),
             segments: const [
@@ -88,6 +104,79 @@ class _AdminMetricsPageState extends State<AdminMetricsPage> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class PilotScorecardSection extends StatelessWidget {
+  final PilotScorecardModel scorecard;
+
+  const PilotScorecardSection({super.key, required this.scorecard});
+
+  static const _rateIds = {'activation', 'retention'};
+
+  String _format(ScorecardCriterion c, num value) =>
+      _rateIds.contains(c.id) ? '${(value * 100).round()}%' : '$value';
+
+  @override
+  Widget build(BuildContext context) {
+    final max = scorecard.wacu.fold<int>(
+      0,
+      (m, w) => w.activeUsers > m ? w.activeUsers : m,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pilot exit criteria',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        for (final c in scorecard.criteria)
+          ListTile(
+            key: Key('criterion_${c.id}'),
+            dense: true,
+            title: Text(c.label),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  c.value == null
+                      ? '—'
+                      : '${_format(c, c.value!)} / ${_format(c, c.target)}',
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  c.met ? Icons.check_circle : Icons.cancel,
+                  color: c.met ? Colors.green : Colors.redAccent,
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 8),
+        Text('Weekly active check-in users'),
+        const SizedBox(height: 8),
+        SizedBox(
+          key: const Key('wacuBars'),
+          height: 80,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              for (final w in scorecard.wacu)
+                Expanded(
+                  child: Tooltip(
+                    message:
+                        '${w.weekStart.split('T').first}: ${w.activeUsers}',
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      height: max == 0 ? 2 : 2 + 78 * w.activeUsers / max,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

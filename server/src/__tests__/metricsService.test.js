@@ -1,8 +1,9 @@
 import { jest } from "@jest/globals";
 import jwt from "jsonwebtoken";
 import request from "supertest";
-import { computePilotMetrics } from "../services/metricsService.js";
+import { computePilotMetrics, computePilotScorecard } from "../services/metricsService.js";
 
+const clubCount = jest.fn();
 const userFindUnique = jest.fn();
 const userFindMany = jest.fn();
 const checkInFindMany = jest.fn();
@@ -11,6 +12,7 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
     user: { findUnique: userFindUnique, findMany: userFindMany },
     checkIn: { findMany: checkInFindMany },
+    club: { count: clubCount },
   },
 }));
 
@@ -131,5 +133,88 @@ describe("GET /api/admin/metrics", () => {
     const res = await request(app).get("/api/admin/metrics").set("Authorization", asRole("ADMIN"));
     expect(res.status).toBe(200);
     expect(res.body.days).toBe(7);
+  });
+});
+
+describe("computePilotScorecard", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const ago = (d) => new Date(now.getTime() - d * DAY);
+  const crit = (s, id) => s.criteria.find((c) => c.id === id);
+
+  it("handles empty input", () => {
+    const s = computePilotScorecard({ now });
+    expect(crit(s, "signups").value).toBe(0);
+    expect(crit(s, "activation")).toMatchObject({ value: null, met: false });
+    expect(crit(s, "retention")).toMatchObject({ value: null, met: false });
+    expect(s.wacu).toHaveLength(8);
+    expect(s.wacu.every((w) => w.activeUsers === 0)).toBe(true);
+  });
+
+  it("counts retention by distinct nights", () => {
+    const t = ago(40).getTime();
+    const users = [
+      { id: "a", createdAt: new Date(t) },
+      { id: "b", createdAt: new Date(t) },
+    ];
+    const day = Math.floor(t / DAY) * DAY + 5 * DAY;
+    const checkIns = [
+      { userId: "a", checkedInAt: new Date(t + 1 * DAY) },
+      { userId: "a", checkedInAt: new Date(t + 3 * DAY) },
+      { userId: "b", checkedInAt: new Date(day + 1 * 3600000) },
+      { userId: "b", checkedInAt: new Date(day + 3 * 3600000) },
+    ];
+    const s = computePilotScorecard({ users, checkIns, now });
+    expect(crit(s, "activation").value).toBe(1);
+    expect(crit(s, "retention").value).toBe(0.5);
+  });
+
+  it("excludes recent signups from activation", () => {
+    const s = computePilotScorecard({ users: [{ id: "n", createdAt: ago(5) }], now });
+    expect(crit(s, "activation").value).toBeNull();
+  });
+
+  it("meets partner clubs at 10 and leaks no user ids", () => {
+    const s = computePilotScorecard({
+      users: [{ id: "u1", createdAt: ago(20) }],
+      checkIns: [{ userId: "u1", checkedInAt: ago(19) }],
+      approvedClubCount: 10,
+      now,
+    });
+    expect(crit(s, "partner_clubs").met).toBe(true);
+    expect(JSON.stringify(s)).not.toMatch(/userId|u1/);
+  });
+});
+
+describe("GET /api/admin/metrics/scorecard", () => {
+  beforeEach(() => jest.spyOn(console, "log").mockImplementation(() => {}));
+  afterEach(() => jest.restoreAllMocks());
+
+  const asRole = (role) => {
+    userFindUnique.mockResolvedValue({ id: "u1", email: "a@b.c", role });
+    return `Bearer ${jwt.sign({ userId: "u1" }, "test-secret")}`;
+  };
+
+  it("rejects no token with 401", async () => {
+    const res = await request(app).get("/api/admin/metrics/scorecard");
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a USER with 403", async () => {
+    const res = await request(app)
+      .get("/api/admin/metrics/scorecard")
+      .set("Authorization", asRole("USER"));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns the scorecard for an admin", async () => {
+    userFindMany.mockResolvedValue([]);
+    checkInFindMany.mockResolvedValue([]);
+    clubCount.mockResolvedValue(3);
+    const res = await request(app)
+      .get("/api/admin/metrics/scorecard")
+      .set("Authorization", asRole("ADMIN"));
+    expect(res.status).toBe(200);
+    expect(res.body.criteria).toHaveLength(4);
+    expect(res.body.wacu).toHaveLength(8);
   });
 });
