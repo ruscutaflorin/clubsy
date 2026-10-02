@@ -1,5 +1,5 @@
 import prisma from "../prisma/client.js";
-import { computePilotMetrics } from "../services/metricsService.js";
+import { computePilotMetrics, computePilotScorecard } from "../services/metricsService.js";
 import { computeClubFootfall } from "../services/footfallService.js";
 
 const ALLOWED_DAYS = [7, 30, 90];
@@ -32,6 +32,20 @@ export const getMetrics = async (req, res) => {
   } catch (error) {
     console.error("Metrics error:", error);
     res.status(500).json({ message: "Failed to compute metrics" });
+  }
+};
+
+export const getScorecard = async (req, res) => {
+  try {
+    const [users, checkIns, approvedClubCount] = await Promise.all([
+      prisma.user.findMany({ select: { id: true, createdAt: true } }),
+      prisma.checkIn.findMany({ select: { userId: true, checkedInAt: true } }),
+      prisma.club.count({ where: { isApproved: true } }),
+    ]);
+    res.json(computePilotScorecard({ users, checkIns, approvedClubCount, now: new Date() }));
+  } catch (error) {
+    console.error("Scorecard error:", error);
+    res.status(500).json({ message: "Failed to compute scorecard" });
   }
 };
 
