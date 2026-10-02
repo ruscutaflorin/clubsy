@@ -9,6 +9,9 @@ class AuthWidget extends StatelessWidget {
   final Future<void> Function() onAuth;
   final String buttonText;
 
+  /// When set, the button is also disabled while this is false.
+  final RxBool? enabled;
+
   const AuthWidget({
     super.key,
     required this.emailController,
@@ -17,6 +20,7 @@ class AuthWidget extends StatelessWidget {
     required this.errorMessage,
     required this.onAuth,
     required this.buttonText,
+    this.enabled,
   });
 
   @override
@@ -80,7 +84,9 @@ class AuthWidget extends StatelessWidget {
         }),
         Obx(
           () => ElevatedButton(
-            onPressed: isLoading.value ? null : onAuth,
+            onPressed: isLoading.value || !(enabled?.value ?? true)
+                ? null
+                : onAuth,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.purple[200],
               padding: const EdgeInsets.symmetric(vertical: 16),

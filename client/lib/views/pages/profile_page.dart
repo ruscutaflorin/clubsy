@@ -5,6 +5,7 @@ import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
+import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
@@ -169,6 +170,20 @@ class ProfilePage extends StatelessWidget {
                     onTap: () => Get.to(() => const AdminClubsPage()),
                   )
                 : const SizedBox.shrink(),
+          ),
+          ListTile(
+            key: const Key('privacyTile'),
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Privacy Policy'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const LegalPage.privacy()),
+          ),
+          ListTile(
+            key: const Key('termsTile'),
+            leading: const Icon(Icons.description_outlined),
+            title: const Text('Terms of Use'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const LegalPage.terms()),
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),

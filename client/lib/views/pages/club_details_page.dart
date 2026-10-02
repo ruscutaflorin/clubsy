@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
-import 'package:clubsy/views/pages/check_in_page.dart';
+import 'package:clubsy/views/pages/check_in_primer_page.dart';
 
 class ClubDetailsPage extends StatelessWidget {
   final ClubModel club;
@@ -71,7 +71,7 @@ class ClubDetailsPage extends StatelessWidget {
                 child: FilledButton.icon(
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Check in'),
-                  onPressed: () => Get.to(() => CheckInPage(club: club)),
+                  onPressed: () => openCheckIn(club),
                 ),
               ),
             ],
