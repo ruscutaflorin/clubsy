@@ -13,8 +13,10 @@ Ideas beyond `TASKS.md`. The night-shift product agent appends proposals here; i
 
 The full product roadmap agreed with the user before Phase 1 was scaffolded (see
 `C:\Users\ruscu\.claude\plans\tingly-exploring-hickey.md` for the original planning context).
-Phases 2-5 are genuine future work; Phase 6 carries a hard safety constraint, not just a feature
-description.
+B1-B5 failed as single night-shift items because each is several features in one and most need
+schema changes. Each one now has a **path forward** that names the `TASKS.md` tasks it was split
+into, and what it still waits on. They stay `[!]` so the supervisor doesn't retry them whole. Build
+them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product decisions".
 
 - [!] B1 Gamification: visit streaks, weekly challenges, points balance — status: approved <!-- failed 2026-10-01: BLOCKED: no database available — B1 needs a schema change and `prisma migrate dev`, and it is also too large for a single task. -->
   - Why: core retention loop once check-in itself works.
@@ -25,6 +27,12 @@ description.
   - Acceptance: a user can see their current streak and challenge progress in the app; points
     accrue from check-ins and challenge completions.
   - Size: likely 4-6 tasks (schema, backend computation, Flutter UI).
+  - Path forward (2026-10-01): split **computed-first**, with no schema needed. TASKS 6.1 (server
+    engine: weekly streak, badge catalogue, weekly challenges, display-only points), 6.2 (Flutter
+    achievements page, unlock moment after a check-in) and 6.3 (monthly/yearly recap share card).
+    The persisted ledger is 7.8, and only once B4 decides what points buy. Streaks are **weekly**,
+    not nightly: a nightly streak would reward going out every night, which is the wrong incentive
+    for a nightlife app, and weekly matches how regulars actually behave.
 
 - [!] B2 Ratings: post-visit behavior ratings between users — status: approved <!-- failed 2026-10-01: BLOCKED: no database available. B2 needs a new `Rating` model, and the project rules require adding it with `npx prisma migrate dev`, which needs a live Postgre... -->
   - Why: requested as a safety/quality signal for who you'll meet at a club.
@@ -33,6 +41,14 @@ description.
   - Acceptance: after a shared check-in window closes, both users can rate each other once; the
     average shows on the rated user's profile.
   - Size: likely 4-5 tasks.
+  - Path forward (2026-10-01): **venue** ratings come first, with less risk and immediate value:
+    TASKS 7.4 (a private vibe rating per check-in) and 7.5 (an aggregate club score with a k >= 5
+    threshold). Person-to-person ratings need a design answer to "how did you meet this person?".
+    Sharing a club and a night isn't enough: it would let anyone rate any stranger who was at the
+    same club, which is a harassment vector. Recommended prerequisite: B3 matches or 8.1 friends,
+    so only people who interacted can rate each other. Also needed: 8.2 block/report, a rule that
+    ratings below 3 need a reason category, an appeal path, and showing averages only from 5+
+    raters. Re-scope after Phase 8.
 
 - [!] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: approved <!-- failed 2026-10-01: BLOCKED: B3 needs a dedicated design and privacy pass first, and its schema migration needs a live database (no database available). -->
   - Why: the original pitch's "algorithm similar to Tinder" for clubgoers.
@@ -43,6 +59,15 @@ description.
   - Acceptance: TBD pending a dedicated design pass — this is a bigger feature than the others and
     should get its own planning round, not a single task list.
   - Size: large; likely needs its own plan, not just backlog tasks.
+  - Path forward (2026-10-01): needs Phase 8 (friends, block/report, privacy settings) and 7.1
+    (usernames, age confirmation). Questions for the design round: (1) Opt-in per night ("I'm open
+    to meeting people tonight"), not a standing profile flag. (2) Who appears in the deck: only
+    other opted-in users checked into the same club **tonight**. Never show their check-in time,
+    and never show anyone after they leave or after 06:00. (3) What a match unlocks: recommended
+    is exchanging usernames to add as friends (8.1), so in-app chat isn't needed for v1. (4) Photos
+    need image upload, storage and moderation, which is a separate project. (5) Abuse controls:
+    rate limits on likes, report from the deck, 18+ enforced (7.1). (6) App store category and
+    age-rating impact. Write the answers here, then split into tasks.
 
 - [!] B4 Points economy & subscriptions — status: approved <!-- failed 2026-10-01: BLOCKED: B4's acceptance criteria are "TBD" and what's being sold (perks, cosmetics, partner discounts, subscription tiers) hasn't been decided. It also require... -->
   - Why: monetization + a sink for the points balance from B1.
@@ -52,6 +77,14 @@ description.
     pattern (that file was deliberately not carried into this repo — Phase 1 has no payments).
   - Acceptance: TBD — needs a decision on what's actually being sold before tasks can be written.
   - Size: large.
+  - Path forward (2026-10-01): recommended order is **venue-side revenue first** (B24 venue
+    insights, B25 venue perks), because clubs pay for verified footfall and regulars, and the
+    consumer app stays free during growth. Consumer points then get a real sink through B25 perks
+    ("500 points = free entry before midnight at Club X"), funded by the venue, not by Clubsy. A
+    consumer subscription waits until there are premium features worth paying for (e.g. unlimited
+    recap history, custom map themes, advanced stats). Note that iOS/Android digital
+    subscriptions must use in-app purchase, not Stripe, so the timeit Stripe pattern only fits
+    venue billing. Decision needed from the user: PLAN.md open decision 6.
 
 - [!] B5 Live presence map ("who's out tonight") — status: approved <!-- failed 2026-10-01: BLOCKED: B5 has no defined acceptance criteria or safety/blocking design, and the project rules forbid building the presence map without an explicit scope. -->
   - Why: the original "Snapchat map" pitch. **Deferred deliberately** for real safety reasons
@@ -62,6 +95,13 @@ description.
   - Acceptance: TBD — needs its own design/safety review pass when the time comes, including how
     blocking/reporting interacts with it.
   - Size: large; requires realtime infrastructure (websockets or similar) not present in Phase 1.
+  - Path forward (2026-10-01): a stepping stone that delivers most of the value with less risk is
+    TASKS 8.4 (a friends' nights feed shown only **after** the night ends), then "friends here
+    tonight" counts at **club level** only ("2 friends checked in here tonight", no names unless
+    each friend opted in for that night). Club-level presence needs no realtime infrastructure:
+    it's a query on tonight's check-ins plus the opt-in flag, refreshed on pull. A true live map
+    only comes after those prove safe in the pilot. The three non-negotiables above still apply to
+    every step.
 
 - [x] B6 Stop exposing club `qrSecret` to non-admin clients — status: done
   - Why: `GET /api/clubs` and `GET /api/clubs/:id` return the full `Club` row, including `qrSecret`, to any signed-in user. Anyone can then build a valid QR payload and check in remotely with spoofed GPS, which breaks the "QR scanned on-site" half of the check-in promise.
@@ -123,32 +163,203 @@ description.
   - Acceptance: Jest: `limit=abc` and `limit=1000` call `findMany` with `take` 20 and 50 respectively. Flutter: a controller test with a fake fetch shows the query is forwarded and the results are exposed. A widget test renders fixture results and marks the visited one. `pnpm test` and `flutter test` pass.
   - Size: M
 
-- [ ] B16 Check-in history grouped by night with readable dates — status: proposed
+- [ ] B16 Check-in history grouped by night with readable dates — status: promoted → TASKS.md 3.5 (build it from TASKS.md, not from here)
   - Why: `CheckInHistoryPage` prints a raw `DateTime.toLocal()` string (`2026-09-12 01:34:56.000`) in one flat list. The history is the text view of the personal map, so it should read as a diary of nights out ("Sat 12 Sep · 2 clubs"), not a debug log.
   - Scope: client-only. Add pure helpers (e.g. `client/lib/data/classes/check_in_grouping.dart`): `nightOf(DateTime local)` (a night runs 06:00 to 06:00, so 02:00 belongs to the previous evening; this matches the window proposed in B8) and `groupByNight(List<CheckInModel>)`, which returns ordered groups, newest first. Add a hand-rolled `formatNightLabel` / `formatTime` so `intl` isn't needed. In `check_in_history_page.dart`, render a section header per night ("Sat 12 Sep · 2 clubs") with tiles showing the club name, city and `HH:mm`. Keep the existing empty state and pull-to-refresh. Out: server changes and filtering.
   - Acceptance: unit tests show that 23:00 and 02:00 the next day end up in one group while 07:00 starts a new one, that groups and the items inside them are ordered newest first, and that the label format is right. A widget test pumps `CheckInHistoryPage` with fixture `myCheckIns` across two nights and finds both headers and an `HH:mm` time. `flutter test` and `flutter analyze --no-fatal-infos` pass.
   - Size: S
 
-- [ ] B17 Check-in success moment: "New place on your map!" vs "Visit #N" — status: proposed
+- [ ] B17 Check-in success moment: "New place on your map!" vs "Visit #N" — status: promoted → TASKS.md 3.6 (build it from TASKS.md, not from here)
   - Why: a successful check-in, the product's core action, currently ends with a generic snackbar and `Get.back()`. Calling out a first visit, which adds a new pin to the map, rewards the behaviour the product is built on, without needing the B1 gamification schema.
   - Scope: client-only. In `ClubController.checkIn`, return the created `CheckInModel` and update `myCheckIns`/`visitedClubIds` locally if it doesn't already. Add a pure `checkInOutcome(clubId, previousCheckIns)` that returns `{isFirstVisit, visitNumber, totalClubsVisited}`, computed before the new record is added. In `CheckInPage`, swap the snackbar for a small confirmation dialog or bottom sheet ("New place on your map! That's 7 clubs." / "Visit #3 at Club X") with a "View on map" button that pops back. Server, QR and GPS rules are unchanged. Out: points, streaks and sharing.
   - Acceptance: unit tests for `checkInOutcome` (no history gives first visit and total 1; two earlier visits to the same club give visit #3; visits to other clubs only change the total). A widget test renders the confirmation widget from a fixture outcome and finds the first-visit text. `flutter test` passes.
   - Size: S
 
-- [ ] B18 Handle expired or invalid sessions: on 401, sign out and return to login — status: proposed
+- [ ] B18 Handle expired or invalid sessions: on 401, sign out and return to login — status: promoted → TASKS.md 3.4 (merged with startup session validation) (build it from TASKS.md, not from here)
   - Why: JWTs expire, and when one does, every call in `club_service.dart`/`check_in_service.dart` fails with a generic "Failed to …" error. The map and history then look empty or broken, with no way back except reinstalling or logging out by hand.
   - Scope: client-only. Add a small shared helper (e.g. `client/lib/services/api_response.dart`) with `bool isUnauthorized(int status)`, plus an injectable `onUnauthorized` callback registered by `AuthController`. That callback calls `signOut()` and `Get.offAllNamed('/login')`, with a "Session expired, please sign in again" snackbar. `ClubService` and `CheckInService` call the helper before their existing status checks. Keep the services constructible with an injectable `http.Client` (or equivalent) so the behaviour can be tested with `MockClient` from `package:http/testing.dart`. Out: refresh tokens and server changes.
   - Acceptance: tests using `MockClient` show that a 401 from `getClubs` and from `getMyCheckIns` invokes the `onUnauthorized` callback exactly once and throws, and that a 200 does not invoke it. A controller test shows the registered callback clears the stored token. `flutter test` and `flutter analyze --no-fatal-infos` pass.
   - Size: S
 
-- [ ] B19 Delete my account and my check-in history — status: proposed
+- [ ] B19 Delete my account and my check-in history — status: promoted → TASKS.md 5.3 (build it from TASKS.md, not from here)
   - Why: Clubsy stores a timestamped history of where a user goes at night, which is sensitive location data. Users need a way to erase it, and the App Store and Play require in-app account deletion before the app can ship.
   - Scope: server: `DELETE /api/auth/me` (authMiddleware) in `authController.js`/`authRoutes.js`. It requires the current `password` in the body (bcrypt compare), validated with `express-validator`. It then runs `prisma.$transaction([checkIn.deleteMany({where:{userId}}), user.delete({where:{id}})])` and returns 204. The last remaining ADMIN account can't be deleted (409). No schema change. Client: `deleteAccount(password)` in `auth_service.dart`, and a "Delete account" tile on `ProfilePage` with a confirm dialog and password field; on success it signs out and goes to `/login`. Out: data export and a soft-delete grace period. The human may want to review the wording of the confirm dialog.
   - Acceptance: Jest tests with mocked Prisma: a wrong password gets 401 and `$transaction` is never called; a correct password gets 204 and `$transaction` is called with the check-in delete before the user delete; with no token it gets 401. A Flutter widget test shows that the Profile tile opens a confirm dialog containing a password field. `pnpm test` and `flutter test` pass.
   - Size: M
 
-- [ ] B20 Remove a single check-in from my map — status: proposed
+- [ ] B20 Remove a single check-in from my map — status: promoted → TASKS.md 5.4 (build it from TASKS.md, not from here)
   - Why: a personal map is only personal if the user controls it. Someone may want to drop a visit they'd rather not keep (a bad night, a place they don't want on their record) without deleting their whole account (B19).
   - Scope: server: `DELETE /api/check-ins/:id` in `checkInController.js`/`checkInRoutes.js`. It looks the row up by id, returns 404 if it doesn't exist or `userId !== req.user.id` (don't leak whether other users' check-ins exist), and otherwise deletes it and returns 204. No schema change. Client: `deleteCheckIn(id)` in `check_in_service.dart`. `ClubController.removeCheckIn(id)` updates `myCheckIns` and recomputes `visitedClubIds`, so a club's pin goes back to unvisited once its last check-in is removed. Swipe-to-delete with a confirm on `CheckInHistoryPage`. Out: undo and admin moderation.
   - Acceptance: Jest tests with mocked Prisma: the owner gets 204 and `checkIn.delete` is called; another user's check-in gets 404 and no delete happens; an unknown id gets 404. A Flutter controller test with a fake service shows that removing a club's only check-in drops it from `visitedClubIds`, while removing one of two keeps it. `pnpm test` and `flutter test` pass.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-01. These sit beyond the pilot scope in `TASKS.md` Phases 2-8.
+Most need a human decision or an external account first, as noted in each item. Approve the ones
+you want, and they'll be split into `TASKS.md` tasks.
+
+- [ ] B21 Push notifications, opt-in and granular — status: proposed
+  - Why: the strongest retention lever for a weekly habit. Examples: "Keep your 3-week streak
+    going: one night out this week does it" (Thursday 18:00 local), "Your September recap is
+    ready", "How was Club X last night?" (the 7.4 vibe prompt), and friend requests (8.1).
+  - Scope: Firebase Cloud Messaging (Android plus APNs through FCM). A `DeviceToken {userId, token,
+    platform, updatedAt}` model. Per-category toggles in Profile, all off until the user opts in
+    on a primer screen, never on first launch. A server `notificationService.js` with an
+    injectable sender and a daily job runner (host cron hitting an admin-only endpoint).
+    Quiet hours: nothing between 02:00 and 10:00 local.
+  - Needs: a Firebase project and APNs key (human), and 7.0 for the schema.
+  - Acceptance: a user who enabled only streak reminders gets only those; no notification ever
+    contains another user's name or location.
+  - Size: L (2-3 tasks).
+
+- [ ] B22 Crash reporting and privacy-safe product analytics — status: proposed
+  - Why: during the pilot we're blind to crashes on real devices and to where users drop off
+    (signup → first check-in → second night). The `PLAN.md` metrics from the server (4.3) cover
+    outcomes, not funnels or crashes.
+  - Scope: Sentry for Flutter and Node (DSN from env, `sendDefaultPii: false`, scrub request bodies
+    and coordinates). A tiny analytics wrapper with about 10 named events (`signup_completed`,
+    `checkin_scan_started`, `checkin_failed{reason}`, `checkin_succeeded{firstVisit}`,
+    `recap_shared`, and so on), never carrying coordinates, club names or user ids in clear text.
+    Send them to a privacy-friendly tool (e.g. PostHog EU or self-hosted) behind a consent toggle
+    that defaults to off where the law requires it.
+  - Needs: accounts or DSNs (human), and an update to the privacy policy (5.7).
+  - Acceptance: a forced test crash shows up in Sentry with a release tag; the event schema is
+    documented in `docs/analytics.md`; a unit test shows events contain no lat/lng keys.
+  - Size: M.
+
+- [ ] B23 Localization: English and Romanian (or the pilot market's language) — status: proposed
+  - Why: if the pilot city is in Romania (the test fixtures sit at 45°N 25°E), a native-language
+    UI noticeably improves signup conversion, and the legal copy has to be in the local language
+    anyway.
+  - Scope: `flutter_localizations` + `intl` with ARB files, extract every user-facing string, and
+    locale-aware dates (this replaces the hand-rolled formatters from 3.5). The server keeps
+    English `message` text but adds a stable `code` (e.g. `CHECKIN_TOO_FAR`) to every error so the
+    client can show localized text. Add a language override in Profile.
+  - Acceptance: a widget test pumps key pages in both locales, and no user-facing string literals
+    remain outside the ARB files (spot-checked in review).
+  - Size: M-L.
+
+- [ ] B24 Venue partner portal: verified footfall insights for clubs (the first revenue path) — status: proposed
+  - Why: venues get real value from verified, de-duplicated visit data (how many unique guests,
+    how many came back, which nights work), and they can pay for it. This funds a free consumer
+    app (see B4's path forward).
+  - Scope: a `VENUE_MANAGER` role and a `ClubManager {userId, clubId}` relation. Admins assign
+    managers. Endpoints scoped to the managed club: check-ins per night (last 12 weeks), unique
+    visitors, a returning-visitor rate, a hour-of-night histogram, and the share of first-time
+    visitors. **All aggregates use k-anonymity ≥ 5** and never return user identities. Managers
+    can also view and rotate their own QR and display link (TASKS 6.4). Build it as an in-app section
+    first; a web dashboard can come later.
+  - Needs: open decision 6 (monetization) and 7.0.
+  - Acceptance: a manager of club A gets 403 on club B; any bucket with fewer than 5 users is
+    suppressed; no response contains user ids.
+  - Size: L (3-4 tasks).
+
+- [ ] B25 Venue perks for regulars — status: proposed
+  - Why: gives check-ins and points a real-world payoff ("your 5th visit: free entry before
+    midnight") that venues fund, and gives venues a reason to promote Clubsy at the door, which is
+    the best acquisition channel there is.
+  - Scope: a `Perk {clubId, title, rule: {type: VISIT_COUNT|POINTS, threshold}, activeFrom,
+    activeTo, maxPerUser}` model and `PerkRedemption`. Users see the perks they've unlocked on the
+    club page. Redemption shows a 60-second one-time code that staff validate in the venue manager
+    view (B24). Abuse: one redemption per perk per night, and codes are bound to the user and the
+    night.
+  - Needs: B24 and 7.8 (points ledger, if perks cost points).
+  - Size: L.
+
+- [ ] B26 "Suggest a club" from users, with admin review — status: proposed
+  - Why: in a new city the club list is the product's biggest gap. Users standing outside an
+    unlisted venue are the best source of new venues, and each suggestion is a sales lead for B24.
+  - Scope: a `ClubSuggestion {userId, name, address, city, lat, lng, note, status, createdAt}`
+    model. A "Club missing? Suggest it" entry in search results and on an empty map. Rate-limit to
+    5 per user per day. An admin queue in the console (Phase 4) where approving pre-fills the 4.2
+    create form. Notify the suggester when their club goes live (B21).
+  - Size: M.
+
+- [ ] B27 Enforce rotating-only QR per club — status: proposed
+  - Why: TASKS 6.4 accepts both the static and the rotating payloads so printed QRs keep working.
+    Once a venue has a display screen running, its static QR should stop working.
+  - Scope: `Club.qrMode enum(STATIC, ROTATING) @default(STATIC)`, an admin/manager toggle with a
+    warning, and `verifyClubQrPayload` respecting the mode. The metrics (4.3) show the static vs.
+    rotating mix.
+  - Size: S (after 6.4 and 7.0).
+
+- [ ] B28 Production map tiles, marker clustering and a dark map style — status: proposed
+  - Why: `ClubMapPage` uses `tile.openstreetmap.org`, and OSM's tile usage policy doesn't allow
+    heavy production use, so it has to change before a public launch. A city with 50+ clubs also
+    becomes an unreadable cluster of pins, and the bright default tiles clash with a nightlife app
+    that's mostly used at night.
+  - Scope: a tile provider with an API key from `--dart-define` (e.g. MapTiler or Stadia; a human
+    picks it and creates the account), a dark style by default with light style following the app
+    theme, correct attribution, `flutter_map_marker_cluster` with visited/unvisited counts per
+    cluster, and tile caching for basements with poor signal.
+  - Size: M.
+
+- [ ] B29 Visual identity pass: brand, typography, icon, splash and empty-state art — status: proposed
+  - Why: the app still carries timeit's look (teal on navy, a carried-over Lottie animation, and
+    `fontFamily: 'Poppins'` in `client/lib/data/constants.dart` with no font bundled in
+    `pubspec.yaml`, so it silently falls back). Recap cards (6.3) are shared publicly, so the brand
+    is visible outside the app too.
+  - Scope: a design decision first (palette, type, logo; human or designer). Then bundle the fonts,
+    centralise the theme in `client/lib/src/core/theme/app_theme.dart` (remove the duplicate theme
+    in `constants.dart`), app icons via `flutter_launcher_icons`, a splash via
+    `flutter_native_splash`, badge artwork for 6.2, and illustrations for empty states.
+  - Size: M (after the design input).
+
+- [ ] B30 Deep links and shareable club pages — status: proposed
+  - Why: shares from 6.3 recaps, 6.5 club shares and B26 should open the app at the right club, or
+    show a web page with store links when the app isn't installed, which turns every share into
+    an install path.
+  - Scope: a domain (open decision 2), Android App Links and iOS Universal Links for `/c/:clubId`,
+    and a small server-rendered public club page (name, city, photo, "Get Clubsy"). It must never
+    show visitor counts below k = 5 or any user data. GetX route handling for the incoming link.
+  - Size: M.
+
+- [ ] B31 Sign in with Apple and Google — status: proposed
+  - Why: signup friction at a club entrance is high (typing an email and password on a phone in
+    the dark). One-tap sign-in raises activation, which is our first pilot metric.
+  - Scope: `google_sign_in` and `sign_in_with_apple`. The server verifies ID tokens and links them
+    to a `UserIdentity {provider, subject}` model, with email matching only for verified emails.
+    Apple's guideline requires Sign in with Apple if Google sign-in is offered on iOS. The 5.1
+    consent checkboxes still apply.
+  - Needs: Apple developer and Google Cloud console setup (human), and 7.0.
+  - Size: M-L.
+
+- [ ] B32 Accessibility pass — status: proposed
+  - Why: the map and the camera scanner are the core flows, and both are unusable with a screen
+    reader today (markers are bare icons, and status messages aren't announced).
+  - Scope: `Semantics` labels on map markers ("Club X, visited 3 times"), a list alternative to the
+    map (the B15 search covers part of this), live-region announcements for check-in status, 4.5:1
+    contrast on the dark theme, layouts that survive 200% text scale, and tap targets of at least
+    48 px.
+  - Acceptance: `flutter test` with `meetsGuideline(textContrastGuideline)` and
+    `androidTapTargetGuideline` on the main pages.
+  - Size: S-M.
+
+- [ ] B33 "How busy is it tonight?" on club pages (aggregate only) — status: proposed
+  - Why: the most-asked question before going out. Verified check-ins answer it honestly, without
+    revealing anyone.
+  - Scope: club responses get `tonight: "quiet" | "getting busy" | "packed" | null`, bucketed from
+    distinct check-ins in the current night relative to that club's own 8-week median. It's `null`
+    below 5 check-ins tonight (k-anonymity), and the exact count is never exposed. No schema change.
+  - Safety note: this is aggregate venue data, not presence of people. It's allowed under the B5
+    principles because no individual can be inferred. Keep the threshold.
+  - Size: S.
+
+- [ ] B34 Integration tests against a real Postgres — status: proposed
+  - Why: the mocked-Prisma tests can't catch query bugs (wrong `where` shape, missing `include`,
+    transaction order, unique-constraint behaviour), and Phase 7 adds a lot of real queries.
+  - Scope: after 7.0, a `pnpm test:int` suite that runs `prisma migrate reset --force` against the
+    docker database, seeds it with 2.5's `buildSeedClubs`, and runs the key flows over supertest
+    (signup → check-in → stats → delete account). Add it to CI (2.6) with a Postgres service
+    container. Keep the night-shift gate on the unit suite unless the service is reliable.
+  - Size: M.
+
+- [ ] B35 Check-in data retention — status: proposed
+  - Why: keeping precise visit history forever is a liability. A clear retention rule (decided in
+    5.7) is also a selling point ("we keep your history only as long as you want").
+  - Scope: depends on the legal decision. Options: (a) keep it forever but let the user set
+    auto-delete after 1 or 2 years; (b) drop `distanceMeters` and coarsen `checkedInAt` to the
+    night date after 90 days (the map and history still work; precise times go). A scheduled job
+    endpoint (admin-only, triggered by host cron), plus tests on fixed dates.
+  - Size: S-M.
