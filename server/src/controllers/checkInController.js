@@ -2,6 +2,7 @@ import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
 import { verifyClubQrPayload } from "../services/venueQrService.js";
 import { distanceInMeters } from "../utils/geo.js";
+import { isImpossibleTravel } from "../utils/travel.js";
 import { nightStart, nightEnd } from "../utils/night.js";
 import { computeCheckInStats, computeCityProgress } from "../services/statsService.js";
 import { computeAchievements } from "../services/gamificationService.js";
@@ -61,6 +62,29 @@ export const checkIn = async (req, res) => {
     if (existingTonight) {
       logFailure("already_checked_in", userId, clubId);
       return res.status(409).json({ message: "You've already checked in at this club tonight" });
+    }
+
+    const previous = await prisma.checkIn.findFirst({
+      where: { userId },
+      orderBy: { checkedInAt: "desc" },
+      include: { club: true },
+    });
+
+    if (
+      previous &&
+      isImpossibleTravel(
+        {
+          latitude: previous.club.latitude,
+          longitude: previous.club.longitude,
+          at: previous.checkedInAt,
+        },
+        { latitude: club.latitude, longitude: club.longitude, at: now }
+      )
+    ) {
+      logFailure("implausible_travel", userId, clubId);
+      return res
+        .status(400)
+        .json({ message: "This check-in doesn't match your previous one. Try again later." });
     }
 
     const checkInRecord = await prisma.checkIn.create({
