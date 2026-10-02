@@ -324,7 +324,7 @@ history) feel finished. No schema changes.
         is true only for ADMIN. `flutter test` and `flutter analyze --no-fatal-infos` pass.
       - Depends on: 2.1 (route and 401s), 3.1.
 
-- [ ] 3.5 Check-in history as a diary of nights, with readable dates (absorbs `BACKLOG.md` B16).
+- [x] 3.5 Check-in history as a diary of nights, with readable dates (absorbs `BACKLOG.md` B16).
       - Goal: `CheckInHistoryPage` prints a raw `DateTime.toLocal()` string
         (`2026-09-12 01:34:56.000`) in one flat list. The history is the text view of the personal
         map and should read like a diary ("Sat 12 Sep · 2 clubs"), not a debug log.
