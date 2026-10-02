@@ -183,7 +183,7 @@ defaults, and a one-command local dev setup. No schema changes.
         output across calls, and no field named `qrSecret` in the pure output (secrets are added at
         write time). `node --check server/prisma/seed.js` exits 0. `pnpm test` passes.
 
-- [ ] 2.6 Continuous integration on GitHub Actions mirroring the night-shift gates.
+- [x] 2.6 Continuous integration on GitHub Actions mirroring the night-shift gates.
       - Goal: every push and PR to `develop`/`main` runs the same checks the night shift trusts, so
         human commits can't silently break the gates.
       - Scope: `.github/workflows/ci.yml` with two jobs. **server**: `pnpm/action-setup` (version
