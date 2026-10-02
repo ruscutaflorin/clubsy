@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:clubsy/services/location_lookup.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_map_filtering.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -9,16 +10,51 @@ import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/views/pages/club_search_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
-class ClubMapPage extends StatelessWidget {
+class ClubMapPage extends StatefulWidget {
   const ClubMapPage({super.key});
 
+  @override
+  State<ClubMapPage> createState() => _ClubMapPageState();
+}
+
+class _ClubMapPageState extends State<ClubMapPage> {
   static const LatLng _defaultCenter = LatLng(51.509865, -0.118092); // London
+
+  final MapController _mapController = MapController();
+
+  Future<void> _centreOnMe() async {
+    final position = await positionIfPermitted();
+    if (position == null) {
+      // Never prompt from the map: explain, the check-in flow asks.
+      await Get.dialog(
+        AlertDialog(
+          title: const Text('Location is off'),
+          content: const Text(
+            'Clubsy only reads your location when you check in, to confirm '
+            'you are at the club. You will be asked the first time you check '
+            'in.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Get.back(), child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
+    _mapController.move(LatLng(position.latitude, position.longitude), 15);
+  }
 
   @override
   Widget build(BuildContext context) {
     final clubController = Get.find<ClubController>();
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        key: const Key('nearMeFab'),
+        tooltip: 'Near me',
+        onPressed: _centreOnMe,
+        child: const Icon(Icons.my_location),
+      ),
       body: RefreshIndicator(
         onRefresh: clubController.refresh,
         child: Obx(() {
@@ -35,6 +71,7 @@ class ClubMapPage extends StatelessWidget {
           return Stack(
             children: [
               FlutterMap(
+                mapController: _mapController,
                 options: MapOptions(
                   initialCenter: _defaultCenter,
                   initialZoom: 13,

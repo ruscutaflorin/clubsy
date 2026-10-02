@@ -53,6 +53,8 @@ void main() {
       expect(find.text('1 Main St, Cluj'), findsOneWidget);
       expect(find.text('Check in'), findsOneWidget);
       expect(find.text('Checked in before'), findsNothing);
+      expect(find.text('Not on your map yet'), findsOneWidget);
+      expect(find.text('Directions'), findsOneWidget);
     });
 
     testWidgets('shows visited chip and a 1-visit summary with one check-in', (
@@ -64,6 +66,7 @@ void main() {
 
       expect(find.text('Checked in before'), findsOneWidget);
       expect(find.textContaining('1 visit ·'), findsOneWidget);
+      expect(find.text('Not on your map yet'), findsNothing);
     });
 
     testWidgets('shows a plural visit count with multiple check-ins', (
