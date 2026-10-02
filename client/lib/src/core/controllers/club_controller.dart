@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:get/get.dart';
+import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_outcome.dart';
@@ -28,6 +29,7 @@ class ClubController extends GetxController {
   final clubs = <ClubModel>[].obs;
   final myCheckIns = <CheckInModel>[].obs;
   final Rxn<CheckInStatsModel> stats = Rxn<CheckInStatsModel>();
+  final Rxn<AchievementsModel> achievements = Rxn<AchievementsModel>();
   final isLoading = false.obs;
   final visitedOnly = false.obs;
 
@@ -77,10 +79,13 @@ class ClubController extends GetxController {
         _clubService.getClubs(),
         _checkInService.getMyCheckIns(),
         _checkInService.getMyStats(),
+        _loadAchievements(),
       ]);
       clubs.value = results[0] as List<ClubModel>;
       myCheckIns.value = results[1] as List<CheckInModel>;
       stats.value = results[2] as CheckInStatsModel;
+      achievements.value =
+          results[3] as AchievementsModel? ?? achievements.value;
       loadError.value = null;
       isOffline.value = false;
       dataSavedAt.value = DateTime.now();
@@ -108,7 +113,10 @@ class ClubController extends GetxController {
     }
   }
 
-  Future<({CheckInModel record, CheckInOutcome outcome})> checkIn({
+  Future<
+    ({CheckInModel record, CheckInOutcome outcome, List<BadgeModel> unlocked})
+  >
+  checkIn({
     required String clubId,
     required String qrPayload,
     required double latitude,
@@ -133,7 +141,14 @@ class ClubController extends GetxController {
     myCheckIns.insert(0, checkInRecord);
     // Fire and forget: the success UI must not wait on (or fail with) stats.
     unawaited(_refreshStats());
-    return (record: checkInRecord, outcome: outcome);
+    final before = achievements.value;
+    final after = await _loadAchievements();
+    if (after != null) achievements.value = after;
+    return (
+      record: checkInRecord,
+      outcome: outcome,
+      unlocked: newlyEarned(before, after),
+    );
   }
 
   /// Removes a check-in from the map. Optimistic: the list updates at once and
@@ -150,6 +165,18 @@ class ClubController extends GetxController {
       rethrow;
     }
     await _refreshStats();
+    final after = await _loadAchievements();
+    if (after != null) achievements.value = after;
+  }
+
+  /// Null when achievements can't be loaded: they're never worth failing a
+  /// refresh or a check-in over.
+  Future<AchievementsModel?> _loadAchievements() async {
+    try {
+      return await _checkInService.getMyAchievements();
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _refreshStats() async {

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
@@ -140,6 +141,10 @@ class _FakeCheckInService implements CheckInService {
     if (statsFail) throw Exception('boom');
     return CheckInStatsModel(totalCheckIns: 5, uniqueClubs: 3, uniqueCities: 1);
   }
+
+  @override
+  Future<AchievementsModel> getMyAchievements() async =>
+      const AchievementsModel(currentStreak: 1);
 
   @override
   Future<List<CheckInModel>> getMyCheckIns() async => [];
