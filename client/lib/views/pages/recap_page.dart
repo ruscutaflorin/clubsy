@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:clubsy/data/classes/nights_calendar.dart';
 import 'package:clubsy/data/classes/recap.dart';
 import 'package:clubsy/widgets/nights_calendar.dart';
+import 'package:clubsy/widgets/yearly_goal_card.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
 const _months = [
@@ -205,6 +206,7 @@ class _RecapPageState extends State<RecapPage> {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            const YearlyGoalCard(),
             DropdownButton<int?>(
               key: const Key('recapPeriod'),
               value: _year,
