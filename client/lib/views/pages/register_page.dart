@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
+import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/widget_tree.dart';
 import 'package:clubsy/widgets/auth_widget.dart';
 
@@ -15,6 +16,11 @@ class RegisterPage extends StatelessWidget {
     final authController = Get.find<AuthController>();
     final isLoading = false.obs;
     final errorMessage = RxnString();
+    final isAdult = false.obs;
+    final acceptedTerms = false.obs;
+    final canRegister = false.obs;
+    void updateCanRegister() =>
+        canRegister.value = isAdult.value && acceptedTerms.value;
 
     Future<void> handleRegister() async {
       if (emailController.text.isEmpty ||
@@ -83,6 +89,54 @@ class RegisterPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                Obx(
+                  () => CheckboxListTile(
+                    key: const Key('ageCheckbox'),
+                    value: isAdult.value,
+                    onChanged: (v) {
+                      isAdult.value = v ?? false;
+                      updateCanRegister();
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      "I'm 18 or older",
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ),
+                Obx(
+                  () => CheckboxListTile(
+                    key: const Key('termsCheckbox'),
+                    value: acceptedTerms.value,
+                    onChanged: (v) {
+                      acceptedTerms.value = v ?? false;
+                      updateCanRegister();
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      'I accept the Terms and Privacy Policy',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      key: const Key('termsLink'),
+                      onPressed: () => Get.to(() => const LegalPage.terms()),
+                      child: const Text('Terms'),
+                    ),
+                    TextButton(
+                      key: const Key('privacyLink'),
+                      onPressed: () => Get.to(() => const LegalPage.privacy()),
+                      child: const Text('Privacy Policy'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
                 AuthWidget(
                   emailController: emailController,
                   passwordController: passwordController,
@@ -90,6 +144,7 @@ class RegisterPage extends StatelessWidget {
                   errorMessage: errorMessage,
                   onAuth: handleRegister,
                   buttonText: 'Sign Up',
+                  enabled: canRegister,
                 ),
                 const SizedBox(height: 24),
                 TextButton(
