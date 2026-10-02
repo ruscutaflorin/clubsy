@@ -189,9 +189,8 @@ defaults, and a one-command local dev setup. No schema changes.
       - Scope: `.github/workflows/ci.yml` with two jobs. **server**: `pnpm/action-setup` (version
         from `packageManager` in `server/package.json`), Node 20, `pnpm install
         --frozen-lockfile`, `pnpm test`, and `npx prisma validate` with a dummy `DATABASE_URL`.
-        **client**: `subosito/flutter-action` pinned to the Flutter version that satisfies
-        `client/pubspec.yaml` (`sdk: ^3.13.3`; read the exact version from `flutter --version` in
-        the session), then `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter
+        **client**: `subosito/flutter-action` with `channel: stable` and `flutter-version: 3.47.3`
+        (the local toolchain: Flutter 3.47.3 / Dart 3.13.3, satisfies `sdk: ^3.13.3`), then `flutter pub get`, `dart format --set-exit-if-changed .`, `flutter
         analyze --no-fatal-infos` and `flutter test`. Cache the pnpm store and the pub cache.
         Trigger on push and pull_request for `develop` and `main`. Add a CI badge line to the
         README if 2.5 has landed.
