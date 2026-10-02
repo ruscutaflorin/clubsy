@@ -78,7 +78,7 @@
                                    "cd server \u0026\u0026 pnpm install"
                                ],
                      "copy":  [
-
+                                  "server/.env"
                               ]
                  }
 }
