@@ -31,6 +31,9 @@ class ClubController extends GetxController {
   final myCheckIns = <CheckInModel>[].obs;
   final Rxn<CheckInStatsModel> stats = Rxn<CheckInStatsModel>();
   final Rxn<AchievementsModel> achievements = Rxn<AchievementsModel>();
+
+  /// Session-only: the streak nudge stays hidden once dismissed.
+  final streakNudgeDismissed = false.obs;
   final cityProgress = <CityProgressModel>[].obs;
   final isLoading = false.obs;
   final visitedOnly = false.obs;
