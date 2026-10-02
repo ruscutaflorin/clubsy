@@ -46,20 +46,29 @@
                                       "Bash(node -e:*)",
                                       "Bash(node --check:*)",
                                       "Bash(timeout 5 node src/index.js:*)",
-                                      "Bash(timeout 5 node server/src/index.js:*)",
-                                      "WebFetch",
-                                      "PowerShell",
-                                      "Bash(git:*)",
-                                      "Bash(gh pr:*)",
-                                      "Bash(gh run:*)",
-                                      "Bash(nightshift:*)"
+                                      "Bash(timeout 5 node server/src/index.js:*)"
                                   ],
                         "deny":  [
-                                     "Bash(git push --force:*)",
-                                     "Bash(git push -f:*)",
-                                     "Bash(git push origin main:*)",
-                                     "Bash(git reset --hard:*)"
-                                 ],
-                        "defaultMode":  "acceptEdits"
+                                     "Edit(.nightshift/**)",
+                                     "Edit(/.nightshift/**)",
+                                     "Edit(.claude/**)",
+                                     "Edit(/.claude/**)",
+                                     "Edit(CLAUDE.md)",
+                                     "Edit(/CLAUDE.md)",
+                                     "Bash(git push:*)",
+                                     "Bash(git reset:*)",
+                                     "Bash(git rebase:*)",
+                                     "Bash(git merge:*)",
+                                     "Bash(git switch:*)",
+                                     "Bash(git branch:*)",
+                                     "Bash(git stash:*)",
+                                     "Bash(git clean:*)",
+                                     "Bash(git remote:*)",
+                                     "Bash(rm -rf:*)",
+                                     "Bash(curl:*)",
+                                     "Bash(wget:*)",
+                                     "PowerShell",
+                                     "WebFetch"
+                                 ]
                     }
 }
