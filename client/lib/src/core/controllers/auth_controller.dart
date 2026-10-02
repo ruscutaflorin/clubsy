@@ -120,6 +120,12 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Deletes the account server-side, then clears the local session and cache.
+  Future<void> deleteAccount(String password) async {
+    await _authService.deleteAccount(password);
+    await signOut();
+  }
+
   Future<void> signOut() async {
     debugPrint('AuthController: Signing out user...');
     await _authService.signOut();

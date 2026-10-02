@@ -55,6 +55,16 @@ class AuthService {
     return await _api.get('/auth/me/export') as Map<String, dynamic>;
   }
 
+  /// Permanently deletes the account and all check-ins (`DELETE /auth/me`).
+  /// A wrong password is a 401 that must not end the session.
+  Future<void> deleteAccount(String password) async {
+    await _api.delete(
+      '/auth/me',
+      body: {'password': password},
+      expireSession: false,
+    );
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(tokenKey);

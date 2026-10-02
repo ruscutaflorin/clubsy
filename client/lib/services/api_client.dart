@@ -95,8 +95,20 @@ class ApiClient {
     bool authenticated = true,
   }) => _send('PATCH', path, body: body, authenticated: authenticated);
 
-  Future<dynamic> delete(String path, {bool authenticated = true}) =>
-      _send('DELETE', path, authenticated: authenticated);
+  /// [expireSession] false: a 401 is an answer to this request (e.g. a wrong
+  /// password), not an expired session, so don't sign the user out.
+  Future<dynamic> delete(
+    String path, {
+    Object? body,
+    bool authenticated = true,
+    bool expireSession = true,
+  }) => _send(
+    'DELETE',
+    path,
+    body: body,
+    authenticated: authenticated,
+    expireSession: expireSession,
+  );
 
   Future<dynamic> _send(
     String method,
@@ -104,6 +116,7 @@ class ApiClient {
     Map<String, String>? query,
     Object? body,
     required bool authenticated,
+    bool expireSession = true,
   }) async {
     final headers = {'Content-Type': 'application/json'};
     if (authenticated) {
@@ -138,7 +151,7 @@ class ApiClient {
         throw ApiException(response.statusCode, 'Unexpected server response');
       }
     }
-    if (response.statusCode == 401 && authenticated) {
+    if (response.statusCode == 401 && authenticated && expireSession) {
       (onUnauthorized ?? globalOnUnauthorized)?.call();
     }
     throw ApiException.fromResponse(response.statusCode, response.body);

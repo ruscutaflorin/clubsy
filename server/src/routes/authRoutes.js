@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
+import { deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { authLimiter } from '../middlewares/rateLimiters.js';
 
@@ -28,5 +28,13 @@ router.get('/me', authMiddleware, getCurrentUser);
 
 // Download my data (GDPR export)
 router.get('/me/export', authMiddleware, exportMyData);
+
+// Delete my account and all my check-ins
+router.delete(
+  '/me',
+  authMiddleware,
+  body('password').notEmpty().withMessage('Password is required'),
+  deleteMyAccount
+);
 
 export default router;
