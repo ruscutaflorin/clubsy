@@ -637,7 +637,7 @@ computed from `CheckIn` history so it needs no migration. This is the first, sch
         "Hide club names" is on. `flutter test` passes.
       - Depends on: share_plus from 4.2 or 5.2 (or add it here).
 
-- [ ] 6.4 Rotating venue QR (TOTP-style) plus a venue display page, to stop photographed QR codes
+- [x] 6.4 Rotating venue QR (TOTP-style) plus a venue display page, to stop photographed QR codes
       from working remotely.
       - Goal: the static QR can be photographed once and reused from home with spoofed GPS. A code
         that changes every 30 s on a screen at the door makes a shared photo useless within a
