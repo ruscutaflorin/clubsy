@@ -617,7 +617,7 @@ computed from `CheckIn` history so it needs no migration. This is the first, sch
         progress text. `flutter test` passes.
       - Depends on: 6.1.
 
-- [ ] 6.3 "Your nights" recap: a monthly and yearly summary with a shareable image card.
+- [x] 6.3 "Your nights" recap: a monthly and yearly summary with a shareable image card.
       - Goal: Spotify-Wrapped-style recaps are the cheapest growth loop for a diary product. Every
         share is a free ad, and the card only shows what the user chose to share.
       - Scope: client-only, computed from `myCheckIns`. Pure

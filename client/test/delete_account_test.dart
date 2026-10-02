@@ -30,6 +30,9 @@ void main() {
     Get.put(AuthController(authService: fake));
     Get.put(ThemeController());
     Get.put(ClubController());
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(const MaterialApp(home: ProfilePage()));
     await tester.pump();
 
