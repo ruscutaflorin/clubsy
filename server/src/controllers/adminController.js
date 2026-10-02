@@ -6,7 +6,9 @@ import {
   computeDistanceHealth,
 } from "../services/footfallService.js";
 
-const ALLOWED_DAYS = [7, 30, 90];
+import { findClubDataIssues } from "../services/clubDataService.js";
+
+const ALLOWED_DAYS =[7, 30, 90];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const getMetrics = async (req, res) => {
@@ -113,5 +115,24 @@ export const getClubRanking = async (req, res) => {
   } catch (error) {
     console.error("Club ranking error:", error);
     res.status(500).json({ message: "Failed to compute club ranking" });
+  }
+};
+
+export const getClubDataHealth = async (req, res) => {
+  try {
+    const clubs = await prisma.club.findMany({
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        latitude: true,
+        longitude: true,
+        isApproved: true,
+      },
+    });
+    res.json(findClubDataIssues(clubs));
+  } catch (error) {
+    console.error("Club data health error:", error);
+    res.status(500).json({ message: "Failed to compute club data health" });
   }
 };

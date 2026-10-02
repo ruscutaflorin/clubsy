@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/admin_controller.dart';
+import 'package:clubsy/views/pages/admin/admin_club_data_health_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_qr_page.dart';
@@ -46,6 +47,12 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
       appBar: AppBar(
         title: const Text('Admin · Clubs'),
         actions: [
+          IconButton(
+            key: const Key('openClubDataHealth'),
+            tooltip: 'Data health',
+            icon: const Icon(Icons.rule),
+            onPressed: () => Get.to(() => const AdminClubDataHealthPage()),
+          ),
           IconButton(
             key: const Key('adminMetrics'),
             tooltip: 'Pilot metrics',

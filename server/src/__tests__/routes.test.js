@@ -321,6 +321,33 @@ describe("admin club ranking route", () => {
   });
 });
 
+describe("admin club data health route", () => {
+  it("returns 401 without a token", async () => {
+    const res = await request(app).get("/api/admin/clubs/data-health");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 403 for a non-admin", async () => {
+    const res = await request(app).get("/api/admin/clubs/data-health").set(auth(userToken));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns 200 with the three lists and no qrSecret for an admin", async () => {
+    clubFindMany.mockResolvedValue([
+      { id: "c1", name: "Zero", city: "X", latitude: 0, longitude: 0, isApproved: false },
+    ]);
+    const res = await request(app).get("/api/admin/clubs/data-health").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual([
+      "farFromCity",
+      "invalidCoordinates",
+      "nearDuplicates",
+    ]);
+    expect(res.body.invalidCoordinates).toHaveLength(1);
+    expect(JSON.stringify(res.body)).not.toContain("qrSecret");
+  });
+});
+
 describe("admin club footfall route", () => {
   it("returns 403 for a non-admin", async () => {
     const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(userToken));

@@ -1,3 +1,4 @@
+import 'package:clubsy/data/classes/club_data_health_model.dart';
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/club_ranking_model.dart';
@@ -67,6 +68,11 @@ class AdminService {
   Future<ClubRankingModel> getClubRanking() async {
     final data = await _api.get('/admin/clubs/ranking');
     return ClubRankingModel.fromJson(Map<String, dynamic>.from(data));
+  }
+
+  Future<ClubDataHealthModel> getClubDataHealth() async {
+    final data = await _api.get('/admin/clubs/data-health');
+    return ClubDataHealthModel.fromJson(Map<String, dynamic>.from(data));
   }
 
   Future<ClubFootfallModel> getClubFootfall(String id) async {

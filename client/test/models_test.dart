@@ -1,4 +1,5 @@
 import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/club_data_health_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/club_ranking_model.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +79,38 @@ void main() {
 
     test('defaults to an empty list without clubs', () {
       expect(ClubRankingModel.fromJson({}).clubs, isEmpty);
+    });
+  });
+
+  group('ClubDataHealthModel', () {
+    test('parses a fixture', () {
+      final m = ClubDataHealthModel.fromJson({
+        'invalidCoordinates': [
+          {'id': 'c1', 'name': 'Zero', 'city': 'Cluj'},
+        ],
+        'nearDuplicates': [
+          {
+            'a': {'id': 'c2', 'name': 'Club X'},
+            'b': {'id': 'c3', 'name': 'Club X Bar'},
+            'meters': 12,
+            'sameName': false,
+          },
+        ],
+        'farFromCity': [
+          {'id': 'c4', 'name': 'Club Y', 'city': 'Cluj', 'km': 41.3},
+        ],
+      });
+      expect(m.invalidCoordinates.single.name, 'Zero');
+      expect(m.nearDuplicates.single.b.name, 'Club X Bar');
+      expect(m.nearDuplicates.single.meters, 12);
+      expect(m.farFromCity.single.km, 41.3);
+    });
+
+    test('defaults missing lists to empty', () {
+      final m = ClubDataHealthModel.fromJson({});
+      expect(m.invalidCoordinates, isEmpty);
+      expect(m.nearDuplicates, isEmpty);
+      expect(m.farFromCity, isEmpty);
     });
   });
 }
