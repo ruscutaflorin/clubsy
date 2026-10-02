@@ -87,7 +87,14 @@ class ApiClient {
     String path, {
     Object? body,
     bool authenticated = true,
-  }) => _send('POST', path, body: body, authenticated: authenticated);
+    bool expireSession = true,
+  }) => _send(
+    'POST',
+    path,
+    body: body,
+    authenticated: authenticated,
+    expireSession: expireSession,
+  );
 
   Future<dynamic> patch(
     String path, {

@@ -126,6 +126,9 @@ class AuthController extends GetxController {
     await signOut();
   }
 
+  Future<void> changePassword(String current, String next) =>
+      _authService.changePassword(current, next);
+
   Future<void> signOut() async {
     debugPrint('AuthController: Signing out user...');
     await _authService.signOut();
