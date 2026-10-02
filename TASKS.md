@@ -444,7 +444,7 @@ already enforces `adminMiddleware`, so the UI gate is only for convenience.
 Goal: the app can legally and safely go in front of real people in one city. 5.1-5.4 are agent
 work; 5.5-5.7 are yours.
 
-- [ ] 5.1 Register consent, an 18+ gate, Privacy/Terms screens, and permission explainers before
+- [x] 5.1 Register consent, an 18+ gate, Privacy/Terms screens, and permission explainers before
       the OS prompts.
       - Goal: clubs are 18+ and Clubsy stores location history. Users must confirm their age and
         accept the terms before an account exists. Explaining why the app needs the camera and
