@@ -78,6 +78,10 @@ class CheckInService {
         .toList();
   }
 
+  Future<void> deleteCheckIn(String id) async {
+    await _api.delete('/check-ins/$id');
+  }
+
   Future<CheckInStatsModel> getMyStats() async {
     final data = await _api.get('/check-ins/me/stats');
     return CheckInStatsModel.fromMap(data);

@@ -8,6 +8,36 @@ import 'package:clubsy/widgets/error_banner_widget.dart';
 class CheckInHistoryPage extends StatelessWidget {
   const CheckInHistoryPage({super.key});
 
+  Future<bool> _confirmRemove(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        content: const Text(
+          "Remove this visit from your map? This can't be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _remove(ClubController controller, String id) async {
+    try {
+      await controller.removeCheckIn(id);
+    } catch (_) {
+      Get.snackbar('Error', "Couldn't remove this visit. Try again.");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final clubController = Get.find<ClubController>();
@@ -65,14 +95,43 @@ class CheckInHistoryPage extends StatelessWidget {
                   ),
                 ),
                 for (final checkIn in group.checkIns)
-                  ListTile(
-                    leading: const Icon(Icons.local_bar),
-                    title: Text(checkIn.club.name),
-                    subtitle: Text(
-                      '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                  Dismissible(
+                    key: ValueKey(checkIn.id),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 16),
+                      child: const Icon(Icons.delete, color: Colors.white),
                     ),
-                    onTap: () =>
-                        Get.to(() => ClubDetailsPage(club: checkIn.club)),
+                    confirmDismiss: (_) => _confirmRemove(context),
+                    onDismissed: (_) => _remove(clubController, checkIn.id),
+                    child: ListTile(
+                      leading: const Icon(Icons.local_bar),
+                      title: Text(checkIn.club.name),
+                      subtitle: Text(
+                        '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                      ),
+                      onTap: () =>
+                          Get.to(() => ClubDetailsPage(club: checkIn.club)),
+                      onLongPress: () async {
+                        final remove = await showModalBottomSheet<bool>(
+                          context: context,
+                          builder: (ctx) => SafeArea(
+                            child: ListTile(
+                              leading: const Icon(Icons.delete),
+                              title: const Text('Remove'),
+                              onTap: () => Navigator.pop(ctx, true),
+                            ),
+                          ),
+                        );
+                        if (remove == true && context.mounted) {
+                          if (await _confirmRemove(context)) {
+                            await _remove(clubController, checkIn.id);
+                          }
+                        }
+                      },
+                    ),
                   ),
               ],
             ],

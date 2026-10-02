@@ -94,6 +94,23 @@ export const getMyCheckIns = async (req, res) => {
   }
 };
 
+export const deleteCheckIn = async (req, res) => {
+  try {
+    const checkInRecord = await prisma.checkIn.findUnique({ where: { id: req.params.id } });
+
+    // Same 404 for "missing" and "someone else's" so ids can't be probed.
+    if (!checkInRecord || checkInRecord.userId !== req.user.id) {
+      return res.status(404).json({ message: "Check-in not found" });
+    }
+
+    await prisma.checkIn.delete({ where: { id: checkInRecord.id } });
+    res.status(204).send();
+  } catch (error) {
+    console.error("Delete check-in error:", error);
+    res.status(500).json({ message: "Error deleting check-in" });
+  }
+};
+
 export const getMyCheckInStats = async (req, res) => {
   try {
     const checkIns = await prisma.checkIn.findMany({

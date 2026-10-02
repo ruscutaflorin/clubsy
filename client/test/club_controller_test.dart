@@ -76,6 +76,32 @@ void main() {
       expect(controller.stats.value, isNull);
     });
 
+    test('removing a club\'s only check-in unvisits it', () async {
+      final fake = _FakeCheckInService();
+      final controller = ClubController(checkInService: fake);
+      controller.myCheckIns.addAll([checkIn('1', 'a'), checkIn('2', 'b')]);
+      await controller.removeCheckIn('1');
+      expect(controller.visitedClubIds, {'b'});
+      expect(fake.statsCalls, 1);
+    });
+
+    test('removing one of two check-ins keeps the club visited', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.myCheckIns.addAll([checkIn('1', 'a'), checkIn('2', 'a')]);
+      await controller.removeCheckIn('1');
+      expect(controller.visitedClubIds, {'a'});
+      expect(controller.myCheckIns.length, 1);
+    });
+
+    test('a service error restores the list', () async {
+      final controller = ClubController(
+        checkInService: _FakeCheckInService(deleteFail: true),
+      );
+      controller.myCheckIns.addAll([checkIn('1', 'a'), checkIn('2', 'b')]);
+      await expectLater(controller.removeCheckIn('1'), throwsException);
+      expect(controller.myCheckIns.map((c) => c.id), ['1', '2']);
+    });
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -89,10 +115,11 @@ void main() {
 
 class _FakeCheckInService implements CheckInService {
   final bool statsFail;
+  final bool deleteFail;
   int statsCalls = 0;
   double? lastAccuracy;
 
-  _FakeCheckInService({this.statsFail = false});
+  _FakeCheckInService({this.statsFail = false, this.deleteFail = false});
 
   @override
   Future<CheckInModel> checkIn({
@@ -116,4 +143,9 @@ class _FakeCheckInService implements CheckInService {
 
   @override
   Future<List<CheckInModel>> getMyCheckIns() async => [];
+
+  @override
+  Future<void> deleteCheckIn(String id) async {
+    if (deleteFail) throw Exception('boom');
+  }
 }
