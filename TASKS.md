@@ -485,7 +485,7 @@ work; 5.5-5.7 are yours.
         test` and `flutter test` pass.
       - Depends on: 2.2, 3.1.
 
-- [ ] 5.3 Delete my account and all my check-ins (absorbs `BACKLOG.md` B19).
+- [x] 5.3 Delete my account and all my check-ins (absorbs `BACKLOG.md` B19).
       - Goal: Clubsy stores a timestamped history of where someone goes at night, which is
         sensitive location data. Users need a way to erase it, and App Store and Play policy require
         in-app account deletion before the app can ship. This blocks 5.5.
