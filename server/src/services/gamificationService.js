@@ -10,12 +10,13 @@ const WEEK_MS = 7 * DAY_MS;
 const toDate = (value) => new Date(value);
 
 // Index of the week (Monday 00:00 UTC / 7 days) containing the night of `date`.
-const weekIndexOf = (date) => {
+const weekStartOf = (date) => {
   const night = nightStart(toDate(date));
   const dayStart = Date.UTC(night.getUTCFullYear(), night.getUTCMonth(), night.getUTCDate());
-  const monday = dayStart - ((night.getUTCDay() + 6) % 7) * DAY_MS;
-  return Math.round(monday / WEEK_MS);
+  return dayStart - ((night.getUTCDay() + 6) % 7) * DAY_MS;
 };
+
+const weekIndexOf = (date) => Math.round(weekStartOf(date) / WEEK_MS);
 
 const sortedAsc = (checkIns) =>
   [...checkIns].sort((a, b) => toDate(a.checkedInAt) - toDate(b.checkedInAt));
@@ -137,7 +138,7 @@ export const badges = (checkIns) => {
 
 export const weeklyChallenges = (checkIns, now = new Date()) => {
   const week = weekIndexOf(now);
-  const endsAt = new Date((week + 1) * WEEK_MS);
+  const endsAt = new Date(weekStartOf(now) + WEEK_MS);
   const sorted = sortedAsc(checkIns);
 
   const firstSeen = new Map();

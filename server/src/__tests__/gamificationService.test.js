@@ -92,6 +92,11 @@ describe("weeklyChallenges and points", () => {
     expect(next.map((c) => c.progress.current)).toEqual([0, 0, 0]);
   });
 
+  it("endsAt is the next Monday 00:00 UTC", () => {
+    const ends = weeklyChallenges([], NOW).map((c) => c.endsAt.toISOString());
+    expect(ends).toEqual(Array(3).fill("2026-10-12T00:00:00.000Z"));
+  });
+
   it("new-club challenge ignores clubs visited before this week", () => {
     const list = [ci("2026-09-20T22:00:00Z", "c1"), ci("2026-10-06T22:00:00Z", "c1")];
     expect(weeklyChallenges(list, NOW)[2].completed).toBe(false);
