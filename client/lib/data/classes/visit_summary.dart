@@ -45,6 +45,15 @@ List<DateTime> nightsAtClub(String clubId, List<CheckInModel> checkIns) {
   return nights;
 }
 
+/// Pure: distinct nights per club id, for the map pins' count badges.
+Map<String, int> nightsPerClub(List<CheckInModel> checkIns) {
+  final nights = <String, Set<DateTime>>{};
+  for (final c in checkIns) {
+    (nights[c.club.id] ??= {}).add(nightOf(c.checkedInAt.toLocal()));
+  }
+  return {for (final e in nights.entries) e.key: e.value.length};
+}
+
 class ClubPairing {
   final ClubModel club;
   final int nights;

@@ -24,6 +24,29 @@ CheckInModel fixtureCheckIn(String clubId, DateTime at) => CheckInModel(
 );
 
 void main() {
+  group('nightsPerClub', () {
+    test('counts distinct nights per club', () {
+      final result = nightsPerClub([
+        fixtureCheckIn('a', DateTime(2026, 9, 12, 23)),
+        fixtureCheckIn('a', DateTime(2026, 9, 19, 23)),
+        fixtureCheckIn('b', DateTime(2026, 9, 12, 23)),
+      ]);
+      expect(result, {'a': 2, 'b': 1});
+    });
+
+    test('a small-hours check-in joins the previous evening', () {
+      final result = nightsPerClub([
+        fixtureCheckIn('a', DateTime(2026, 9, 12, 23)),
+        fixtureCheckIn('a', DateTime(2026, 9, 13, 2)),
+      ]);
+      expect(result, {'a': 1});
+    });
+
+    test('empty list gives empty map', () {
+      expect(nightsPerClub([]), isEmpty);
+    });
+  });
+
   group('visitSummaryForClub', () {
     test('returns null with no visits', () {
       expect(visitSummaryForClub('a', []), isNull);
