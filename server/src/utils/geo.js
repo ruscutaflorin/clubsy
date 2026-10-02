@@ -1,5 +1,7 @@
 const EARTH_RADIUS_METERS = 6371000;
 
+export const MAX_CHECK_IN_DISTANCE_METERS = 150;
+
 const toRadians = (degrees) => (degrees * Math.PI) / 180;
 
 export const distanceInMeters = (lat1, lon1, lat2, lon2) => {

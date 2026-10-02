@@ -1,4 +1,5 @@
 import { nightStart } from "../utils/night.js";
+import { MAX_CHECK_IN_DISTANCE_METERS } from "../utils/geo.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -12,6 +13,29 @@ const weekStartOf = (night) => {
 };
 
 const ratio = (n, d) => (d === 0 ? 0 : n / d);
+
+const nearestRank = (sorted, p) => sorted[Math.max(0, Math.ceil(p * sorted.length) - 1)];
+
+// Distribution of stored check-in distances (metres) for one club; no ids.
+export const computeDistanceHealth = (distances, { limit = MAX_CHECK_IN_DISTANCE_METERS } = {}) => {
+  const count = distances.length;
+  if (count === 0) {
+    return {
+      count,
+      medianMeters: null,
+      p90Meters: null,
+      nearLimitShare: null,
+      status: "insufficient",
+    };
+  }
+  const sorted = [...distances].sort((a, b) => a - b);
+  const threshold = 0.8 * limit;
+  const medianMeters = Math.round(nearestRank(sorted, 0.5));
+  const p90Meters = Math.round(nearestRank(sorted, 0.9));
+  const nearLimitShare = sorted.filter((d) => d >= threshold).length / count;
+  const status = count < 5 ? "insufficient" : p90Meters >= threshold ? "marginal" : "ok";
+  return { count, medianMeters, p90Meters, nearLimitShare, status };
+};
 
 // Pure aggregation over one club's check-in rows (no database); returns aggregates only, never ids.
 // `firstVisits` is [{ userId, firstCheckInAt }]: each visitor's earliest check-in at this club ever.
