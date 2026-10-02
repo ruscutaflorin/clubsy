@@ -4,6 +4,7 @@ import { verifyClubQrPayload } from "../services/venueQrService.js";
 import { distanceInMeters } from "../utils/geo.js";
 import { nightStart, nightEnd } from "../utils/night.js";
 import { computeCheckInStats } from "../services/statsService.js";
+import { computeAchievements } from "../services/gamificationService.js";
 
 const MAX_CHECK_IN_DISTANCE_METERS = 150;
 
@@ -108,6 +109,20 @@ export const deleteCheckIn = async (req, res) => {
   } catch (error) {
     console.error("Delete check-in error:", error);
     res.status(500).json({ message: "Error deleting check-in" });
+  }
+};
+
+export const getMyAchievements = async (req, res) => {
+  try {
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: req.user.id },
+      include: { club: true },
+    });
+
+    res.json(computeAchievements(checkIns, new Date()));
+  } catch (error) {
+    console.error("Get achievements error:", error);
+    res.status(500).json({ message: "Error fetching achievements" });
   }
 };
 

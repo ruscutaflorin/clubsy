@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import {
   checkIn,
   deleteCheckIn,
+  getMyAchievements,
   getMyCheckIns,
   getMyCheckInStats,
 } from "../controllers/checkInController.js";
@@ -24,6 +25,7 @@ const checkInValidation = [
 ];
 
 router.post("/", authMiddleware, checkInLimiter, checkInValidation, checkIn);
+router.get("/me/achievements", authMiddleware, getMyAchievements);
 router.get("/me/stats", authMiddleware, getMyCheckInStats);
 router.get("/me", authMiddleware, getMyCheckIns);
 router.delete("/:id", authMiddleware, deleteCheckIn);
