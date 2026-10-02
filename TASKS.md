@@ -83,7 +83,7 @@ defaults, and a one-command local dev setup. No schema changes.
         `signInValidation` chain against a fake req with `express-validator`'s `run()`. `pnpm test`
         passes.
 
-- [ ] 2.2 Finish the route-level safety net: JSON 404s, a 400 for malformed JSON, and supertest
+- [x] 2.2 Finish the route-level safety net: JSON 404s, a 400 for malformed JSON, and supertest
       coverage for auth, clubs and stats.
       - Goal: B7 split `server/src/app.js` from `index.js` and covered `POST /api/check-ins` and
         `GET /api/check-ins/me` in `server/src/__tests__/app.test.js`. The other route groups still
