@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/admin_controller.dart';
+import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_qr_page.dart';
 
 class AdminClubsPage extends StatefulWidget {
@@ -41,6 +42,12 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Admin · Clubs')),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('adminAddClub'),
+        onPressed: () => Get.to(() => const AdminClubFormPage()),
+        icon: const Icon(Icons.add),
+        label: const Text('Add club'),
+      ),
       body: Column(
         children: [
           Padding(
@@ -109,9 +116,21 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
                           ),
                         ],
                       ),
-                      trailing: Switch(
-                        value: club.isApproved,
-                        onChanged: (v) => _toggle(club.id, v),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: Key('adminEdit-${club.id}'),
+                            icon: const Icon(Icons.edit),
+                            tooltip: 'Edit',
+                            onPressed: () =>
+                                Get.to(() => AdminClubFormPage(club: club)),
+                          ),
+                          Switch(
+                            value: club.isApproved,
+                            onChanged: (v) => _toggle(club.id, v),
+                          ),
+                        ],
                       ),
                       onTap: () => Get.to(() => AdminClubQrPage(club: club)),
                     );

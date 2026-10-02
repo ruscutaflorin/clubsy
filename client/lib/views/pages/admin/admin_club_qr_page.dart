@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/src/core/controllers/admin_controller.dart';
 
@@ -43,6 +46,20 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
       error = e.toString();
     }
     if (mounted) setState(() => busy = false);
+  }
+
+  /// Writes the PNG to a temp file and opens the share sheet.
+  Future<void> _share(String qr) async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/clubsy-qr-${widget.club.id}.png');
+      await file.writeAsBytes(decodeQrDataUrl(qr));
+      await Share.shareXFiles([
+        XFile(file.path, mimeType: 'image/png'),
+      ], subject: widget.club.name);
+    } catch (_) {
+      if (mounted) setState(() => error = "Couldn't share the QR code");
+    }
   }
 
   Future<void> _confirmRotate() async {
@@ -94,10 +111,21 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
                   Text(error!, style: const TextStyle(color: Colors.red)),
                 Padding(
                   padding: const EdgeInsets.all(16),
-                  child: FilledButton.icon(
-                    onPressed: busy ? null : _confirmRotate,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Rotate QR'),
+                  child: Wrap(
+                    spacing: 12,
+                    children: [
+                      FilledButton.icon(
+                        key: const Key('adminQrShare'),
+                        onPressed: busy ? null : () => _share(qr),
+                        icon: const Icon(Icons.share),
+                        label: const Text('Share / print'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: busy ? null : _confirmRotate,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Rotate QR'),
+                      ),
+                    ],
                   ),
                 ),
               ],
