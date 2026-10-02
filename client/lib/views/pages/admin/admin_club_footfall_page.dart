@@ -72,6 +72,36 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
 
   String _pct(double v) => '${(v * 100).round()}%';
 
+  Widget _distanceCard(DistanceHealth d) {
+    final enough = d.status != 'insufficient' && d.medianMeters != null;
+    return Card(
+      key: const Key('footfallDistance'),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Check-in distance',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            if (d.medianMeters != null && d.p90Meters != null)
+              Text('Median ${d.medianMeters} m · 90% within ${d.p90Meters} m'),
+            if (d.nearLimitShare != null)
+              Text('${_pct(d.nearLimitShare!)} close to the 150 m limit'),
+            if (!enough)
+              const Text('Not enough check-ins yet')
+            else if (d.status == 'marginal')
+              const Text(
+                "Many check-ins are close to the 150 m limit: check the pin's position",
+                style: TextStyle(color: Colors.orangeAccent),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _footfall;
@@ -115,6 +145,10 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
             ),
             const SizedBox(height: 8),
             WeeklyBars(weekly: data.weekly),
+            if (data.distance != null) ...[
+              const SizedBox(height: 24),
+              _distanceCard(data.distance!),
+            ],
           ],
         ],
       ),

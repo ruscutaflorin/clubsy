@@ -1,6 +1,6 @@
 import prisma from "../prisma/client.js";
 import { computePilotMetrics, computePilotScorecard } from "../services/metricsService.js";
-import { computeClubFootfall } from "../services/footfallService.js";
+import { computeClubFootfall, computeDistanceHealth } from "../services/footfallService.js";
 
 const ALLOWED_DAYS = [7, 30, 90];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -64,7 +64,7 @@ export const getClubFootfall = async (req, res) => {
     const since = new Date(now.getTime() - (FOOTFALL_WEEKS + 1) * 7 * DAY_MS);
     const checkIns = await prisma.checkIn.findMany({
       where: { clubId: club.id, checkedInAt: { gte: since } },
-      select: { userId: true, checkedInAt: true },
+      select: { userId: true, checkedInAt: true, distanceMeters: true },
     });
     const visitorIds = [...new Set(checkIns.map((c) => c.userId))];
     const firsts = visitorIds.length
@@ -78,7 +78,11 @@ export const getClubFootfall = async (req, res) => {
       userId: f.userId,
       firstCheckInAt: f._min.checkedInAt,
     }));
-    res.json(computeClubFootfall({ checkIns, firstVisits, now, weeks: FOOTFALL_WEEKS }));
+    const distances = checkIns.map((c) => c.distanceMeters).filter((d) => typeof d === "number");
+    res.json({
+      ...computeClubFootfall({ checkIns, firstVisits, now, weeks: FOOTFALL_WEEKS }),
+      distance: computeDistanceHealth(distances),
+    });
   } catch (error) {
     console.error("Club footfall error:", error);
     res.status(500).json({ message: "Failed to compute footfall" });
