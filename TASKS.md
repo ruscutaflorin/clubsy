@@ -666,7 +666,7 @@ computed from `CheckIn` history so it needs no migration. This is the first, sch
         containing a `data:image/png` URL; wrong key → 404. `pnpm test` passes.
       - Depends on: 2.2, 4.1.
 
-- [ ] 6.5 Club page polish: directions, distance from me, share, and a "not visited yet" nudge.
+- [x] 6.5 Club page polish: directions, distance from me, share, and a "not visited yet" nudge.
       - Goal: `ClubDetailsPage` is where intent turns into a visit. It should answer "how far is it,
         and how do I get there?" and make an unvisited club feel like an invitation.
       - Scope: in `client/lib/views/pages/club_details_page.dart`, add a "Directions" button that
