@@ -187,3 +187,44 @@ export const exportMyData = async (req, res) => {
     res.status(500).json({ message: "Error exporting data" });
   }
 };
+
+// Erases the account and its check-ins. Requires the current password.
+export const deleteMyAccount = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isValidPassword = await bcrypt.compare(req.body.password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    if (user.role === "ADMIN") {
+      const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (admins <= 1) {
+        return res.status(409).json({ message: "Cannot delete the last admin" });
+      }
+    }
+
+    // Every task that adds user-owned rows (favourites, friendships, reports, ...)
+    // must add its table to this transaction, before the user delete.
+    // When 7.7 lands, bump tokenVersion first.
+    await prisma.$transaction([
+      prisma.checkIn.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("Delete account error:", error);
+    res.status(500).json({ message: "Error deleting account" });
+  }
+};

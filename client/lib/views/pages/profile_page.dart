@@ -76,6 +76,108 @@ class ProfileStatsCard extends StatelessWidget {
   }
 }
 
+Future<void> _exportMyData() async {
+  final service = Get.isRegistered<DataExportService>()
+      ? Get.find<DataExportService>()
+      : DataExportService();
+  try {
+    await service.exportMyData();
+  } catch (e) {
+    Get.snackbar(
+      'Export failed',
+      e is ApiException ? e.message : "Couldn't export your data",
+    );
+  }
+}
+
+/// Confirm dialog for account deletion. Pops `true` once the account is gone.
+class DeleteAccountDialog extends StatefulWidget {
+  const DeleteAccountDialog({super.key});
+
+  @override
+  State<DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
+  final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _delete() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await Get.find<AuthController>().deleteAccount(_password.text);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e is ApiException && e.statusCode == 401
+            ? 'Wrong password'
+            : e is ApiException
+            ? e.message
+            : "Couldn't delete your account";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Delete account?'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'This permanently deletes your account and every check-in on '
+              'your map. This can\'t be undone.',
+            ),
+            TextButton.icon(
+              key: const Key('deleteAccountExport'),
+              onPressed: _exportMyData,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Download my data first'),
+            ),
+            TextField(
+              key: const Key('deleteAccountPassword'),
+              controller: _password,
+              obscureText: true,
+              enabled: !_busy,
+              decoration: InputDecoration(
+                labelText: 'Password',
+                errorText: _error,
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          key: const Key('deleteAccountConfirm'),
+          onPressed: _busy || _password.text.isEmpty ? null : _delete,
+          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    );
+  }
+}
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -192,19 +294,7 @@ class ProfilePage extends StatelessWidget {
             leading: const Icon(Icons.download_outlined),
             title: const Text('Download my data'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              final service = Get.isRegistered<DataExportService>()
-                  ? Get.find<DataExportService>()
-                  : DataExportService();
-              try {
-                await service.exportMyData();
-              } catch (e) {
-                Get.snackbar(
-                  'Export failed',
-                  e is ApiException ? e.message : "Couldn't export your data",
-                );
-              }
-            },
+            onTap: _exportMyData,
           ),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
@@ -212,6 +302,27 @@ class ProfilePage extends StatelessWidget {
             onTap: () async {
               await authController.signOut();
               Get.offAllNamed('/login');
+            },
+          ),
+          ListTile(
+            key: const Key('deleteAccountTile'),
+            leading: const Icon(Icons.delete_forever, color: Colors.red),
+            title: const Text(
+              'Delete account',
+              style: TextStyle(color: Colors.red),
+            ),
+            onTap: () async {
+              final deleted = await showDialog<bool>(
+                context: context,
+                builder: (_) => const DeleteAccountDialog(),
+              );
+              if (deleted == true) {
+                Get.offAllNamed('/login');
+                Get.snackbar(
+                  'Account deleted',
+                  'Your account and history were deleted',
+                );
+              }
             },
           ),
         ],
