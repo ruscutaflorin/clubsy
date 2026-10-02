@@ -588,3 +588,82 @@ Product-owner proposals, 2026-10-03 (dawn). Schema-free: map milestones, data po
   - Scope: client only, no server or schema change. Add a pure `nightRoute(NightGroup group)` next to `groupByNight` in `client/lib/data/classes/check_in_grouping.dart`. It returns the check-ins oldest first plus `{minutesBetween, metersBetween}` for each hop, using haversine on club coordinates and `formatDistance` from `client/lib/data/classes/club_directions.dart`. A new `client/lib/views/pages/night_detail_page.dart` opens when a group header in `check_in_history_page.dart` is tapped. It includes a small `flutter_map` preview of that night's pins, reusing `ClubMapPage`'s tile setup. Out: walking routes, sharing, notes (7.4). Lower priority than B63-B65; worth it once pilot data shows multi-club nights are common.
   - Acceptance: unit tests for hop ordering, minutes across midnight and distances between known coordinates; a widget test that taps a group header and finds the night's summary line.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue window, a personal yearly goal, and club pairings.
+
+- [ ] B67 Admin footfall window: choose 4, 12, 26 or 52 weeks on a club's footfall report — status: approved
+  - Why: the B38/B51/B60 footfall report always covers 12 weeks. When pitching a venue (pilot step 5.6, PLAN monetization direction), a new partner wants "the last month", and a renewal conversation wants "the last 6 months / year". A window selector makes the same verified numbers fit each conversation, including the B60 copied summary, which already says "last <weekly.length> weeks". No schema change.
+  - Scope: no schema change; admin-only; aggregates only.
+    - Server: in `server/src/controllers/adminController.js`, `getClubFootfall` reads an optional `weeks` query param (default 12) and accepts only `4`, `12`, `26` or `52`. Anything else returns 400 `{message: "weeks must be 4, 12, 26 or 52"}` before any Prisma call (mirror the `ALLOWED_DAYS` check in `getMetrics`). Replace the fixed `FOOTFALL_WEEKS` with the chosen value in both the `since` window and the `computeClubFootfall({... weeks})` call. `computeDistanceHealth` uses the same window's check-ins. The response shape doesn't change, so `weekly.length === weeks`. The route stays `GET /api/admin/clubs/:id/footfall` in `server/src/routes/adminRoutes.js`.
+    - Client: `getClubFootfall(String id, {int weeks = 12})` in `client/lib/services/admin_service.dart` appends `?weeks=<n>`. In `client/lib/views/pages/admin/admin_club_footfall_page.dart`, add a `SegmentedButton<int>` (`Key('footfallWeeks')`, segments "4 wk", "12 wk", "26 wk", "52 wk", default 12) above the headline numbers. Mirror the 7/30/90-day selector on `admin_metrics_page.dart`; changing the selection reloads the report. Let the page take the service through an optional constructor parameter (or the page's existing injection pattern) so tests can pass a fake. `WeeklyBars` must not overflow with 52 entries: make each bar `Expanded`, and thin out week labels that would collide (e.g. label every 4th week when there are more than 12). The B60 "Copy summary" action keeps working and reports the selected window.
+    - Out: custom date ranges, comparing windows, export formats.
+  - Acceptance: mocked-Prisma route tests in `server/src/__tests__/routes.test.js`: an admin with `?weeks=4` gets 200 with `weekly.length === 4`; no param gives `weekly.length === 12`; `?weeks=5` and `?weeks=abc` give 400 and `prisma.checkIn.findMany` is not called; a non-admin still gets 403. A widget test in `client/test/admin_club_footfall_test.dart` pumps the page with a fake service (no HTTP) that records the requested weeks. It finds `Key('footfallWeeks')`, taps "52 wk", checks that the fake was called with 52, and renders a 52-week fixture without overflow errors. `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B68 Yearly nights-out goal: "22 of 30 nights in 2026 · 2 ahead of pace" — status: approved
+  - Why: badges have fixed thresholds and the streak is weekly, but the regular thinks in years ("I want to go out more this year"). A goal users set for themselves, with a pace line, gives them a personal reason to come back (core loop step 4). It counts only verified nights (principle 5) and stays on the device (principle 2).
+  - Scope: client only, no server or schema change. Store the goal locally under the key `yearly_goal_<year>` (an int, 1–365) with `shared_preferences`, which is already a dependency; follow how `client/lib/views/pages/check_in_primer_page.dart` reads and writes its flag. No server sync.
+    - Pure logic: in a new `client/lib/data/classes/yearly_goal.dart`, add `YearlyGoalProgress yearlyGoalProgress(List<CheckInModel> checkIns, int goal, DateTime now)`.
+      - `nightsSoFar` counts distinct nights in `now.year`, using `nightOf` from `client/lib/data/classes/check_in_grouping.dart` on `checkedInAt.toLocal()`. A 01:00 check-in on 1 January counts for the previous year.
+      - `expectedByNow = goal × (day of year of now) / (days in year)`, rounded down.
+      - `aheadBy = nightsSoFar - expectedByNow`.
+      - `reached = nightsSoFar >= goal`.
+      - Add `String goalPaceLine(YearlyGoalProgress p)`. It returns "Goal reached!" when reached, otherwise "N ahead of pace", "N behind pace" or "Right on pace". The headline uses singular/plural "night" correctly.
+    - Widget: add a `YearlyGoalCard` in a new `client/lib/widgets/yearly_goal_card.dart`. It reads `ClubController.myCheckIns`, takes an optional `now` (default `DateTime.now()`) for tests, and loads the stored goal on init.
+      - With no goal, it shows "Set a goal for <year>" with a "Set goal" `TextButton` (`Key('setYearlyGoal')`).
+      - With a goal, it shows "22 of 30 nights in 2026", a `LinearProgressIndicator`, the pace line and an edit icon.
+      - Both buttons open a dialog with a numeric `TextField` (`Key('yearlyGoalField')`). It accepts 1–365 and otherwise shows "Enter a number from 1 to 365". Saving writes the preference and rebuilds the card.
+    - Show the card at the top of the page body in `client/lib/views/pages/recap_page.dart`, not on the shareable image card. Don't put it on `profile_page.dart`.
+    - Out: server-side goals, notifications, monthly goals, sharing.
+  - Acceptance:
+    - Flutter unit tests in a new `client/test/yearly_goal_test.dart`:
+      - 3 check-ins on 2 nights in 2026 give `nightsSoFar` 2.
+      - A 01:00 check-in on 1 Jan 2026 counts for 2025, not 2026.
+      - Goal 30 on 2 July 2026 (day 183 of 365) gives `expectedByNow` 15. On that date, 17 nights give "2 ahead of pace", 14 give "1 behind pace" and 15 give "Right on pace".
+      - 30 nights give "Goal reached!".
+    - Widget tests pump `YearlyGoalCard` with a fixture `ClubController` (no HTTP), a fixed `now` and `SharedPreferences.setMockInitialValues`:
+      - With no stored goal, they find "Set a goal for 2026" and tap `Key('setYearlyGoal')`. Entering 0 shows the validation message; entering 30 shows "of 30 nights in 2026".
+      - With `yearly_goal_2026: 30` stored, they find the pace line directly.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B69 "Often paired with": the clubs I combine with this one on the same night, on its page — status: approved
+  - Why: regulars hop between venues ("we start at A, end at B"), but the club page shows only this club's own history (B13, B54). A line like "Often paired with: Club B · 4 nights" tells the story of a user's usual route and leads straight to the partner club. It is computed from verified pins (principle 5), and only the user sees it (principle 2).
+  - Scope: client only, no server or schema change.
+    - Pure logic: add `List<ClubPairing> pairedClubs(String clubId, List<CheckInModel> checkIns, {int limit = 3})` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`.
+      - Group check-ins into nights with `nightOf` from `client/lib/data/classes/check_in_grouping.dart` on `checkedInAt.toLocal()`.
+      - For every night that includes `clubId`, count each other distinct club (by `club.id`) once.
+      - Return `ClubPairing {club (ClubModel), nights}` for clubs with at least 1 shared night. Sort by `nights` desc, then the most recent shared night, then name, and cap at `limit`.
+      - Never return the club itself. Two check-ins at the partner club on one night count once.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add an "Often paired with" section (`Key('pairedClubs')`) below the B54 "Your nights here" tile, only when the list is non-empty. It has one `ListTile` per partner: the title is the club name and the subtitle "4 nights together" ("1 night together" for one). Tapping a row pushes `ClubDetailsPage(club: pairing.club)` with `Get.to`, the way history rows open clubs.
+    - Out: suggesting clubs the user has never been to, other users' pairings (aggregate pairings would need the B24 privacy rules), maps or routes (B66).
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`:
+      - Clubs A and B on two nights plus A and C on one night give B (2), then C (1).
+      - A 23:00 check-in at A and a 02:00 check-in at B the next morning count as one shared night.
+      - Two check-ins at B on the same night count once.
+      - Nights without A are ignored, and the club itself is never returned.
+      - `limit` is respected, and no shared nights give an empty list.
+    - A widget test in `client/test/pages_widget_test.dart` pumps `ClubDetailsPage` for club A with a fixture `ClubController` (no HTTP). It finds `Key('pairedClubs')`, "Often paired with" and "2 nights together". For a club with no shared nights, it finds no `Key('pairedClubs')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B70 Admin pilot report "Copy summary": the scorecard, WACU trend and club ranking as plain text — status: proposed
+  - Why: the B45 scorecard and B65 club ranking answer "is the pilot working?", but only on an admin's phone. A one-tap text report ("Pilot, week of 28 Sep: 6/10 partner clubs ✗, 143 signups, activation 46% ✓, WACU 38 (+5 vs last week); top clubs…") can be pasted into a team chat or a stakeholder update, mirroring B60's venue summary.
+  - Scope: client only, no server or schema change; admin-only.
+    - Add a pure `pilotReportText(PilotScorecardModel s, ClubRankingModel? r)` in a new `client/lib/data/classes/pilot_report.dart`. It writes one line per criterion ("value / target" plus met or not met, "—" for null), the latest WACU with its change vs the week before, and the top 3 clubs from the ranking when present. The text has no user ids, names or emails.
+    - Add an app-bar copy `IconButton` (`Key('copyPilotReport')`) on `client/lib/views/pages/admin/admin_metrics_page.dart`. It uses `Clipboard.setData` and shows a "Report copied" snackbar, like B60.
+    - Build it after B65 lands, because it reads `ClubRankingModel` and edits the same page.
+  - Acceptance: Flutter unit tests in a new `client/test/pilot_report_test.dart`: a null activation renders "—"; the WACU change line is correct; the ranking is omitted when null; the fixture email doesn't appear in the text. A widget test mocks `SystemChannels.platform` as in `client/test/admin_club_footfall_test.dart`, taps `Key('copyPilotReport')` and finds "Report copied". `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B71 Check-in distance preflight: "You're about 40 m from Club X" before scanning — status: proposed
+  - Why: the risk table's top door problem is the 150 m GPS check failing at a real venue, and today the user learns the distance only after scanning the QR (B12). Showing the approximate distance as soon as `CheckInPage` opens lets the user step outside or wait for a better fix before scanning. It only runs when location permission is already granted and never prompts from here. The server check stays authoritative (principle 1).
+  - Scope: client only.
+    - Add a pure `preflightMessage(double distanceMeters, double accuracyMeters, {double limit = 150})` that returns one of three messages: "You're about 40 m from <club> · ready to scan", "You're about 600 m away: check-in works within 150 m", or "Your location is imprecise (±80 m): try near the entrance".
+    - In `client/lib/views/pages/check_in_page.dart`, put the position lookup behind an injectable position provider so tests can fake it. On open, fetch one position if `Geolocator.checkPermission()` is already granted, and show the message in a small banner above the scanner.
+    - Keep this proposed until a human tries it at a venue. Someone needs to confirm on a real device that the extra GPS request doesn't slow the scan, and widget tests can't cover the camera.
+  - Acceptance: unit tests for the three messages and the boundary at exactly 150 m; a widget test with a fake position provider and a stubbed scanner that finds the banner text.
+  - Size: S
