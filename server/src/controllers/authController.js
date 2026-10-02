@@ -126,6 +126,7 @@ export const getCurrentUser = async (req, res) => {
         email: true,
         name: true,
         role: true,
+        createdAt: true,
       },
     });
 
