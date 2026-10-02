@@ -156,7 +156,7 @@ defaults, and a one-command local dev setup. No schema changes.
         `prisma.club.update` with only the provided fields. `pnpm test` passes.
       - Depends on: 2.2.
 
-- [ ] 2.5 One-command local dev environment: Postgres in Docker, `.env.example`, seed data with
+- [x] 2.5 One-command local dev environment: Postgres in Docker, `.env.example`, seed data with
       venue QR images, and a README.
       - Goal: anyone (human or agent with Docker) can go from clone to a working map with clubs in
         minutes. Today the database is empty and the only way to add a club is curl as an admin
