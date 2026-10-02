@@ -597,7 +597,7 @@ computed from `CheckIn` history so it needs no migration. This is the first, sch
         Challenge progress resets at the week boundary. A controller test returns all four
         sections. `pnpm test` passes.
 
-- [ ] 6.2 Achievements in the app: streak flame, badge grid, weekly challenges, and unlocks
+- [x] 6.2 Achievements in the app: streak flame, badge grid, weekly challenges, and unlocks
       announced after a check-in.
       - Scope: `client/lib/data/classes/achievements_model.dart` (`fromMap` for the 6.1 response).
         Add `getMyAchievements()` to `CheckInService`, and an `achievements` field on
