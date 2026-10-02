@@ -43,7 +43,7 @@ export const weeklyStreak = (checkIns, now = new Date()) => {
     cursor -= 1;
   }
 
-  return { streak, longestStreak };
+  return { streak, longestStreak, atRisk: streak > 0 && !weekSet.has(currentWeek) };
 };
 
 const evaluate = (badge, sorted) => {
@@ -174,9 +174,9 @@ export const points = (checkIns) => {
 };
 
 export const computeAchievements = (checkIns, now = new Date()) => {
-  const { streak, longestStreak } = weeklyStreak(checkIns, now);
+  const { streak, longestStreak, atRisk } = weeklyStreak(checkIns, now);
   return {
-    streak: { current: streak, longest: longestStreak },
+    streak: { current: streak, longest: longestStreak, atRisk },
     badges: badges(checkIns),
     challenges: weeklyChallenges(checkIns, now),
     points: points(checkIns),

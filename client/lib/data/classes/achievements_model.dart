@@ -65,6 +65,7 @@ class ChallengeModel {
 class AchievementsModel {
   final int currentStreak;
   final int longestStreak;
+  final bool streakAtRisk;
   final List<BadgeModel> badges;
   final List<ChallengeModel> challenges;
   final int points;
@@ -72,6 +73,7 @@ class AchievementsModel {
   const AchievementsModel({
     this.currentStreak = 0,
     this.longestStreak = 0,
+    this.streakAtRisk = false,
     this.badges = const [],
     this.challenges = const [],
     this.points = 0,
@@ -84,6 +86,7 @@ class AchievementsModel {
     return AchievementsModel(
       currentStreak: (streak['current'] as num?)?.toInt() ?? 0,
       longestStreak: (streak['longest'] as num?)?.toInt() ?? 0,
+      streakAtRisk: streak['atRisk'] == true,
       badges: ((map['badges'] as List?) ?? const [])
           .map((b) => BadgeModel.fromMap(Map<String, dynamic>.from(b as Map)))
           .toList(),

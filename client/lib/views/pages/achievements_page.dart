@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/widgets/streak_nudge_banner.dart';
 
 /// Material icon per badge id; artwork is a later design task.
 IconData badgeIcon(String id) => switch (id) {
@@ -118,6 +119,7 @@ class AchievementsView extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 20),
+        const StreakNudgeBanner(),
         Text(
           'Badges (${achievements.earnedCount}/${achievements.badges.length})',
           style: theme.textTheme.titleMedium,

@@ -29,7 +29,7 @@ const badge = (list, id) => list.find((b) => b.id === id);
 
 describe("weeklyStreak", () => {
   it("is 0 for empty history and no badge is earned", () => {
-    expect(weeklyStreak([], NOW)).toEqual({ streak: 0, longestStreak: 0 });
+    expect(weeklyStreak([], NOW)).toEqual({ streak: 0, longestStreak: 0, atRisk: false });
     expect(badges([]).every((b) => b.earnedAt === null)).toBe(true);
   });
 
@@ -45,13 +45,28 @@ describe("weeklyStreak", () => {
       ci("2026-09-15T22:00:00Z"),
       ci("2026-09-29T22:00:00Z"),
     ];
-    expect(weeklyStreak(list, NOW)).toEqual({ streak: 1, longestStreak: 3 });
+    expect(weeklyStreak(list, NOW)).toEqual({ streak: 1, longestStreak: 3, atRisk: true });
   });
 
   it("assigns a Sunday 02:00 check-in to the previous week", () => {
     const list = [ci("2026-10-04T02:00:00Z")];
     expect(weeklyStreak(list, new Date("2026-10-05T12:00:00Z")).streak).toBe(1);
     expect(weeklyStreak(list, new Date("2026-10-12T12:00:00Z")).streak).toBe(0);
+  });
+
+  it("flags atRisk when the current week has no check-in yet", () => {
+    const prev = [ci("2026-09-22T22:00:00Z"), ci("2026-09-29T22:00:00Z")];
+    expect(weeklyStreak(prev, NOW)).toMatchObject({ streak: 2, atRisk: true });
+    expect(weeklyStreak([...prev, ci("2026-10-06T22:00:00Z")], NOW)).toMatchObject({
+      streak: 3,
+      atRisk: false,
+    });
+    expect(weeklyStreak([], NOW).atRisk).toBe(false);
+  });
+
+  it("treats Monday 03:00 UTC as the previous week's night", () => {
+    const list = [ci("2026-09-29T22:00:00Z"), ci("2026-10-05T03:00:00Z")];
+    expect(weeklyStreak(list, NOW)).toMatchObject({ atRisk: true });
   });
 });
 
