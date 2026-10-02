@@ -38,4 +38,50 @@ void main() {
     expect(find.text('25%'), findsOneWidget);
     expect(find.text('75%'), findsOneWidget);
   });
+
+  test('parses distance and defaults to null without it', () {
+    expect(fixture.distance, isNull);
+    final m = ClubFootfallModel.fromMap({
+      'distance': {
+        'count': 10,
+        'medianMeters': 42,
+        'p90Meters': 118,
+        'nearLimitShare': 0.3,
+        'status': 'marginal',
+      },
+    });
+    expect(m.distance!.medianMeters, 42);
+    expect(m.distance!.status, 'marginal');
+    final empty = DistanceHealth.fromMap({
+      'count': 0,
+      'status': 'insufficient',
+    });
+    expect(empty.medianMeters, isNull);
+  });
+
+  testWidgets('shows distance health with marginal warning', (tester) async {
+    final data = ClubFootfallModel.fromMap({
+      'weekly': [],
+      'distance': {
+        'count': 10,
+        'medianMeters': 42,
+        'p90Meters': 118,
+        'nearLimitShare': 0.3,
+        'status': 'marginal',
+      },
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(club: club, footfall: data),
+      ),
+    );
+    expect(find.textContaining('Median 42 m'), findsOneWidget);
+    expect(
+      find.textContaining('close to the 150 m limit: check'),
+      findsOneWidget,
+    );
+  });
 }

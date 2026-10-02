@@ -1,13 +1,11 @@
 import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
 import { verifyClubQrPayload } from "../services/venueQrService.js";
-import { distanceInMeters } from "../utils/geo.js";
+import { distanceInMeters, MAX_CHECK_IN_DISTANCE_METERS } from "../utils/geo.js";
 import { isImpossibleTravel } from "../utils/travel.js";
 import { nightStart, nightEnd } from "../utils/night.js";
 import { computeCheckInStats, computeCityProgress } from "../services/statsService.js";
 import { computeAchievements } from "../services/gamificationService.js";
-
-const MAX_CHECK_IN_DISTANCE_METERS = 150;
 
 const logFailure = (reason, userId, clubId) =>
   console.warn(JSON.stringify({ evt: "checkin_failed", reason, userId, clubId }));

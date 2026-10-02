@@ -317,4 +317,16 @@ describe("admin club footfall route", () => {
     expect(res.body.weekly).toHaveLength(12);
     expect(JSON.stringify(res.body)).not.toContain("u1");
   });
+
+  it("includes distance health without user ids", async () => {
+    clubFindUnique.mockResolvedValue({ id: "c1" });
+    checkInFindMany.mockResolvedValue([
+      { userId: "u1", checkedInAt: new Date(), distanceMeters: 42 },
+    ]);
+    checkInGroupBy.mockResolvedValue([{ userId: "u1", _min: { checkedInAt: new Date() } }]);
+    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.distance.count).toBe(1);
+    expect(JSON.stringify(res.body)).not.toContain("userId");
+  });
 });

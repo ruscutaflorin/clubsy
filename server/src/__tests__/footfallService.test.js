@@ -1,4 +1,38 @@
-import { computeClubFootfall } from "../services/footfallService.js";
+import { computeClubFootfall, computeDistanceHealth } from "../services/footfallService.js";
+
+describe("computeDistanceHealth", () => {
+  it("is insufficient with null numbers for no data", () => {
+    expect(computeDistanceHealth([])).toEqual({
+      count: 0,
+      medianMeters: null,
+      p90Meters: null,
+      nearLimitShare: null,
+      status: "insufficient",
+    });
+  });
+
+  it("is insufficient with four distances", () => {
+    expect(computeDistanceHealth([10, 20, 30, 40]).status).toBe("insufficient");
+  });
+
+  it("is ok for close check-ins", () => {
+    const out = computeDistanceHealth([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    expect(out.medianMeters).toBe(50);
+    expect(out.p90Meters).toBe(90);
+    expect(out.status).toBe("ok");
+  });
+
+  it("is marginal when p90 is near the limit", () => {
+    const out = computeDistanceHealth([10, 20, 30, 40, 50, 60, 70, 80, 125, 140]);
+    expect(out.p90Meters).toBe(125);
+    expect(out.status).toBe("marginal");
+  });
+
+  it("counts values >= 0.8 x limit as near the limit", () => {
+    const out = computeDistanceHealth([10, 20, 30, 40, 50, 60, 70, 119, 120, 149]);
+    expect(out.nearLimitShare).toBe(0.2);
+  });
+});
 
 // Wednesday 2026-10-07 12:00 UTC
 const now = new Date("2026-10-07T12:00:00Z");
