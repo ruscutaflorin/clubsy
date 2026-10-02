@@ -5,6 +5,7 @@ import request from "supertest";
 
 const userFindUnique = jest.fn();
 const userCreate = jest.fn();
+const userFindMany = jest.fn();
 const clubFindUnique = jest.fn();
 const clubFindMany = jest.fn();
 const clubCount = jest.fn();
@@ -14,7 +15,7 @@ const checkInGroupBy = jest.fn();
 
 jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
-    user: { findUnique: userFindUnique, create: userCreate },
+    user: { findUnique: userFindUnique, create: userCreate, findMany: userFindMany },
     club: {
       findUnique: clubFindUnique,
       findMany: clubFindMany,
@@ -293,6 +294,50 @@ describe("stats, health and fallbacks", () => {
       .send("{bad json");
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ message: "Malformed JSON body" });
+  });
+});
+
+describe("admin metrics routes", () => {
+  it("rejects metrics without a token or for a non-admin", async () => {
+    expect((await request(app).get("/api/admin/metrics")).status).toBe(401);
+    expect((await request(app).get("/api/admin/metrics").set(auth(userToken))).status).toBe(403);
+    const scorecard = await request(app).get("/api/admin/metrics/scorecard").set(auth(userToken));
+    expect(scorecard.status).toBe(403);
+  });
+
+  it("400s on a days value outside 7/30/90 without querying", async () => {
+    const res = await request(app).get("/api/admin/metrics?days=5").set(auth(adminToken));
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ message: "days must be 7, 30 or 90" });
+    expect(checkInFindMany).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 for metrics with a valid days value", async () => {
+    userFindMany.mockResolvedValue([]);
+    checkInFindMany.mockResolvedValue([]);
+    const res = await request(app).get("/api/admin/metrics?days=30").set(auth(adminToken));
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 500 {message} when the metrics query fails", async () => {
+    userFindMany.mockRejectedValue(new Error("db down"));
+    checkInFindMany.mockResolvedValue([]);
+    const res = await request(app).get("/api/admin/metrics").set(auth(adminToken));
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ message: "Failed to compute metrics" });
+  });
+
+  it("returns 200 for the scorecard and 500 when it fails", async () => {
+    userFindMany.mockResolvedValue([]);
+    checkInFindMany.mockResolvedValue([]);
+    clubCount.mockResolvedValue(3);
+    const ok = await request(app).get("/api/admin/metrics/scorecard").set(auth(adminToken));
+    expect(ok.status).toBe(200);
+
+    clubCount.mockRejectedValue(new Error("db down"));
+    const bad = await request(app).get("/api/admin/metrics/scorecard").set(auth(adminToken));
+    expect(bad.status).toBe(500);
+    expect(bad.body).toEqual({ message: "Failed to compute scorecard" });
   });
 });
 
