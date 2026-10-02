@@ -52,11 +52,17 @@ void main() {
   group('checkInFailureMessage', () {
     test('rounds a fractional distance for display', () {
       final error = CheckInException(message: 'too far', distanceMeters: 419.6);
-      expect(checkInFailureMessage(error), "You're ~420 m away — get within 150 m of the entrance");
+      expect(
+        checkInFailureMessage(error),
+        "You're ~420 m away — get within 150 m of the entrance",
+      );
     });
 
-    test('falls back to Exception.toString for a non-CheckInException error', () {
-      expect(checkInFailureMessage(Exception('boom')), 'boom');
-    });
+    test(
+      'falls back to Exception.toString for a non-CheckInException error',
+      () {
+        expect(checkInFailureMessage(Exception('boom')), 'boom');
+      },
+    );
   });
 }

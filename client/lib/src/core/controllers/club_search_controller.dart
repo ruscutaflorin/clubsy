@@ -4,14 +4,18 @@ import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/club_service.dart';
 
-typedef ClubFetch = Future<List<ClubModel>> Function({String? search, String? city});
+typedef ClubFetch = Future<List<ClubModel>> Function({
+  String? search,
+  String? city,
+});
 
 class ClubSearchController extends GetxController {
   final ClubFetch _fetch;
 
   /// [fetch] is injectable so tests don't need real HTTP; defaults to
   /// [ClubService.getClubs] in the running app.
-  ClubSearchController({ClubFetch? fetch}) : _fetch = fetch ?? ClubService().getClubs;
+  ClubSearchController({ClubFetch? fetch})
+    : _fetch = fetch ?? ClubService().getClubs;
 
   final results = <ClubModel>[].obs;
   final isLoading = false.obs;

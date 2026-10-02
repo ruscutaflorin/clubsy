@@ -25,12 +25,14 @@ class CheckInException implements Exception {
     try {
       final decoded = json.decode(body) as Map<String, dynamic>;
       final distanceMeters = (decoded['distanceMeters'] as num?)?.toDouble();
-      final fieldErrors = (decoded['errors'] as List?)
+      final fieldErrors =
+          (decoded['errors'] as List?)
               ?.map((e) => (e as Map)['msg']?.toString())
               .whereType<String>()
               .toList() ??
           const <String>[];
-      final message = decoded['message'] as String? ??
+      final message =
+          decoded['message'] as String? ??
           (fieldErrors.isNotEmpty ? fieldErrors.first : 'Failed to check in');
       return CheckInException(
         message: message,

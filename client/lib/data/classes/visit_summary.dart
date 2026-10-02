@@ -25,12 +25,26 @@ VisitSummary? visitSummaryForClub(String clubId, List<CheckInModel> checkIns) {
     if (checkIn.checkedInAt.isAfter(last)) last = checkIn.checkedInAt;
   }
 
-  return VisitSummary(visits: matches.length, firstVisit: first, lastVisit: last);
+  return VisitSummary(
+    visits: matches.length,
+    firstVisit: first,
+    lastVisit: last,
+  );
 }
 
 const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 /// "12 Sep", in local time. Hand-rolled so the app doesn't need intl.
