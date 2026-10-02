@@ -566,7 +566,7 @@ Goal: build the retention loop (streaks, badges, challenges, recaps) on top of v
 computed from `CheckIn` history so it needs no migration. This is the first, schema-free slice of
 `BACKLOG.md` B1. Points stay display-only until B4.
 
-- [ ] 6.1 Achievements engine on the server: weekly streak, badges, weekly challenges and display
+- [x] 6.1 Achievements engine on the server: weekly streak, badges, weekly challenges and display
       points.
       - Scope: `server/src/services/gamificationService.js` with pure functions over a user's
         check-ins (each including its club) and `now`:
