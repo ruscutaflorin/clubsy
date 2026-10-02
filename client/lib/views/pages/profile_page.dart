@@ -16,6 +16,7 @@ import 'package:clubsy/widgets/been_a_while_card.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/next_goals_card.dart';
 import 'package:clubsy/widgets/personal_records_card.dart';
+import 'package:clubsy/widgets/rhythm_card.dart';
 import 'package:clubsy/widgets/streak_nudge_banner.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
@@ -290,6 +291,7 @@ class ProfilePage extends StatelessWidget {
           NextGoalsCard(onTap: () => Get.to(() => const AchievementsPage())),
           const PersonalRecordsCard(),
           const BeenAWhileCard(),
+          const RhythmCard(),
           ListTile(
             key: const Key('recapTile'),
             leading: const Icon(Icons.auto_awesome),
