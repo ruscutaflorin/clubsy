@@ -41,6 +41,15 @@ class AuthService {
     return data;
   }
 
+  /// Validates the stored token and returns the current user (`GET /auth/me`).
+  /// Also refreshes the cached user.
+  Future<Map<String, dynamic>> fetchMe() async {
+    final user = await _api.get('/auth/me') as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode(user));
+    return user;
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(tokenKey);
