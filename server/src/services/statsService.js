@@ -46,3 +46,36 @@ export const computeCheckInStats = (checkIns) => {
     firstCheckInAt,
   };
 };
+
+// Per-city collection progress: how many of a city's approved clubs the user has visited.
+// Only cities with at least one check-in appear. A visited club that is no longer approved
+// still counts as visited, but visitedClubs is capped at totalClubs for display.
+export const computeCityProgress = (checkIns, approvedClubs) => {
+  const totals = new Map();
+  for (const club of approvedClubs) {
+    totals.set(club.city, (totals.get(club.city) ?? 0) + 1);
+  }
+
+  const cities = new Map();
+  for (const checkIn of checkIns) {
+    const city = checkIn.club.city;
+    const entry = cities.get(city) ?? { clubs: new Set(), lastVisitedAt: checkIn.checkedInAt };
+    entry.clubs.add(checkIn.clubId);
+    if (new Date(checkIn.checkedInAt) > new Date(entry.lastVisitedAt)) {
+      entry.lastVisitedAt = checkIn.checkedInAt;
+    }
+    cities.set(city, entry);
+  }
+
+  return [...cities.entries()]
+    .map(([city, entry]) => {
+      const totalClubs = totals.get(city) ?? 0;
+      return {
+        city,
+        visitedClubs: Math.min(entry.clubs.size, totalClubs),
+        totalClubs,
+        lastVisitedAt: entry.lastVisitedAt,
+      };
+    })
+    .sort((a, b) => b.visitedClubs - a.visitedClubs || a.city.localeCompare(b.city));
+};

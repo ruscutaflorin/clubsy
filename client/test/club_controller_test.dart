@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:clubsy/data/classes/achievements_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -145,6 +146,9 @@ class _FakeCheckInService implements CheckInService {
   @override
   Future<AchievementsModel> getMyAchievements() async =>
       const AchievementsModel(currentStreak: 1);
+
+  @override
+  Future<List<CityProgressModel>> getMyCities() async => [];
 
   @override
   Future<List<CheckInModel>> getMyCheckIns() async => [];

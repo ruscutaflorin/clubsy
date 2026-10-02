@@ -3,7 +3,7 @@ import { validationResult } from "express-validator";
 import { verifyClubQrPayload } from "../services/venueQrService.js";
 import { distanceInMeters } from "../utils/geo.js";
 import { nightStart, nightEnd } from "../utils/night.js";
-import { computeCheckInStats } from "../services/statsService.js";
+import { computeCheckInStats, computeCityProgress } from "../services/statsService.js";
 import { computeAchievements } from "../services/gamificationService.js";
 
 const MAX_CHECK_IN_DISTANCE_METERS = 150;
@@ -137,5 +137,25 @@ export const getMyCheckInStats = async (req, res) => {
   } catch (error) {
     console.error("Get check-in stats error:", error);
     res.status(500).json({ message: "Error fetching check-in stats" });
+  }
+};
+
+export const getMyCityProgress = async (req, res) => {
+  try {
+    const [checkIns, approvedClubs] = await Promise.all([
+      prisma.checkIn.findMany({
+        where: { userId: req.user.id },
+        include: { club: true },
+      }),
+      prisma.club.findMany({
+        where: { isApproved: true },
+        select: { id: true, city: true },
+      }),
+    ]);
+
+    res.json(computeCityProgress(checkIns, approvedClubs));
+  } catch (error) {
+    console.error("Get city progress error:", error);
+    res.status(500).json({ message: "Error fetching city progress" });
   }
 };

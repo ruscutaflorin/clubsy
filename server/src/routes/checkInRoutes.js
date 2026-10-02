@@ -6,6 +6,7 @@ import {
   getMyAchievements,
   getMyCheckIns,
   getMyCheckInStats,
+  getMyCityProgress,
 } from "../controllers/checkInController.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 import { checkInLimiter } from "../middlewares/rateLimiters.js";
@@ -26,6 +27,7 @@ const checkInValidation = [
 
 router.post("/", authMiddleware, checkInLimiter, checkInValidation, checkIn);
 router.get("/me/achievements", authMiddleware, getMyAchievements);
+router.get("/me/cities", authMiddleware, getMyCityProgress);
 router.get("/me/stats", authMiddleware, getMyCheckInStats);
 router.get("/me", authMiddleware, getMyCheckIns);
 router.delete("/:id", authMiddleware, deleteCheckIn);
