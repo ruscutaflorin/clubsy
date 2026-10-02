@@ -27,6 +27,8 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
 process.env.JWT_SECRET = "test-secret";
 const { default: app } = await import("../app.js");
 
+const { displayKey } = await import("../services/venueQrService.js");
+
 const tokenFor = (userId) => jwt.sign({ userId }, "test-secret");
 const userToken = tokenFor("u1");
 const adminToken = tokenFor("a1");
@@ -175,6 +177,51 @@ describe("club routes", () => {
     const res = await request(app).patch("/api/clubs/c1/approve").set(auth(userToken));
     expect(res.status).toBe(403);
     expect(clubUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("venue display", () => {
+  const key = () => displayKey(club);
+
+  it("serves the page as html with an inline PNG for the right key", async () => {
+    clubFindUnique.mockResolvedValue(club);
+    const res = await request(app).get(`/venue-display/c1?key=${key()}`);
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.text).toContain("data:image/png");
+  });
+
+  it("returns 404 for a wrong key, a missing key and an unknown club", async () => {
+    clubFindUnique.mockResolvedValue(club);
+    expect((await request(app).get("/venue-display/c1?key=nope")).status).toBe(404);
+    expect((await request(app).get("/venue-display/c1")).status).toBe(404);
+    clubFindUnique.mockResolvedValue(null);
+    expect((await request(app).get(`/venue-display/zzz?key=${key()}`)).status).toBe(404);
+  });
+
+  it("GET /venue-display/:id/qr returns qrCode and expiresAt", async () => {
+    clubFindUnique.mockResolvedValue(club);
+    const res = await request(app).get(`/venue-display/c1/qr?key=${key()}`);
+    expect(res.status).toBe(200);
+    expect(res.body.qrCode).toMatch(/^data:image\/png/);
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it("the old display key stops working after the QR secret is rotated", async () => {
+    const oldKey = key();
+    clubFindUnique.mockResolvedValue({ ...club, qrSecret: "rotated" });
+    const res = await request(app).get(`/venue-display/c1?key=${oldKey}`);
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /api/clubs/:id/display-link is admin only and returns the url", async () => {
+    clubFindUnique.mockResolvedValue(club);
+    expect(
+      (await request(app).get("/api/clubs/c1/display-link").set(auth(userToken))).status,
+    ).toBe(403);
+    const res = await request(app).get("/api/clubs/c1/display-link").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.url).toContain(`/venue-display/c1?key=${key()}`);
   });
 });
 

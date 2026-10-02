@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -62,6 +62,56 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
     }
   }
 
+  /// Opens a sheet with the venue display URL (rotating QR) to copy or share.
+  Future<void> _showDisplayLink() async {
+    try {
+      final url = await controller.loadDisplayLink(widget.club.id);
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Open this link on a screen at the door. The QR changes '
+                'every 30 seconds. Rotating the QR invalidates the link.',
+              ),
+              const SizedBox(height: 12),
+              SelectableText(url, key: const Key('displayLinkText')),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                children: [
+                  FilledButton.icon(
+                    key: const Key('displayLinkCopy'),
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('displayLinkShare'),
+                    onPressed: () =>
+                        Share.share(url, subject: widget.club.name),
+                    icon: const Icon(Icons.share),
+                    label: const Text('Share'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) setState(() => error = "Couldn't get the display link");
+    }
+  }
+
   Future<void> _confirmRotate() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -119,6 +169,12 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
                         onPressed: busy ? null : () => _share(qr),
                         icon: const Icon(Icons.share),
                         label: const Text('Share / print'),
+                      ),
+                      OutlinedButton.icon(
+                        key: const Key('adminQrDisplayLink'),
+                        onPressed: busy ? null : _showDisplayLink,
+                        icon: const Icon(Icons.tv),
+                        label: const Text('Venue display link'),
                       ),
                       OutlinedButton.icon(
                         onPressed: busy ? null : _confirmRotate,
