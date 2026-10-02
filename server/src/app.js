@@ -29,9 +29,17 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Unknown routes
+app.use((req, res) => {
+  res.status(404).json({ message: "Not found" });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ message: "Malformed JSON body" });
+  }
+  console.error("Error:", err.message, err.stack);
   res.status(500).json({ message: "Something went wrong!" });
 });
 
