@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/admin_controller.dart';
 import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_qr_page.dart';
+import 'package:clubsy/views/pages/admin/admin_metrics_page.dart';
 
 class AdminClubsPage extends StatefulWidget {
   const AdminClubsPage({super.key});
@@ -41,7 +42,17 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin · Clubs')),
+      appBar: AppBar(
+        title: const Text('Admin · Clubs'),
+        actions: [
+          IconButton(
+            key: const Key('adminMetrics'),
+            tooltip: 'Pilot metrics',
+            icon: const Icon(Icons.insights),
+            onPressed: () => Get.to(() => const AdminMetricsPage()),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('adminAddClub'),
         onPressed: () => Get.to(() => const AdminClubFormPage()),

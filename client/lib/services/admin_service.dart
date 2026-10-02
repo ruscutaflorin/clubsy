@@ -1,4 +1,5 @@
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/pilot_metrics_model.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/auth_service.dart';
 
@@ -48,6 +49,11 @@ class AdminService {
   Future<String> getQr(String id) async {
     final data = await _api.get('/clubs/$id/qr');
     return data['qrCode'] as String;
+  }
+
+  Future<PilotMetricsModel> getMetrics(int days) async {
+    final data = await _api.get('/admin/metrics', query: {'days': '$days'});
+    return PilotMetricsModel.fromMap(Map<String, dynamic>.from(data));
   }
 
   Future<String> rotateQr(String id) async {
