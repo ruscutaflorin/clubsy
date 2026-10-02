@@ -76,6 +76,9 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
         final nights = isVisited
             ? nightsAtClub(club.id, clubController.myCheckIns)
             : <DateTime>[];
+        final pairings = isVisited
+            ? pairedClubs(club.id, clubController.myCheckIns)
+            : <ClubPairing>[];
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -153,6 +156,29 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                       ),
                   ],
                 ),
+                if (pairings.isNotEmpty)
+                  Column(
+                    key: const Key('pairedClubs'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'Often paired with',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      for (final pairing in pairings)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(pairing.club.name),
+                          subtitle: Text(
+                            '${pairing.nights} '
+                            '${pairing.nights == 1 ? 'night' : 'nights'} together',
+                          ),
+                          onTap: () =>
+                              Get.to(() => ClubDetailsPage(club: pairing.club)),
+                        ),
+                    ],
+                  ),
               ],
               const SizedBox(height: 16),
               SizedBox(
