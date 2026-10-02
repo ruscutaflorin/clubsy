@@ -602,7 +602,7 @@ Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue windo
   - Acceptance: mocked-Prisma route tests in `server/src/__tests__/routes.test.js`: an admin with `?weeks=4` gets 200 with `weekly.length === 4`; no param gives `weekly.length === 12`; `?weeks=5` and `?weeks=abc` give 400 and `prisma.checkIn.findMany` is not called; a non-admin still gets 403. A widget test in `client/test/admin_club_footfall_test.dart` pumps the page with a fake service (no HTTP) that records the requested weeks. It finds `Key('footfallWeeks')`, taps "52 wk", checks that the fake was called with 52, and renders a 52-week fixture without overflow errors. `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B68 Yearly nights-out goal: "22 of 30 nights in 2026 · 2 ahead of pace" — status: approved
+- [x] B68 Yearly nights-out goal: "22 of 30 nights in 2026 · 2 ahead of pace" — status: done
   - Why: badges have fixed thresholds and the streak is weekly, but the regular thinks in years ("I want to go out more this year"). A goal users set for themselves, with a pace line, gives them a personal reason to come back (core loop step 4). It counts only verified nights (principle 5) and stays on the device (principle 2).
   - Scope: client only, no server or schema change. Store the goal locally under the key `yearly_goal_<year>` (an int, 1–365) with `shared_preferences`, which is already a dependency; follow how `client/lib/views/pages/check_in_primer_page.dart` reads and writes its flag. No server sync.
     - Pure logic: in a new `client/lib/data/classes/yearly_goal.dart`, add `YearlyGoalProgress yearlyGoalProgress(List<CheckInModel> checkIns, int goal, DateTime now)`.
