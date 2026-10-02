@@ -18,7 +18,10 @@ export function loadConfig(env = process.env) {
     PORT: toInt(env.PORT, 3000),
     NODE_ENV,
     IS_PRODUCTION: NODE_ENV === "production",
-    JWT_SECRET: env.JWT_SECRET,
+    // Read lazily so the secret can be set after this module loads (tests).
+    get JWT_SECRET() {
+      return env.JWT_SECRET;
+    },
     JWT_EXPIRES_IN: env.JWT_EXPIRES_IN || "30d",
     // null means "allow all"; an empty array means "allow none".
     CORS_ORIGINS: corsList.length > 0 ? corsList : NODE_ENV === "production" ? [] : null,

@@ -11,7 +11,7 @@ export const signUp = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (!process.env.JWT_SECRET) {
+    if (!config.JWT_SECRET) {
       return res.status(500).json({ message: "Server is not configured to issue sessions" });
     }
 
@@ -42,7 +42,7 @@ export const signUp = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      config.JWT_SECRET,
       { expiresIn: config.JWT_EXPIRES_IN }
     );
 
@@ -69,7 +69,7 @@ export const signIn = async (req, res) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    if (!process.env.JWT_SECRET) {
+    if (!config.JWT_SECRET) {
       return res.status(500).json({ message: "Server is not configured to issue sessions" });
     }
 
@@ -93,7 +93,7 @@ export const signIn = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      config.JWT_SECRET,
       { expiresIn: config.JWT_EXPIRES_IN }
     );
 
