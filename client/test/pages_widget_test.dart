@@ -114,7 +114,9 @@ void main() {
       });
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ProfileStatsCard(stats: stats))),
+        MaterialApp(
+          home: Scaffold(body: ProfileStatsCard(stats: stats)),
+        ),
       );
 
       expect(find.text('5'), findsOneWidget);
@@ -123,9 +125,7 @@ void main() {
       expect(find.text('Most visited: Club Alpha (3 visits)'), findsOneWidget);
     });
 
-    testWidgets('omits the most-visited line with no history', (
-      tester,
-    ) async {
+    testWidgets('omits the most-visited line with no history', (tester) async {
       final stats = CheckInStatsModel.fromMap({
         'totalCheckIns': 0,
         'uniqueClubs': 0,
@@ -135,7 +135,9 @@ void main() {
       });
 
       await tester.pumpWidget(
-        MaterialApp(home: Scaffold(body: ProfileStatsCard(stats: stats))),
+        MaterialApp(
+          home: Scaffold(body: ProfileStatsCard(stats: stats)),
+        ),
       );
 
       expect(find.byKey(const Key('profileStatsCard')), findsOneWidget);

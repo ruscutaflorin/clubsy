@@ -48,6 +48,41 @@ describe("authMiddleware", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "User not found" });
   });
 
+  it("rejects an expired token with 401 Session expired", async () => {
+    const token = jwt.sign(
+      { userId: "u1", exp: Math.floor(Date.now() / 1000) - 60 },
+      "test-secret"
+    );
+    const res = makeRes();
+    const next = jest.fn();
+    await authMiddleware({ headers: { authorization: `Bearer ${token}` } }, res, next);
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Session expired" });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("rejects a garbage token with 401 Invalid token", async () => {
+    const res = makeRes();
+    await authMiddleware({ headers: { authorization: "Bearer not.a.jwt" } }, res, jest.fn());
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: "Invalid token" });
+  });
+
+  it("rejects a non-Bearer scheme with 401", async () => {
+    const res = makeRes();
+    await authMiddleware({ headers: { authorization: "Basic xyz" } }, res, jest.fn());
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 on a database error", async () => {
+    findUnique.mockRejectedValue(new Error("db down"));
+    const token = jwt.sign({ userId: "u1" }, "test-secret");
+    const res = makeRes();
+    await authMiddleware({ headers: { authorization: `Bearer ${token}` } }, res, jest.fn());
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
   it("sets req.user and calls next for a valid token", async () => {
     findUnique.mockResolvedValue({ id: "u1", email: "a@b.c", role: "USER" });
     const token = jwt.sign({ userId: "u1" }, "test-secret");

@@ -61,7 +61,7 @@ class ClubDetailsPage extends StatelessWidget {
                   summary.visits == 1
                       ? '1 visit · on ${formatShortDate(summary.firstVisit)}'
                       : '${summary.visits} visits · last on '
-                          '${formatShortDate(summary.lastVisit)}',
+                            '${formatShortDate(summary.lastVisit)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],

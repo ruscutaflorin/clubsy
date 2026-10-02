@@ -52,14 +52,8 @@ class ProfileStatsCard extends StatelessWidget {
                 value: '${stats.totalCheckIns}',
                 label: 'Check-ins',
               ),
-              ProfileStatTile(
-                value: '${stats.uniqueClubs}',
-                label: 'Clubs',
-              ),
-              ProfileStatTile(
-                value: '${stats.uniqueCities}',
-                label: 'Cities',
-              ),
+              ProfileStatTile(value: '${stats.uniqueClubs}', label: 'Clubs'),
+              ProfileStatTile(value: '${stats.uniqueCities}', label: 'Cities'),
             ],
           ),
           if (stats.mostVisitedClub != null) ...[
