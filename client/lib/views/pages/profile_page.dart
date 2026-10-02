@@ -14,6 +14,7 @@ import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/next_goals_card.dart';
+import 'package:clubsy/widgets/personal_records_card.dart';
 import 'package:clubsy/widgets/streak_nudge_banner.dart';
 
 /// A single stat in the Profile stats card: a number and the label under it.
@@ -286,6 +287,7 @@ class ProfilePage extends StatelessWidget {
             );
           }),
           NextGoalsCard(onTap: () => Get.to(() => const AchievementsPage())),
+          const PersonalRecordsCard(),
           ListTile(
             key: const Key('recapTile'),
             leading: const Icon(Icons.auto_awesome),
