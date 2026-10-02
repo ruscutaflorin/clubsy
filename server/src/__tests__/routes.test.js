@@ -202,10 +202,11 @@ describe("venue display", () => {
 
   it("GET /venue-display/:id/qr returns qrCode and expiresAt", async () => {
     clubFindUnique.mockResolvedValue(club);
+    const before = Date.now();
     const res = await request(app).get(`/venue-display/c1/qr?key=${key()}`);
     expect(res.status).toBe(200);
     expect(res.body.qrCode).toMatch(/^data:image\/png/);
-    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(before);
   });
 
   it("the old display key stops working after the QR secret is rotated", async () => {
