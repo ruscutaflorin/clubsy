@@ -81,6 +81,37 @@ void main() {
 
       expect(find.textContaining('2 visits · last on'), findsOneWidget);
     });
+
+    testWidgets('lists the nights spent here in an expandable tile', (
+      tester,
+    ) async {
+      for (final day in [3, 10, 14]) {
+        controller.myCheckIns.add(
+          CheckInModel(
+            id: '$day',
+            clubId: club.id,
+            checkedInAt: DateTime(2026, 3, day, 22),
+            verificationMethod: 'QR_GPS',
+            distanceMeters: 10,
+            club: club,
+          ),
+        );
+      }
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      expect(find.text('Your nights here (3)'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('nightsHereTile')));
+      await tester.pumpAndSettle();
+      expect(find.text('Sat 14 Mar 2026'), findsOneWidget);
+    });
+
+    testWidgets('hides the nights tile for an unvisited club', (tester) async {
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('nightsHereTile')), findsNothing);
+    });
   });
 
   group('CheckInHistoryPage', () {
