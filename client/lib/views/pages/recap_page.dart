@@ -6,7 +6,9 @@ import 'package:flutter/rendering.dart';
 import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:clubsy/data/classes/nights_calendar.dart';
 import 'package:clubsy/data/classes/recap.dart';
+import 'package:clubsy/widgets/nights_calendar.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
 const _months = [
@@ -204,6 +206,15 @@ class _RecapPageState extends State<RecapPage> {
                 ),
               )
             else ...[
+              if (_year != null) ...[
+                NightsCalendar(checkIns: controller.myCheckIns, year: _year!),
+                const SizedBox(height: 4),
+                Text(
+                  '${nightsCalendar(controller.myCheckIns, _year!).nightsOut} nights out in $_year',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+              ],
               RepaintBoundary(
                 key: _boundaryKey,
                 child: RecapCard(
