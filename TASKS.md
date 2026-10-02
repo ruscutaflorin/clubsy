@@ -210,7 +210,7 @@ Goal: the app works on a real phone against a real server, failures are visible 
 the check-in is harder to fake, and the two screens people use most (the check-in result and the
 history) feel finished. No schema changes.
 
-- [ ] 3.1 One configurable API layer for the client: base URL from `--dart-define`, an injectable
+- [x] 3.1 One configurable API layer for the client: base URL from `--dart-define`, an injectable
       HTTP client, and one error parser.
       - Goal: the three services hard-code `http://localhost:3000/api`, which is unreachable from an
         Android emulator (`10.0.2.2`) or a phone, so the app can't be piloted. Error parsing is

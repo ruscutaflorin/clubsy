@@ -1,44 +1,30 @@
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:clubsy/services/api_client.dart';
 
 class AuthService {
-  static const String baseUrl =
-      'http://localhost:3000/api'; // Update with your API URL
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 
-  /// Reads the server's `{message}` error shape, or the first
-  /// express-validator `{errors: [{msg}]}` entry when `message` is absent.
-  static String _errorMessage(String body, String fallback) {
-    final decoded = json.decode(body);
-    if (decoded['message'] != null) return decoded['message'];
-    final errors = decoded['errors'] as List?;
-    if (errors != null && errors.isNotEmpty) {
-      return errors.first['msg'] ?? fallback;
-    }
-    return fallback;
+  final ApiClient _api;
+
+  AuthService({ApiClient? api})
+    : _api = api ?? ApiClient(tokenProvider: _readToken);
+
+  static Future<String?> _readToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(tokenKey);
   }
 
   Future<Map<String, dynamic>> signIn(String email, String password) async {
-    final http.Response response;
-    try {
-      response = await http.post(
-        Uri.parse('$baseUrl/auth/signin'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
-      );
-    } catch (_) {
-      throw Exception('Failed to connect to the server');
-    }
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      await _saveAuthData(data['token'], data['user']);
-      return data;
-    }
-    throw Exception(_errorMessage(response.body, 'Failed to sign in'));
+    final data = await _api.post(
+      '/auth/signin',
+      body: {'email': email, 'password': password},
+      authenticated: false,
+    ) as Map<String, dynamic>;
+    await _saveAuthData(data['token'], data['user']);
+    return data;
   }
 
   Future<Map<String, dynamic>> signUp(
@@ -46,23 +32,13 @@ class AuthService {
     String password,
     String name,
   ) async {
-    final http.Response response;
-    try {
-      response = await http.post(
-        Uri.parse('$baseUrl/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password, 'name': name}),
-      );
-    } catch (_) {
-      throw Exception('Failed to connect to the server');
-    }
-
-    if (response.statusCode == 201) {
-      final data = json.decode(response.body);
-      await _saveAuthData(data['token'], data['user']);
-      return data;
-    }
-    throw Exception(_errorMessage(response.body, 'Failed to sign up'));
+    final data = await _api.post(
+      '/auth/signup',
+      body: {'email': email, 'password': password, 'name': name},
+      authenticated: false,
+    ) as Map<String, dynamic>;
+    await _saveAuthData(data['token'], data['user']);
+    return data;
   }
 
   Future<void> signOut() async {
