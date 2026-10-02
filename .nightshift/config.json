@@ -65,7 +65,7 @@
                           ":(exclude)**/*.jpg"
                       ],
     "batch":  {
-                  "maxTasks":  8,
+                  "maxTasks":  1,
                   "maxTextLength":  600
               },
     "agentTimeoutMinutes":  75,
