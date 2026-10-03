@@ -605,7 +605,7 @@ Product-owner proposals, 2026-10-03 (dawn). Schema-free: map milestones, data po
 
 Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue window, a personal yearly goal, and club pairings.
 
-- [ ] B67 Admin footfall window: choose 4, 12, 26 or 52 weeks on a club's footfall report — status: approved
+- [x] B67 Admin footfall window: choose 4, 12, 26 or 52 weeks on a club's footfall report — status: done
   - Why: the B38/B51/B60 footfall report always covers 12 weeks. When pitching a venue (pilot step 5.6, PLAN monetization direction), a new partner wants "the last month", and a renewal conversation wants "the last 6 months / year". A window selector makes the same verified numbers fit each conversation, including the B60 copied summary, which already says "last <weekly.length> weeks". No schema change.
   - Scope: no schema change; admin-only; aggregates only.
     - Server: in `server/src/controllers/adminController.js`, `getClubFootfall` reads an optional `weeks` query param (default 12) and accepts only `4`, `12`, `26` or `52`. Anything else returns 400 `{message: "weeks must be 4, 12, 26 or 52"}` before any Prisma call (mirror the `ALLOWED_DAYS` check in `getMetrics`). Replace the fixed `FOOTFALL_WEEKS` with the chosen value in both the `since` window and the `computeClubFootfall({... weeks})` call. `computeDistanceHealth` uses the same window's check-ins. The response shape doesn't change, so `weekly.length === weeks`. The route stays `GET /api/admin/clubs/:id/footfall` in `server/src/routes/adminRoutes.js`.
