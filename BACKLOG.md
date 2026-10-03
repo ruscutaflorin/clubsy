@@ -702,7 +702,7 @@ Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data qualit
     - `node .nightshift/test-all.mjs` passes.
   - Size: M
 
-- [ ] B73 Map pins that show my nights: a count badge on clubs I've been to more than once — status: approved
+- [x] B73 Map pins that show my nights: a count badge on clubs I've been to more than once — status: done
   - Why: the personal map is the product's centrepiece, but a club visited once and a club visited twenty times look identical (one green pin). A small night count on each pin lets the map tell the regular's story at a glance. It also shows the explorer which pins are a ticked box and which is a home club. It uses only verified pins (principle 5) and only the user's own data (principle 2).
   - Scope: client only, no server or schema change.
     - Pure logic: add `Map<String, int> nightsPerClub(List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`. It maps each `club.id` to its number of distinct nights, using `nightOf` from `client/lib/data/classes/check_in_grouping.dart` on `checkedInAt.toLocal()`. A check-in at 23:00 and one at 02:00 the next morning at one club count as 1 night.
