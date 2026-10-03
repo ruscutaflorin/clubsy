@@ -1,9 +1,23 @@
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/admin_service.dart';
 import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _FakeAdminService extends AdminService {
+  final Map<String, dynamic> body;
+  final List<int> requested = [];
+
+  _FakeAdminService(this.body);
+
+  @override
+  Future<ClubFootfallModel> getClubFootfall(String id, {int weeks = 12}) async {
+    requested.add(weeks);
+    return ClubFootfallModel.fromMap(body);
+  }
+}
 
 void main() {
   final club = ClubModel(
@@ -66,6 +80,32 @@ void main() {
     await tester.pump();
     expect(find.text('Summary copied'), findsOneWidget);
     expect(copied, contains('Unique visitors'));
+  });
+
+  testWidgets('picking 52 wk reloads with 52 and renders without overflow', (
+    tester,
+  ) async {
+    final svc = _FakeAdminService({
+      'weekly': [
+        for (var i = 0; i < 52; i++)
+          {'weekStart': '2026-01-01', 'checkIns': i, 'uniqueVisitors': i},
+      ],
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(club: club, service: svc),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('footfallWeeks')), findsOneWidget);
+    expect(svc.requested, [12]);
+    await tester.tap(find.text('52 wk'));
+    await tester.pumpAndSettle();
+    expect(svc.requested.last, 52);
+    expect(tester.takeException(), isNull);
   });
 
   test('parses distance and defaults to null without it', () {
