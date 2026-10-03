@@ -717,7 +717,7 @@ Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data qualit
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B74 Change my display name from Profile — status: approved
+- [x] B74 Change my display name from Profile — status: done
   - Why: the name is set once at signup and can never be fixed. It is what the profile, the recap share card and (later) the Phase 8 social layer show. A user who typed a nickname, a typo or their full legal name at signup can only change it by deleting the account, which throws away their verified history. This completes the account basics next to change password (B43) and delete account (5.3).
   - Scope: no schema change (`User.name` already exists).
     - Server: add `updateMyProfile` in `server/src/controllers/authController.js`, mirroring `changePassword`'s shape: `validationResult` first, 404 `{message: "User not found"}` when the user is gone, 500 `{message}` on error. It updates only `name` for `req.user.id` and returns `{user: {id, email, name, role}}` with an explicit `select` (never `password`). Register it in `server/src/routes/authRoutes.js` as `router.patch('/me', authMiddleware, body('name').trim().notEmpty().withMessage('Name is required').isLength({ max: 50 }).withMessage('Name must be at most 50 characters'), updateMyProfile)`. It ignores any other body fields (`email`, `role`, `password`) and never writes them.
