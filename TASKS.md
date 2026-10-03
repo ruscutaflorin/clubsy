@@ -561,7 +561,7 @@ work; 5.5-5.7 are yours.
       account-deletion path (5.3) meet App Store and Play policy. Add the hosted policy URL to both
       store listings.
 
-- [ ] 5.8 Render deployment blueprint for the backend, so deploying (5.5) is only an account plus
+- [x] 5.8 Render deployment blueprint for the backend, so deploying (5.5) is only an account plus
       secrets.
       - Goal: the pilot API deploys to Render (decided 2026-10-03, `PLAN.md` decision 2) from one
         file, with no hand-configured settings.
