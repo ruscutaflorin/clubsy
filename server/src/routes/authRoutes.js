@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { changePassword, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp } from '../controllers/authController.js';
+import { changePassword, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp, updateMyProfile } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { authLimiter } from '../middlewares/rateLimiters.js';
 
@@ -25,6 +25,19 @@ router.post('/signin', authLimiter, signInValidation, signIn);
 
 // Current user
 router.get('/me', authMiddleware, getCurrentUser);
+
+// Change my display name
+router.patch(
+  '/me',
+  authMiddleware,
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ max: 50 })
+    .withMessage('Name must be at most 50 characters'),
+  updateMyProfile
+);
 
 // Download my data (GDPR export)
 router.get('/me/export', authMiddleware, exportMyData);

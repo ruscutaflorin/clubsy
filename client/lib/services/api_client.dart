@@ -100,7 +100,14 @@ class ApiClient {
     String path, {
     Object? body,
     bool authenticated = true,
-  }) => _send('PATCH', path, body: body, authenticated: authenticated);
+    bool expireSession = true,
+  }) => _send(
+    'PATCH',
+    path,
+    body: body,
+    authenticated: authenticated,
+    expireSession: expireSession,
+  );
 
   /// [expireSession] false: a 401 is an answer to this request (e.g. a wrong
   /// password), not an expired session, so don't sign the user out.

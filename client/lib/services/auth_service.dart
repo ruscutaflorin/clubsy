@@ -75,6 +75,19 @@ class AuthService {
     );
   }
 
+  /// Changes the display name (`PATCH /auth/me`) and refreshes the cached user.
+  Future<Map<String, dynamic>> updateName(String name) async {
+    final data = await _api.patch(
+      '/auth/me',
+      body: {'name': name},
+      expireSession: false,
+    ) as Map<String, dynamic>;
+    final user = data['user'] as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode(user));
+    return user;
+  }
+
   Future<void> signOut() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(tokenKey);
