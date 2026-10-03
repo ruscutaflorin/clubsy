@@ -106,7 +106,7 @@ removing a single check-in (B20) became 5.4.
 - **Later (growth and revenue):** Phase 8 social foundation, then B2/B3/B5 on top of it, venue
   partner tools (B24) and monetization (B4). See `BACKLOG.md`.
 
-## Open product decisions (the user needs to answer these)
+## Open product decisions (the user needs to answer these; 2, 3, 4, 6 and 7 decided 2026-10-03)
 
 These block specific tasks. Each one says what it unblocks.
 
@@ -114,21 +114,27 @@ These block specific tasks. Each one says what it unblocks.
    (B23, RO/EN). Unblocks 5.6.
 2. **Hosting** (e.g. Render, Fly.io or Railway, plus managed Postgres) and a production domain.
    Unblocks 5.5, CORS origins (2.3), and deep links (B30).
+   **Decided 2026-10-03: Render** (web service + managed Postgres from a `render.yaml` blueprint,
+   task 5.8). The production domain is still open.
 3. **Database access for agents.** Pick one: (a) a Postgres container the night shift starts
    through `.nightshift/config.json` `services`, or (b) amend `.nightshift/rules.md` so agents can
    generate migrations offline with
    `prisma migrate diff --from-schema-datamodel <snapshot> --to-schema-datamodel prisma/schema.prisma --script`.
    (a) is recommended because it also enables real integration tests. Unblocks all of Phase 7 (task 7.0).
+   **Decided 2026-10-03: (a)**, using the existing `clubsy-db` container as the `postgres` service.
 4. **Email provider** for password reset and notifications (e.g. Resend, Postmark or SES).
-   Unblocks 7.6.
+   Unblocks 7.6. **Decided 2026-10-03: Resend**, called over its HTTP API.
 5. **Legal copy:** privacy policy, terms, age requirement (18+ assumed), data retention period for
    check-ins. Unblocks 5.7 and the final text for 5.1.
 6. **Monetization direction.** Recommended: **venue-side (B2B) first.** Sell verified footfall
    insights and "reward your regulars" perks to clubs (B24), and keep the consumer app free. A
    consumer subscription (B4) only makes sense once there are social or cosmetic features worth
    paying for. Decide before B4/B24 get acceptance criteria.
+   **Decided 2026-10-03: venue-side B2B first.** B4 and the points ledger are deferred.
 7. **Social model.** Mutual friends only, or followers too? Recommended: mutual friends only for v1
    (Phase 8). It's simpler and safer, and it matches the B5 constraint.
+   **Decided 2026-10-03: mutual friends only**, with the visibility, blocking and moderation rules
+   written into TASKS 8.0.
 
 ## Risks
 

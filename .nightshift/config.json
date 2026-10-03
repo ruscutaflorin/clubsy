@@ -32,6 +32,13 @@
                                }
                   },
                   {
+                      "name":  "server-schema",
+                      "run":  "cd server && npx prisma validate",
+                      "when":  {
+                                   "changed":  "server/prisma/*"
+                               }
+                  },
+                  {
                       "name":  "tests",
                       "run":  "node .nightshift/test-all.mjs",
                       "when":  {
@@ -45,7 +52,18 @@
                   }
               ],
     "services":  {
-
+                     "postgres":  {
+                                      "docker":  true,
+                                      "check":  "docker exec clubsy-db pg_isready -U clubsy -d clubsy",
+                                      "start":  "docker start clubsy-db && docker exec clubsy-db sh -c \"until pg_isready -U clubsy -d clubsy; do sleep 1; done\"",
+                                      "startTimeoutMinutes":  3,
+                                      "forPhases":  [
+                                                        "7",
+                                                        "8"
+                                                    ],
+                                      "forTextMatch":  "(?i)prisma|migration|schema",
+                                      "exclusive":  true
+                                  }
                  },
     "protectedPaths":  {
 

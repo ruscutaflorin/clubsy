@@ -2,10 +2,11 @@
 
 Ideas beyond `TASKS.md`. The night-shift product agent appends proposals here; it never builds them.
 **To queue one, change `status: proposed` to `status: approved`.** To reject, set `status: rejected`
-(kept so it isn't proposed again). Built items become `[x] … status: done`.
+(kept so it isn't proposed again). `status: deferred` means decided but parked: the supervisor never builds it,
+and the line says what it waits for. Built items become `[x] … status: done`.
 
 ```
-- [ ] B<n> Title — status: proposed | approved | rejected
+- [ ] B<n> Title — status: proposed | approved | rejected | deferred
   - Why / Scope / Acceptance / Size
 ```
 
@@ -15,10 +16,11 @@ The full product roadmap agreed with the user before Phase 1 was scaffolded (see
 `C:\Users\ruscu\.claude\plans\tingly-exploring-hickey.md` for the original planning context).
 B1-B5 failed as single night-shift items because each is several features in one and most need
 schema changes. Each one now has a **path forward** that names the `TASKS.md` tasks it was split
-into, and what it still waits on. They stay `[!]` so the supervisor doesn't retry them whole. Build
-them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product decisions".
+into, and what it still waits on. Since 2026-10-03 they're marked `promoted` or `deferred` instead
+of `[!]`, so the supervisor neither retries them whole nor reports them as failed. Build them
+through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product decisions".
 
-- [!] B1 Gamification: visit streaks, weekly challenges, points balance — status: approved <!-- failed 2026-10-01: BLOCKED: no database available — B1 needs a schema change and `prisma migrate dev`, and it is also too large for a single task. -->
+- [ ] B1 Gamification: visit streaks, weekly challenges, points balance — status: promoted → TASKS.md 6.1-6.3 (done); the persisted points ledger is deferred with B4
   - Why: core retention loop once check-in itself works.
   - Scope: a `Streak`/points-balance concept on `User` or a new `UserStats` model, computed from
     `CheckIn` history (consecutive nights/weeks with a check-in); a handful of static weekly
@@ -34,7 +36,7 @@ them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product
     not nightly: a nightly streak would reward going out every night, which is the wrong incentive
     for a nightlife app, and weekly matches how regulars actually behave.
 
-- [!] B2 Ratings: post-visit behavior ratings between users — status: approved <!-- failed 2026-10-01: BLOCKED: no database available. B2 needs a new `Rating` model, and the project rules require adding it with `npx prisma migrate dev`, which needs a live Postgre... -->
+- [ ] B2 Ratings: post-visit behavior ratings between users — status: deferred until Phase 8 lands (8.1 friends, 8.2 block/report); venue ratings ship as TASKS 7.4/7.5
   - Why: requested as a safety/quality signal for who you'll meet at a club.
   - Scope: a `Rating` model (rater, ratee, optional note, 1-5 score), only submittable between two
     users who checked into the same club on the same night; an average rating surfaced on profile.
@@ -50,7 +52,7 @@ them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product
     ratings below 3 need a reason category, an appeal path, and showing averages only from 5+
     raters. Re-scope after Phase 8.
 
-- [!] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: approved <!-- failed 2026-10-01: BLOCKED: B3 needs a dedicated design and privacy pass first, and its schema migration needs a live database (no database available). -->
+- [ ] B3 Matching: Tinder-style swipe/match between users checked into the same club/night — status: deferred until Phase 8 lands, then a design round (questions below)
   - Why: the original pitch's "algorithm similar to Tinder" for clubgoers.
   - Scope: a swipe/like/match model scoped to users who share a current or recent check-in at the
     same club; a match unlocks some form of contact (chat is out of scope unless separately
@@ -69,7 +71,7 @@ them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product
     rate limits on likes, report from the deck, 18+ enforced (7.1). (6) App store category and
     age-rating impact. Write the answers here, then split into tasks.
 
-- [!] B4 Points economy & subscriptions — status: approved <!-- failed 2026-10-01: BLOCKED: B4's acceptance criteria are "TBD" and what's being sold (perks, cosmetics, partner discounts, subscription tiers) hasn't been decided. It also require... -->
+- [ ] B4 Points economy & subscriptions — status: deferred: venue-side B2B first (decided 2026-10-03, PLAN.md decision 6)
   - Why: monetization + a sink for the points balance from B1.
   - Scope: ways to spend accumulated points (perks, cosmetic profile features, club-partner
     discounts — TBD with the business side); subscription tiers on top. Reintroduce a Stripe
@@ -85,8 +87,18 @@ them through the listed tasks instead. See `PLAN.md` "Roadmap" and "Open product
     recap history, custom map themes, advanced stats). Note that iOS/Android digital
     subscriptions must use in-app purchase, not Stripe, so the timeit Stripe pattern only fits
     venue billing. Decision needed from the user: PLAN.md open decision 6.
+  - Decided 2026-10-03: **venue-side B2B first** (B24, B25), and the consumer app stays free.
+    B4 waits until consumer redemption is planned. The persisted points ledger (formerly TASKS
+    7.8) waits with it. Its spec, for when it returns to `TASKS.md`:
+    - Schema: `PointsEntry {id, userId, amount, reason enum(CHECK_IN, NEW_CLUB, BADGE, CHALLENGE,
+      REDEMPTION, ADJUSTMENT), refId, createdAt, @@unique([userId, reason, refId])}`. The unique
+      constraint makes awarding idempotent.
+    - Server: award inside the check-in transaction, and the balance is the sum. Add a backfill
+      script from existing check-ins that produces the same total as 6.1's `points()`.
+    - Verified by: Jest (a duplicate award is a no-op; deleting a check-in (5.4) writes a
+      compensating negative entry; the backfill equals the computed points for fixtures).
 
-- [!] B5 Live presence map ("who's out tonight") — status: approved <!-- failed 2026-10-01: BLOCKED: B5 has no defined acceptance criteria or safety/blocking design, and the project rules forbid building the presence map without an explicit scope. -->
+- [ ] B5 Live presence map ("who's out tonight") — status: deferred until 8.4 proves safe in the pilot (stepping stones below)
   - Why: the original "Snapchat map" pitch. **Deferred deliberately** for real safety reasons
     (stalking/unwanted-contact risk in a nightlife context), not because it's low value.
   - Scope, non-negotiable before any build: opt-in per session (not a standing setting), visible

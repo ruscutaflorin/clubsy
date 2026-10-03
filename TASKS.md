@@ -534,10 +534,11 @@ work; 5.5-5.7 are yours.
       - Depends on: 3.1, 3.5.
 
 - [>] 5.5 (You) Deploy the pilot backend and ship test builds.
-      - Pick a host (see the open decisions in `PLAN.md`), provision managed Postgres, and set
-        `DATABASE_URL`, a fresh 64-byte `JWT_SECRET`, `NODE_ENV=production`, `CORS_ORIGINS` and
-        `JWT_EXPIRES_IN`. Run `pnpm prisma migrate deploy` on release. Point an uptime check at
-        `/health/ready` (2.3).
+      - Host: **Render** (decided 2026-10-03). Once 5.8 has landed: create a Render account,
+        choose New → Blueprint, point it at this repo's `main`, and fill in the secrets the
+        blueprint marks as yours (`CORS_ORIGINS`, `RESEND_API_KEY`, `EMAIL_FROM`). The blueprint
+        provisions managed Postgres, generates `JWT_SECRET`, runs `prisma migrate deploy` before
+        each release and health-checks `/health/ready` (2.3). Add a custom domain if you want one.
       - Build the app with `--dart-define=API_BASE_URL=https://<domain>/api`. Ship it to Play
         Console internal testing and TestFlight. Set a real application id or bundle id instead of
         any `com.example` default, plus app name, icon and splash screen.
@@ -559,6 +560,30 @@ work; 5.5-5.7 are yours.
       check-in data retention period, and confirm the 18+ requirement and the in-app
       account-deletion path (5.3) meet App Store and Play policy. Add the hosted policy URL to both
       store listings.
+
+- [ ] 5.8 Render deployment blueprint for the backend, so deploying (5.5) is only an account plus
+      secrets.
+      - Goal: the pilot API deploys to Render (decided 2026-10-03, `PLAN.md` decision 2) from one
+        file, with no hand-configured settings.
+      - Scope: a `render.yaml` at the repo root with:
+        - a Node web service: `rootDir: server`, region `frankfurt`, build
+          `pnpm install --frozen-lockfile && npx prisma generate`, `preDeployCommand:
+          npx prisma migrate deploy`, start `node src/index.js`, `healthCheckPath: /health/ready`
+        - a managed Postgres database `clubsy-db` in the same region, wired in with
+          `DATABASE_URL: fromDatabase`
+        - env vars `NODE_ENV=production`, `JWT_EXPIRES_IN=30d`, `JWT_SECRET` with
+          `generateValue: true`, and `CORS_ORIGINS`, `RESEND_API_KEY`, `EMAIL_FROM` as
+          `sync: false` (filled in by the owner)
+
+        Also add a short `docs/deploy.md`: the owner's click path, how to run the seed script's
+        admin path against production (2.5), and how to roll back. Add `RESEND_API_KEY` and
+        `EMAIL_FROM` to `server/.env.example` as optional, commented.
+      - Out: creating the Render account or deploying (5.5), app store builds, the email sender
+        itself (7.6).
+      - Verified by: a Jest test (`server/src/__tests__/renderBlueprint.test.js`) that parses
+        `render.yaml` with the `yaml` package (add it as a devDependency). It asserts the
+        health-check path, the pre-deploy migration, `rootDir`, and that every variable
+        `config.js` reads in production is declared. `pnpm test` passes.
 
 ## Phase 6 — Engagement without schema changes
 
@@ -685,22 +710,19 @@ computed from `CheckIn` history so it needs no migration. This is the first, sch
         "Not on your map yet" state for an unvisited club and the B13 summary for a visited one.
         `flutter test` passes.
 
-## Phase 7 — Features that need schema changes (blocked on 7.0)
+## Phase 7 — Features that need schema changes
 
-Every task here adds a Prisma migration. Agents can't create migrations without a database (see
-`.nightshift/rules.md`), so all of them are `[>]` until 7.0 is resolved. **To queue one, flip it
-to `[ ]` after 7.0 is done.** Each task bundles schema, migration, server, client and tests for one
-feature, per the sizing rules.
+Every task here adds a Prisma migration with `npx prisma migrate dev` against the local dev
+Postgres that the supervisor starts (service `postgres` in `.nightshift/config.json`; see
+`.nightshift/rules.md`). Each task bundles schema, migration, server, client and tests for one
+feature, per the sizing rules. Server tests still mock Prisma.
 
-- [>] 7.0 (You) Give the night shift a way to create migrations. Either (a) add a Postgres
-      container from 2.5's `docker-compose.yml` to `.nightshift/config.json` `services` and put its
-      URL in the agent environment's `server/.env`, or (b) amend `.nightshift/rules.md` to allow
-      `prisma migrate diff --from-schema-datamodel <snapshot of the old schema>
-      --to-schema-datamodel prisma/schema.prisma --script` into a new
-      `prisma/migrations/<timestamp>_<name>/migration.sql` (generated, not hand-written). (a) is
-      recommended. Then flip the Phase 7 tasks you want to `[ ]`.
+- [x] 7.0 (You) Give the night shift a way to create migrations. Done 2026-10-03 with option (a):
+      the existing `clubsy-db` container is the `postgres` service (started for Phases 7 and 8),
+      `server/.env` (copied into every worktree) points at it, and `.nightshift/rules.md` explains
+      how to migrate and reset it.
 
-- [>] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
+- [ ] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
       server-side consent records.
       - Schema: `User.username String? @unique` (3-20 characters, `[a-z0-9_]`, stored lowercase),
         `User.homeCity String?`, `User.acceptedTermsAt DateTime?`, `User.termsVersion String?`,
@@ -717,7 +739,7 @@ feature, per the sizing rules.
         400; a case-insensitive duplicate → 409), a Flutter widget test for the edit form
         validation, and `pnpm test` plus `flutter test`.
 
-- [>] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
+- [ ] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
       - Schema: `Club.description String?` (≤ 500), `Club.genres String[]` (from a fixed list in
         `server/src/utils/genres.js`: techno, house, hip-hop, commercial, rock, latin, drum-and-bass,
         live), `Club.openingHours Json?` (`{mon:[{open:"23:00",close:"05:00"}], …}`, close may be
@@ -736,7 +758,7 @@ feature, per the sizing rules.
         at Saturday 06:00; closed days; a malformed JSON shape is rejected at validation),
         Flutter tests for the chip text, `pnpm test` and `flutter test`.
 
-- [>] 7.3 Favourites ("Want to go") list and map layer.
+- [ ] 7.3 Favourites ("Want to go") list and map layer.
       - Schema: `Favorite {userId, clubId, createdAt, @@unique([userId, clubId])}`.
       - Server: `PUT /api/clubs/:id/favorite` and `DELETE /api/clubs/:id/favorite` (idempotent,
         404 for unapproved clubs), and `GET /api/clubs/favorites`. Club list responses include
@@ -749,7 +771,7 @@ feature, per the sizing rules.
         `isFavorite` only reflects the caller's favourites), Flutter controller tests for the
         optimistic toggle with rollback, `pnpm test` and `flutter test`.
 
-- [>] 7.4 Private night notes and a venue "vibe" rating on each check-in.
+- [ ] 7.4 Private night notes and a venue "vibe" rating on each check-in.
       - Goal: turn the history into a real diary ("great DJ, went with Ana") and collect the venue
         quality signal that powers 7.5. This rates **venues**, not people; person-to-person
         ratings (B2) stay gated behind Phase 8.
@@ -766,7 +788,7 @@ feature, per the sizing rules.
         (pure `pendingVibePrompt(checkIns, now)`), `pnpm test` and `flutter test`.
       - Depends on: 7.0, 3.5 and 5.4 (history tile layout).
 
-- [>] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
+- [ ] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
       - Server: club responses include `vibe: {average, count}` only when `count >= 5` (k-anonymity:
         individual ratings are never exposed, and below the threshold the field is `null`).
         Compute it over the last 90 days. Add a `sort=vibe` option on `GET /api/clubs`.
@@ -776,8 +798,12 @@ feature, per the sizing rules.
         no rater ids in the payload), `pnpm test` and `flutter test`.
       - Depends on: 7.4.
 
-- [>] 7.6 Password reset by email.
-      - Needs an email provider decision (`PLAN.md` open decision 4) and its API key in env.
+- [ ] 7.6 Password reset by email.
+      - Provider: **Resend** (decided 2026-10-03, `PLAN.md` decision 4). Call its HTTP API
+        (`POST https://api.resend.com/emails`) with `fetch` instead of adding an SDK. Use the
+        Resend sender when `RESEND_API_KEY` is set, otherwise the console sender, and send from
+        `EMAIL_FROM`. `config.js` requires both in production. Tests inject a fake sender or a
+        fake `fetch` and never call the real API.
       - Schema: `PasswordResetToken {id, userId, tokenHash, expiresAt, usedAt}`. Store only a
         SHA-256 hash of the token.
       - Server: `POST /api/auth/password/forgot` always returns 202 (never reveals whether an email
@@ -791,7 +817,7 @@ feature, per the sizing rules.
         code → 400; a reused code → 400; a successful reset → new password works and the old one
         doesn't), `pnpm test` and `flutter test`.
 
-- [>] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
+- [ ] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
       account deletion.
       - Schema: `User.tokenVersion Int @default(0)`.
       - Server: include `tv` in the JWT. `authMiddleware` rejects with 401 when `tv !==
@@ -801,30 +827,28 @@ feature, per the sizing rules.
       - Verified by: Jest (an old token → 401 after signout-all; a new token works), `pnpm test`.
       - Depends on: 2.1, 3.4.
 
-- [>] 7.8 Points ledger (the persisted half of B1; prerequisite for B4).
-      - Only build this once B4's "what can points buy" decision exists. Until then, 6.1's computed
-        points are enough.
-      - Schema: `PointsEntry {id, userId, amount, reason enum(CHECK_IN, NEW_CLUB, BADGE, CHALLENGE,
-        REDEMPTION, ADJUSTMENT), refId, createdAt, @@unique([userId, reason, refId])}`. The unique
-        constraint makes awarding idempotent.
-      - Server: award inside the check-in transaction; balance = sum. Add a backfill script from
-        existing check-ins that produces the same total as 6.1's `points()`.
-      - Verified by: Jest (a duplicate award is a no-op; deleting a check-in (5.4) writes a
-        compensating negative entry; the backfill equals the computed points for fixtures).
+The points ledger (formerly 7.8) moved to `BACKLOG.md` B4 on 2026-10-03: monetization is
+venue-side B2B first, so there's nothing for points to buy yet, and 6.1's computed points are
+enough.
 
-## Phase 8 — Social foundation (blocked on 8.0 design and safety sign-off)
+## Phase 8 — Social foundation (after 7)
 
 Nothing in this phase shows a user's **current** location to anyone. It's the base that B2
-(ratings), B3 (matching) and B5 (presence) must build on. Each task needs 7.0 for its schema, and
-8.0 before any of it.
+(ratings), B3 (matching) and B5 (presence) must build on. Every task needs 7.1 (usernames) and
+follows the 8.0 decisions below.
 
-- [>] 8.0 (You) Sign off the social design. Mutual friends only, or followers too (PLAN.md
-      recommends mutual only)? What a friend can see (recommended: clubs and nights, never times;
-      only nights that have ended, after 06:00; opt-in per user, off by default). Block semantics
-      (a blocked user disappears everywhere both ways, and existing friendships end). Who moderates
-      reports and how fast. Write the answers into this task, then flip 8.1-8.4 to `[ ]`.
+- [x] 8.0 (You) Sign off the social design. Signed off 2026-10-03 (`PLAN.md` decision 7):
+      - **Model:** mutual friends only. No followers and no one-way visibility.
+      - **What a friend sees:** clubs and night dates, never check-in times, and only nights that
+        have ended (after 06:00). Sharing is opt-in per user and off by default, and any single
+        check-in can be hidden.
+      - **Blocking:** a blocked user disappears everywhere, in both directions, and any friendship
+        or pending request between the two ends. Unblocking doesn't restore the friendship.
+      - **Moderation:** the owner (admin role) works the report queue in the admin console within
+        48 hours. A user with 3+ open reports is flagged for review.
+      - **Navigation:** no new bottom tab. Friends and the feed are pages pushed from Profile.
 
-- [>] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
+- [ ] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
       - Schema: `Friendship {id, requesterId, addresseeId, status PENDING|ACCEPTED, createdAt,
         respondedAt, @@unique([requesterId, addresseeId])}`.
       - Server: send a request by `username` (7.1). Searching only matches an exact username,
@@ -836,7 +860,7 @@ Nothing in this phase shows a user's **current** location to anyone. It's the ba
         auto-accept, requesting yourself → 400, and an unknown username giving the same response
         as a known one, plus Flutter controller tests.
 
-- [>] 8.2 Block and report, plus an admin moderation queue.
+- [ ] 8.2 Block and report, plus an admin moderation queue.
       - Schema: `Block {blockerId, blockedId, createdAt, @@unique}` and `Report {id, reporterId,
         reportedUserId, reason enum, details ≤ 500, status OPEN|ACTIONED|DISMISSED, createdAt,
         handledById, handledAt}`.
@@ -850,7 +874,7 @@ Nothing in this phase shows a user's **current** location to anyone. It's the ba
         either direction; unblocking doesn't restore the friendship), `pnpm test` and
         `flutter test`.
 
-- [>] 8.3 Privacy settings: control who sees my nights.
+- [ ] 8.3 Privacy settings: control who sees my nights.
       - Schema: `User.shareNightsWithFriends Boolean @default(false)` and `CheckIn.hiddenFromFriends
         Boolean @default(false)`.
       - Client: a Privacy section in Profile with a clear explanation, and a per-check-in "Hide
@@ -858,13 +882,13 @@ Nothing in this phase shows a user's **current** location to anyone. It's the ba
       - Verified by: Jest for the defaults (a new user shares nothing) and the toggles,
         `pnpm test` and `flutter test`.
 
-- [>] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
+- [ ] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
       - Server: `GET /api/feed` returns friends' check-ins only when **both** users have
         `shareNightsWithFriends` on, the check-in isn't hidden, and its night has **ended** (now is
         at or after `nightEnd(checkedInAt)`). It shows the club and the night date, never the
         check-in time. It's paginated and never includes blocked users.
-      - Client: a "Friends" feed (a new tab only if the user approves the nav change; otherwise a
-        page from the map), plus "3 friends have been here" on `ClubDetailsPage` (count only).
+      - Client: a "Friends' nights" feed page pushed from Profile (no new tab, per 8.0), plus
+        "3 friends have been here" on `ClubDetailsPage` (count only).
       - Verified by: Jest (a check-in from tonight is not visible until 06:00; one-sided sharing is
         not visible; hidden check-ins and blocked users are excluded; no `checkedInAt` time is in
         the payload), `pnpm test` and `flutter test`.

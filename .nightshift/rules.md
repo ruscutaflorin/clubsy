@@ -34,13 +34,18 @@ in this repo should reintroduce event/ticketing/cart concepts.
   `TASKS.md` task explicitly describes that exact scope.
 - `server/prisma/schema.prisma` migrations are one-way in practice (a real Postgres instance holds
   data once seeded) — when a task changes the schema, add a new migration via
-  `npx prisma migrate dev`, never hand-edit a file under `server/prisma/migrations/`.
+  `cd server && npx prisma migrate dev --name <snake_case_name>`, never hand-edit a file under
+  `server/prisma/migrations/`. Only `TASKS.md` Phase 7+ tasks may change the schema.
 - Club check-in verification is QR (venue-displayed) + GPS proximity (~150m, see
   `server/src/utils/geo.js` and `MAX_CHECK_IN_DISTANCE_METERS` in `checkInController.js`) — don't
   relax this to GPS-only or QR-only without an explicit task saying so.
-- No Postgres is guaranteed to be running during a night-shift session. Any task that needs a live
-  database (running `prisma migrate dev`, hitting an endpoint end-to-end) should say so plainly and
-  end `BLOCKED: no database available` rather than guessing at a connection string.
+- A local dev Postgres (Docker container `clubsy-db`) is started by the supervisor for Phase 7 and 8
+  tasks (`.nightshift/config.json` service `postgres`), and `server/.env` already points at it: use
+  that `DATABASE_URL`, never invent a connection string. The database holds seed data only and is
+  disposable. If `prisma migrate dev` reports drift or migrations the branch doesn't have (left by
+  an earlier attempt), run `cd server && npx prisma migrate reset --force` (it re-applies the
+  branch's migrations and re-seeds), then retry. Server tests still mock Prisma and never need
+  the database. If the database is unreachable, end `BLOCKED: no database available`.
 - To verify the server boots without crashing, run exactly `timeout 5 node server/src/index.js`
   (that precise command, from the repo root) — it is the one allowlisted in `.claude/settings.json`.
   A different timeout value or invocation form will be denied by the permission system, not by a
