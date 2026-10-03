@@ -4,10 +4,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:clubsy/services/location_lookup.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_map_filtering.dart';
+import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/club_search_controller.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/views/pages/club_search_page.dart';
+import 'package:clubsy/widgets/club_pin.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 
 class ClubMapPage extends StatefulWidget {
@@ -63,6 +65,7 @@ class _ClubMapPageState extends State<ClubMapPage> {
           }
 
           final visited = clubController.visitedClubIds;
+          final nights = nightsPerClub(clubController.myCheckIns);
           final visitedOnly = clubController.visitedOnly.value;
           final clubs = clubsForMap(clubController.clubs, visited, visitedOnly);
           final bounds = boundsFor(clubs);
@@ -94,19 +97,16 @@ class _ClubMapPageState extends State<ClubMapPage> {
                   ),
                   MarkerLayer(
                     markers: clubs.map((club) {
-                      final isVisited = visited.contains(club.id);
                       return Marker(
                         point: LatLng(club.latitude, club.longitude),
                         width: 44,
                         height: 44,
-                        child: GestureDetector(
+                        child: ClubPin(
+                          club: club,
+                          isVisited: visited.contains(club.id),
+                          nights: nights[club.id] ?? 0,
                           onTap: () =>
                               Get.to(() => ClubDetailsPage(club: club)),
-                          child: Icon(
-                            Icons.location_on,
-                            size: 40,
-                            color: isVisited ? Colors.green : Colors.redAccent,
-                          ),
                         ),
                       );
                     }).toList(),
