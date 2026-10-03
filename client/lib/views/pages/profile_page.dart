@@ -195,6 +195,84 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   }
 }
 
+/// Dialog to edit the display name. Pops `true` once the name is saved.
+class EditNameDialog extends StatefulWidget {
+  final String initialName;
+
+  const EditNameDialog({super.key, required this.initialName});
+
+  @override
+  State<EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<EditNameDialog> {
+  late final _name = TextEditingController(text: widget.initialName);
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _error = 'Name is required');
+      return;
+    }
+    if (name.length > 50) {
+      setState(() => _error = 'Name must be at most 50 characters');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await Get.find<AuthController>().updateName(name);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      Navigator.of(context).pop(false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : "Couldn't update your name",
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Change name'),
+      content: TextField(
+        key: const Key('nameField'),
+        controller: _name,
+        enabled: !_busy,
+        autofocus: true,
+        decoration: InputDecoration(labelText: 'Name', errorText: _error),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          key: const Key('nameSave'),
+          onPressed: _busy ? null : _save,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -243,14 +321,39 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Obx(
-                  () => Text(
-                    authController.user?['name'] ?? 'User',
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Obx(
+                        () => Text(
+                          authController.user?['name'] ?? 'User',
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    IconButton(
+                      key: const Key('editName'),
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Change name',
+                      onPressed: () async {
+                        final saved = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => EditNameDialog(
+                            initialName: authController.user?['name'] ?? '',
+                          ),
+                        );
+                        if (saved == true && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Name updated')),
+                          );
+                        }
+                      },
+                    ),
+                  ],
                 ),
                 Obx(() => Text(authController.user?['email'] ?? '')),
               ],
