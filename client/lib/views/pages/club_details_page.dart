@@ -1,51 +1,192 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:clubsy/data/classes/club_directions.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/location_lookup.dart';
+import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
-import 'package:clubsy/views/pages/check_in_page.dart';
+import 'package:clubsy/views/pages/check_in_primer_page.dart';
 
-class ClubDetailsPage extends StatelessWidget {
+const _maxNightRows = 20;
+
+class ClubDetailsPage extends StatefulWidget {
   final ClubModel club;
 
   const ClubDetailsPage({super.key, required this.club});
+
+  @override
+  State<ClubDetailsPage> createState() => _ClubDetailsPageState();
+}
+
+class _ClubDetailsPageState extends State<ClubDetailsPage> {
+  String? _distance;
+
+  ClubModel get club => widget.club;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDistance();
+  }
+
+  Future<void> _loadDistance() async {
+    final position = await positionIfPermitted();
+    if (position == null || !mounted) return;
+    final meters = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      club.latitude,
+      club.longitude,
+    );
+    setState(() => _distance = formatDistance(meters));
+  }
+
+  Future<void> _openDirections() async {
+    final uri = directionsUri(club, defaultTargetPlatform);
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened) {
+      Get.snackbar('Directions', 'No maps app available');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final clubController = Get.find<ClubController>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(club.name)),
+      appBar: AppBar(
+        title: Text(club.name),
+        actions: [
+          IconButton(
+            key: const Key('shareClub'),
+            icon: const Icon(Icons.share),
+            tooltip: 'Share',
+            onPressed: () => Share.share(clubShareText(club)),
+          ),
+        ],
+      ),
       body: Obx(() {
-        final isVisited = clubController.visitedClubIds.contains(club.id);
+        final summary = clubController.visitSummaryFor(club.id);
+        final isVisited = summary != null;
 
-        return Padding(
+        final nights = isVisited
+            ? nightsAtClub(club.id, clubController.myCheckIns)
+            : <DateTime>[];
+        final pairings = isVisited
+            ? pairedClubs(club.id, clubController.myCheckIns)
+            : <ClubPairing>[];
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(club.imageUrl, height: 180, width: double.infinity, fit: BoxFit.cover),
+                child: Image.network(
+                  club.imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(height: 16),
-              Text(club.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              Text(
+                club.name,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 4),
               Text('${club.address}, ${club.city}'),
+              if (_distance != null) ...[
+                const SizedBox(height: 4),
+                Text('$_distance from you'),
+              ],
               const SizedBox(height: 8),
-              if (isVisited)
+              OutlinedButton.icon(
+                key: const Key('directionsButton'),
+                icon: const Icon(Icons.directions),
+                label: const Text('Directions'),
+                onPressed: _openDirections,
+              ),
+              const SizedBox(height: 8),
+              if (!isVisited)
+                Text(
+                  'Not on your map yet',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              if (isVisited) ...[
                 const Chip(
-                  avatar: Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  avatar: Icon(
+                    Icons.check_circle,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                   label: Text('Checked in before'),
                   backgroundColor: Colors.green,
                   labelStyle: TextStyle(color: Colors.white),
                 ),
-              const Spacer(),
+                const SizedBox(height: 4),
+                Text(
+                  summary.visits == 1
+                      ? '1 visit · on ${formatShortDate(summary.firstVisit)}'
+                      : '${summary.visits} visits · last on '
+                            '${formatShortDate(summary.lastVisit)}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                ExpansionTile(
+                  key: const Key('nightsHereTile'),
+                  tilePadding: EdgeInsets.zero,
+                  title: Text('Your nights here (${nights.length})'),
+                  children: [
+                    for (final night in nights.take(_maxNightRows))
+                      ListTile(dense: true, title: Text(formatNightRow(night))),
+                    if (nights.length > _maxNightRows)
+                      ListTile(
+                        dense: true,
+                        title: Text(
+                          '+${nights.length - _maxNightRows} earlier nights',
+                        ),
+                      ),
+                  ],
+                ),
+                if (pairings.isNotEmpty)
+                  Column(
+                    key: const Key('pairedClubs'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        'Often paired with',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      for (final pairing in pairings)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(pairing.club.name),
+                          subtitle: Text(
+                            '${pairing.nights} '
+                            '${pairing.nights == 1 ? 'night' : 'nights'} together',
+                          ),
+                          onTap: () =>
+                              Get.to(() => ClubDetailsPage(club: pairing.club)),
+                        ),
+                    ],
+                  ),
+              ],
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Check in'),
-                  onPressed: () => Get.to(() => CheckInPage(club: club)),
+                  onPressed: () => openCheckIn(club),
                 ),
               ),
             ],

@@ -1,9 +1,20 @@
 import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { validationResult } from "express-validator";
+import config from "../config.js";
 
 export const signUp = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    if (!config.JWT_SECRET) {
+      return res.status(500).json({ message: "Server is not configured to issue sessions" });
+    }
+
     const { email, password, name } = req.body;
 
     // Check if user already exists
@@ -31,8 +42,8 @@ export const signUp = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.status(201).json({
@@ -53,6 +64,15 @@ export const signUp = async (req, res) => {
 
 export const signIn = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    if (!config.JWT_SECRET) {
+      return res.status(500).json({ message: "Server is not configured to issue sessions" });
+    }
+
     const { email, password } = req.body;
 
     // Find user
@@ -73,8 +93,8 @@ export const signIn = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "24h" }
+      config.JWT_SECRET,
+      { expiresIn: config.JWT_EXPIRES_IN }
     );
 
     res.json({
@@ -107,6 +127,7 @@ export const getCurrentUser = async (req, res) => {
         email: true,
         name: true,
         role: true,
+        createdAt: true,
       },
     });
 
@@ -118,5 +139,155 @@ export const getCurrentUser = async (req, res) => {
   } catch (error) {
     console.error("Get current user error:", error);
     res.status(500).json({ message: "Error fetching user" });
+  }
+};
+
+// GDPR access/portability: the user's profile and full check-in history as a JSON download.
+// Explicit selects only; never password or qrSecret.
+export const exportMyData = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const checkIns = await prisma.checkIn.findMany({
+      where: { userId: req.user.id },
+      orderBy: { checkedInAt: "asc" },
+      select: {
+        id: true,
+        checkedInAt: true,
+        distanceMeters: true,
+        verificationMethod: true,
+        club: {
+          select: {
+            id: true,
+            name: true,
+            address: true,
+            city: true,
+            latitude: true,
+            longitude: true,
+          },
+        },
+      },
+    });
+
+    const exportedAt = new Date();
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="clubsy-export-${exportedAt.toISOString().slice(0, 10)}.json"`
+    );
+    res.json({ exportedAt: exportedAt.toISOString(), user, checkIns });
+  } catch (error) {
+    console.error("Export data error:", error);
+    res.status(500).json({ message: "Error exporting data" });
+  }
+};
+
+// Changes the password of the signed-in user. Requires the current password.
+export const changePassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    if (newPassword === currentPassword) {
+      return res
+        .status(400)
+        .json({ message: "New password must be different from the current one" });
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: await bcrypt.hash(newPassword, 10) },
+    });
+
+    res.json({ message: "Password changed" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({ message: "Error changing password" });
+  }
+};
+
+// Changes the display name of the signed-in user. Only `name` is ever written.
+export const updateMyProfile = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!existing) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: req.body.name },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    res.json({ user });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({ message: "Error updating profile" });
+  }
+};
+
+// Erases the account and its check-ins. Requires the current password.
+export const deleteMyAccount = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const userId = req.user.id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isValidPassword = await bcrypt.compare(req.body.password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    if (user.role === "ADMIN") {
+      const admins = await prisma.user.count({ where: { role: "ADMIN" } });
+      if (admins <= 1) {
+        return res.status(409).json({ message: "Cannot delete the last admin" });
+      }
+    }
+
+    // Every task that adds user-owned rows (favourites, friendships, reports, ...)
+    // must add its table to this transaction, before the user delete.
+    // When 7.7 lands, bump tokenVersion first.
+    await prisma.$transaction([
+      prisma.checkIn.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("Delete account error:", error);
+    res.status(500).json({ message: "Error deleting account" });
   }
 };

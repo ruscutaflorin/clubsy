@@ -20,10 +20,7 @@ class AppTheme {
       brightness: Brightness.light,
     ),
     scaffoldBackgroundColor: Colors.white,
-    cardTheme: const CardThemeData(
-      color: Colors.white,
-      elevation: 2,
-    ),
+    cardTheme: const CardThemeData(color: Colors.white, elevation: 2),
     appBarTheme: const AppBarTheme(
       backgroundColor: primaryColor,
       foregroundColor: Colors.white,
@@ -52,10 +49,7 @@ class AppTheme {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
       ),
     ),
     appBarTheme: AppBarTheme(
@@ -68,25 +62,18 @@ class AppTheme {
     bottomSheetTheme: BottomSheetThemeData(
       backgroundColor: surfaceColor,
       modalBackgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     popupMenuTheme: PopupMenuThemeData(
       color: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: surfaceColor,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.1), width: 1),
       ),
       titleTextStyle: const TextStyle(
         color: textPrimaryColor,
@@ -172,9 +159,7 @@ class AppTheme {
       }),
       checkColor: WidgetStateProperty.all(Colors.white),
       side: const BorderSide(color: textSecondaryColor),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
     ),
     radioTheme: RadioThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
@@ -201,27 +186,21 @@ class AppTheme {
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: textSecondaryColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: textPrimaryColor,
         side: BorderSide(color: textSecondaryColor.withValues(alpha: 0.5)),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
@@ -266,9 +245,7 @@ class AppTheme {
       bodyMedium: TextStyle(color: textPrimaryColor),
       bodySmall: TextStyle(color: textSecondaryColor),
     ),
-    iconTheme: const IconThemeData(
-      color: textSecondaryColor,
-    ),
+    iconTheme: const IconThemeData(color: textSecondaryColor),
     dividerTheme: DividerThemeData(
       color: textSecondaryColor.withValues(alpha: 0.1),
       thickness: 1,
@@ -276,9 +253,7 @@ class AppTheme {
     snackBarTheme: SnackBarThemeData(
       backgroundColor: cardColor,
       contentTextStyle: const TextStyle(color: textPrimaryColor),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       behavior: SnackBarBehavior.floating,
     ),
   );

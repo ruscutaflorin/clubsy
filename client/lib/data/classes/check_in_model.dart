@@ -27,4 +27,13 @@ class CheckInModel {
       club: ClubModel.fromMap(map['club']),
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'clubId': clubId,
+    'checkedInAt': checkedInAt.toIso8601String(),
+    'verificationMethod': verificationMethod,
+    'distanceMeters': distanceMeters,
+    'club': club.toMap(),
+  };
 }

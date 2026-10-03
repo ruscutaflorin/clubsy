@@ -1,14 +1,94 @@
 {
+    "name":  "clubsy",
     "baseBranch":  "develop",
-    "stopAt":  "07:00",
     "gates":  [
-
+                  {
+                      "name":  "client-pub-get",
+                      "run":  "cd client \u0026\u0026 flutter pub get",
+                      "when":  {
+                                   "fileExists":  "client/pubspec.yaml"
+                               }
+                  },
+                  {
+                      "name":  "client-format",
+                      "run":  "cd client \u0026\u0026 dart format .",
+                      "when":  {
+                                   "fileExists":  "client/pubspec.yaml"
+                               },
+                      "autoFix":  true
+                  },
+                  {
+                      "name":  "client-analyze",
+                      "run":  "cd client \u0026\u0026 flutter analyze --no-fatal-infos",
+                      "when":  {
+                                   "fileExists":  "client/pubspec.yaml"
+                               }
+                  },
+                  {
+                      "name":  "server-install",
+                      "run":  "cd server \u0026\u0026 pnpm install",
+                      "when":  {
+                                   "fileExists":  "server/package.json"
+                               }
+                  },
+                  {
+                      "name":  "server-schema",
+                      "run":  "cd server && npx prisma validate",
+                      "when":  {
+                                   "changed":  "server/prisma/*"
+                               }
+                  },
+                  {
+                      "name":  "tests",
+                      "run":  "node .nightshift/test-all.mjs",
+                      "when":  {
+                                   "fileExists":  [
+                                                      "client/pubspec.yaml",
+                                                      "server/package.json"
+                                                  ]
+                               },
+                      "countTests":  true,
+                      "testCountPattern":  "TOTAL PASSED TESTS: (\\d+)"
+                  }
               ],
     "services":  {
-
+                     "postgres":  {
+                                      "docker":  true,
+                                      "check":  "docker exec clubsy-db pg_isready -U clubsy -d clubsy",
+                                      "start":  "docker start clubsy-db && docker exec clubsy-db sh -c \"until pg_isready -U clubsy -d clubsy; do sleep 1; done\"",
+                                      "startTimeoutMinutes":  3,
+                                      "forPhases":  [
+                                                        "7",
+                                                        "8"
+                                                    ],
+                                      "forTextMatch":  "(?i)prisma|migration|schema",
+                                      "exclusive":  true
+                                  }
                  },
     "protectedPaths":  {
 
                        },
-    "name":  "clubsy"
+    "reviewExclude":  [
+                          ":(exclude)client/pubspec.lock",
+                          ":(exclude)server/pnpm-lock.yaml",
+                          ":(exclude)**/*.png",
+                          ":(exclude)**/*.jpg"
+                      ],
+    "batch":  {
+                  "maxTasks":  1,
+                  "maxTextLength":  600
+              },
+    "agentTimeoutMinutes":  75,
+    "gateTimeoutMinutes":  30,
+    "agentMaxBudgetUsd":  8,
+    "branchPrefix":  "night/",
+    "worktree":  {
+                     "setup":  [
+                                   "cd client \u0026\u0026 flutter pub get",
+                                   "cd server \u0026\u0026 pnpm install"
+                               ],
+                     "copy":  [
+                                  "server/.env"
+                              ]
+                 }
 }

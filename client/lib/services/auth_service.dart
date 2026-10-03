@@ -1,61 +1,91 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:clubsy/services/api_client.dart';
 
 class AuthService {
-  static const String baseUrl =
-      'http://localhost:3000/api'; // Update with your API URL
   static const String tokenKey = 'auth_token';
   static const String userKey = 'user_data';
 
-  Future<Map<String, dynamic>> signIn(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/signin'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-        }),
-      );
+  final ApiClient _api;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _saveAuthData(data['token'], data['user']);
-        return data;
-      } else {
-        throw Exception(
-            json.decode(response.body)['message'] ?? 'Failed to sign in');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
-    }
+  AuthService({ApiClient? api})
+    : _api = api ?? ApiClient(tokenProvider: _readToken);
+
+  static Future<String?> _readToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(tokenKey);
+  }
+
+  Future<Map<String, dynamic>> signIn(String email, String password) async {
+    final data = await _api.post(
+      '/auth/signin',
+      body: {'email': email, 'password': password},
+      authenticated: false,
+    ) as Map<String, dynamic>;
+    await _saveAuthData(data['token'], data['user']);
+    return data;
   }
 
   Future<Map<String, dynamic>> signUp(
-      String email, String password, String name) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-          'name': name,
-        }),
-      );
+    String email,
+    String password,
+    String name,
+  ) async {
+    final data = await _api.post(
+      '/auth/signup',
+      body: {'email': email, 'password': password, 'name': name},
+      authenticated: false,
+    ) as Map<String, dynamic>;
+    await _saveAuthData(data['token'], data['user']);
+    return data;
+  }
 
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        await _saveAuthData(data['token'], data['user']);
-        return data;
-      } else {
-        throw Exception(
-            json.decode(response.body)['message'] ?? 'Failed to sign up');
-      }
-    } catch (e) {
-      throw Exception('Failed to connect to the server');
-    }
+  /// Validates the stored token and returns the current user (`GET /auth/me`).
+  /// Also refreshes the cached user.
+  Future<Map<String, dynamic>> fetchMe() async {
+    final user = await _api.get('/auth/me') as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode(user));
+    return user;
+  }
+
+  /// The user's profile and full check-in history (`GET /auth/me/export`).
+  Future<Map<String, dynamic>> exportData() async {
+    return await _api.get('/auth/me/export') as Map<String, dynamic>;
+  }
+
+  /// Permanently deletes the account and all check-ins (`DELETE /auth/me`).
+  /// A wrong password is a 401 that must not end the session.
+  Future<void> deleteAccount(String password) async {
+    await _api.delete(
+      '/auth/me',
+      body: {'password': password},
+      expireSession: false,
+    );
+  }
+
+  /// Changes the password (`POST /auth/me/password`). A wrong current
+  /// password is a 401 that must not end the session.
+  Future<void> changePassword(String current, String next) async {
+    await _api.post(
+      '/auth/me/password',
+      body: {'currentPassword': current, 'newPassword': next},
+      expireSession: false,
+    );
+  }
+
+  /// Changes the display name (`PATCH /auth/me`) and refreshes the cached user.
+  Future<Map<String, dynamic>> updateName(String name) async {
+    final data = await _api.patch(
+      '/auth/me',
+      body: {'name': name},
+      expireSession: false,
+    ) as Map<String, dynamic>;
+    final user = data['user'] as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode(user));
+    return user;
   }
 
   Future<void> signOut() async {

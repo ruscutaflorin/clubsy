@@ -34,4 +34,16 @@ class ClubModel {
       qrCode: map['qrCode'],
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'address': address,
+    'city': city,
+    'latitude': latitude,
+    'longitude': longitude,
+    'imageUrl': imageUrl,
+    'isApproved': isApproved,
+    'qrCode': qrCode,
+  };
 }

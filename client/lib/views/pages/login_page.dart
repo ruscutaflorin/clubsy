@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/views/widget_tree.dart';
 import 'package:clubsy/widgets/auth_widget.dart';
+
 import 'register_page.dart';
 
 class LoginPage extends StatelessWidget {
