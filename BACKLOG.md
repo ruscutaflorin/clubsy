@@ -808,7 +808,7 @@ Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These
     - `node .nightshift/test-all.mjs` passes.
   - Size: M
 
-- [ ] B78 "Open now" filter in club search — status: approved
+- [x] B78 "Open now" filter in club search — status: done
   - Why: 7.2 added opening hours, but they only show on a club's own page. On a night out, "where can I go right now?" is step 4 of the core loop, and the search screen can't answer it. One chip next to the genre chips turns the schedule into a decision.
   - Scope: client only, no server change.
     - Pure function: in `client/lib/data/classes/club_profile.dart`, add `List<ClubModel> clubsOpenAt(List<ClubModel> clubs, DateTime now)` next to `clubsWithGenre`. It keeps the clubs where `openingChipText(<the club's opening hours>, now) == 'Open now'`, and drops clubs with no schedule. Take the opening-hours field from `ClubModel`, and derive `now` the same way `ClubDetailsPage` does when it calls `openingChipText`.
