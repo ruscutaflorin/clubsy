@@ -1117,7 +1117,7 @@ Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' n
 
 Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now describe the user's taste, but they don't show up when it matters: at the door, and on a club page while deciding where to go. The footfall report also can't yet tell a venue how many real regulars it has, which is the basis for "reward your regulars" (B24, PLAN decision 6).
 
-- [ ] B95 "More like this": clubs in the same city with a similar sound, on a club's page — status: approved
+- [x] B95 "More like this": clubs in the same city with a similar sound, on a club's page — status: done
   - Why: core loop step 4 ("find the next place to go") often starts from a club page, and "if you like this place, try these" is the natural next question. It uses only public club data (city and genres from 7.2), so it reveals nothing about any user (principle 2). It also works for unvisited clubs and for new users with no history.
   - Scope: client only, no server or schema change. `ClubController.clubs` already holds the approved clubs with `city` and `genres`.
     - Pure logic: add `List<({ClubModel club, List<String> shared})> similarClubs(ClubModel club, List<ClubModel> clubs, {int limit = 3})` to `client/lib/data/classes/genre_taste.dart`.
