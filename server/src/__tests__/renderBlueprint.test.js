@@ -15,6 +15,8 @@ const OPTIONAL = new Set([
   "RATE_LIMIT_AUTH_PER_MIN",
   "RATE_LIMIT_CHECKIN_PER_MIN",
   "PRISMA_LOG_QUERIES",
+  "RATE_LIMIT_PASSWORD_RESET_PER_HOUR",
+  "RATE_LIMIT_PASSWORD_RESET_IP_PER_HOUR",
 ]);
 
 // Values that only restate render.yaml aren't asserted; these check that what it points at exists.

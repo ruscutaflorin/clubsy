@@ -15,7 +15,16 @@ describe("loadConfig", () => {
   });
 
   it("allows no origins in production when CORS_ORIGINS is unset", () => {
-    expect(loadConfig({ NODE_ENV: "production" }).CORS_ORIGINS).toEqual([]);
+    const env = { NODE_ENV: "production", RESEND_API_KEY: "re_x", EMAIL_FROM: "a@b.c" };
+    expect(loadConfig(env).CORS_ORIGINS).toEqual([]);
+  });
+
+  it("requires the email settings in production only", () => {
+    expect(() => loadConfig({ NODE_ENV: "production" })).toThrow(/RESEND_API_KEY, EMAIL_FROM/);
+    expect(() => loadConfig({ NODE_ENV: "production", RESEND_API_KEY: "re_x" })).toThrow(
+      /EMAIL_FROM/
+    );
+    expect(() => loadConfig({})).not.toThrow();
   });
 
   it("parses a comma-separated CORS_ORIGINS list", () => {
