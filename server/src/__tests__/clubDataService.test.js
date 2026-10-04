@@ -18,6 +18,45 @@ describe("findClubDataIssues", () => {
       invalidCoordinates: [],
       nearDuplicates: [],
       farFromCity: [],
+      incompleteProfiles: [],
+    });
+  });
+
+  describe("incompleteProfiles", () => {
+    const profile = (id, name, isApproved, extra = {}) => ({
+      ...club(id, name, "Cluj", 46.77, 23.59),
+      isApproved,
+      description: "A club",
+      genres: ["techno"],
+      openingHours: { mon: { open: "22:00", close: "04:00" } },
+      ...extra,
+    });
+
+    it("leaves out a club with hours, genres and a description", () => {
+      expect(findClubDataIssues([profile("a", "Alpha", true)]).incompleteProfiles).toEqual([]);
+    });
+
+    it("lists everything missing, in order", () => {
+      const { incompleteProfiles } = findClubDataIssues([
+        profile("a", "Alpha", true, { openingHours: null, genres: [], description: "  " }),
+      ]);
+      expect(incompleteProfiles).toEqual([
+        {
+          id: "a",
+          name: "Alpha",
+          city: "Cluj",
+          isApproved: true,
+          missing: ["openingHours", "genres", "description"],
+        },
+      ]);
+    });
+
+    it("sorts approved clubs before unapproved ones that miss more", () => {
+      const { incompleteProfiles } = findClubDataIssues([
+        profile("u", "Unapproved", false, { openingHours: {}, genres: [], description: null }),
+        profile("a", "Approved", true, { genres: [] }),
+      ]);
+      expect(incompleteProfiles.map((c) => c.id)).toEqual(["a", "u"]);
     });
   });
 

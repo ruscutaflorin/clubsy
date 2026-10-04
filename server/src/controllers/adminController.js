@@ -132,6 +132,9 @@ export const getClubDataHealth = async (req, res) => {
         latitude: true,
         longitude: true,
         isApproved: true,
+        description: true,
+        genres: true,
+        openingHours: true,
       },
     });
     res.json(findClubDataIssues(clubs));

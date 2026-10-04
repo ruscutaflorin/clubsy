@@ -959,9 +959,9 @@ Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genr
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B87 "You might like": unvisited clubs that match my sound, on the Want to go page — status: approved
+- [ ] B87 "You might like": unvisited clubs that match my sound, on the Want to go page (after B86) — status: approved
   - Why: core loop step 4 ("find the next place to go") has a list of places the user saved (B81), but nothing suggests new ones. This ranks the clubs I haven't been to by how well their genres match my own nights. It is a personal "where next?" that needs no other user's data (principle 2) and no server change.
-  - Scope: client only. It is built after B86 and reuses `genreNights` from `client/lib/data/classes/genre_taste.dart`.
+  - Scope: client only. It is built only after B86 has landed on `develop` (B86 is in flight on its own branch; do not start B87 until `client/lib/data/classes/genre_taste.dart` with `genreNights` exists) and reuses `genreNights` from `client/lib/data/classes/genre_taste.dart`.
     - Pure logic: add `List<ClubModel> soundMatches(List<ClubModel> clubs, List<CheckInModel> checkIns, Set<String> favoriteIds, {int limit = 5})` to `client/lib/data/classes/genre_taste.dart`.
       - Skip clubs that aren't `isApproved`, clubs I've checked in at, clubs already in `favoriteIds`, and clubs with no genres.
       - Score each club as the sum of my `genreNights` counts over its genres, and drop clubs that score 0.
@@ -983,7 +983,7 @@ Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genr
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: approved
+- [x] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: done
   - Why: a club with no hours or genres drops out of "Open now" (B78), the Want to go opening status (B81) and the genre features (B86, B87), so a half-filled pilot club becomes invisible to them. Admins onboarding ~10 partner clubs need to see what's missing at a glance. This extends the B72 data health check they already use.
   - Scope: server and client, no schema change.
     - Server: in `server/src/services/clubDataService.js`, make `findClubDataIssues` also return `incompleteProfiles: [{id, name, city, isApproved, missing}]`.
