@@ -15,7 +15,50 @@ final club = ClubModel(
   isApproved: true,
 );
 
+ClubModel at(String id, String name, double lat, {bool approved = true}) =>
+    ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: lat,
+      longitude: 23.5,
+      imageUrl: '',
+      isApproved: approved,
+    );
+
 void main() {
+  group('distanceMeters', () {
+    test('0.009 degrees of latitude is about 1 km; same point is 0', () {
+      expect(distanceMeters(46, 23.5, 46.009, 23.5), closeTo(1000, 5));
+      expect(distanceMeters(46, 23.5, 46, 23.5), 0);
+    });
+  });
+
+  group('nearbyClubs', () {
+    final here = at('here', 'Here', 46);
+
+    test('ranks by distance and excludes far, unapproved and self', () {
+      final result = nearbyClubs(here, [
+        here,
+        at('far', 'Far', 46.0072),
+        at('near', 'Near', 46.0027),
+        at('away', 'Away', 46.0135),
+        at('pending', 'Pending', 46.0009, approved: false),
+      ]);
+      expect(result.map((r) => r.club.id), ['near', 'far']);
+    });
+
+    test('respects limit', () {
+      final result = nearbyClubs(here, [
+        at('a', 'A', 46.001),
+        at('b', 'B', 46.002),
+        at('c', 'C', 46.003),
+      ], limit: 2);
+      expect(result.map((r) => r.club.id), ['a', 'b']);
+    });
+  });
+
   group('directionsUri', () {
     test('android uses geo: with encoded coordinates and label', () {
       final uri = directionsUri(club, TargetPlatform.android);
