@@ -817,7 +817,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         code → 400; a reused code → 400; a successful reset → new password works and the old one
         doesn't), `pnpm test` and `flutter test`.
 
-- [ ] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
+- [x] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
       account deletion.
       - Schema: `User.tokenVersion Int @default(0)`.
       - Server: include `tv` in the JWT. `authMiddleware` rejects with 401 when `tv !==
