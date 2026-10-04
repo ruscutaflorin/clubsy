@@ -5,6 +5,7 @@ import 'package:clubsy/data/classes/check_in_grouping.dart';
 import 'package:clubsy/data/classes/on_this_night.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
+import 'package:clubsy/widgets/vibe_widgets.dart';
 
 class CheckInHistoryPage extends StatefulWidget {
   const CheckInHistoryPage({super.key});
@@ -197,7 +198,18 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
                       leading: const Icon(Icons.local_bar),
                       title: Text(checkIn.club.name),
                       subtitle: Text(
-                        '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                        [
+                          '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                          if (checkIn.vibe != null) '★' * checkIn.vibe!,
+                          if (checkIn.note != null) checkIn.note!,
+                        ].join('\n'),
+                      ),
+                      isThreeLine: checkIn.vibe != null || checkIn.note != null,
+                      trailing: IconButton(
+                        key: Key('edit_diary_${checkIn.id}'),
+                        tooltip: 'Note and rating',
+                        icon: const Icon(Icons.edit_note),
+                        onPressed: () => showDiaryEditor(context, checkIn),
                       ),
                       onTap: () =>
                           Get.to(() => ClubDetailsPage(club: checkIn.club)),

@@ -11,6 +11,7 @@ import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/views/pages/club_search_page.dart';
 import 'package:clubsy/widgets/club_pin.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
+import 'package:clubsy/widgets/vibe_widgets.dart';
 
 class ClubMapPage extends StatefulWidget {
   const ClubMapPage({super.key});
@@ -177,6 +178,26 @@ class _ClubMapPageState extends State<ClubMapPage> {
                   ),
                 ),
               ),
+              if (clubController.vibePrompt case final prompt?)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SafeArea(
+                    child: VibePromptCard(
+                      checkIn: prompt,
+                      onDismiss: () =>
+                          clubController.dismissedVibeIds.add(prompt.id),
+                      onRate: (v) async {
+                        try {
+                          await clubController.updateDiary(prompt.id, vibe: v);
+                        } catch (_) {
+                          Get.snackbar('Error', "Couldn't save. Try again.");
+                        }
+                      },
+                    ),
+                  ),
+                ),
               if (showEmptyHint)
                 const Center(
                   child: Padding(
