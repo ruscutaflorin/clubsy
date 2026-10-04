@@ -37,6 +37,13 @@ model Club {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   checkIns   CheckIn[]
+
+  description  String?
+  genres       String[]
+  openingHours Json?
+  instagramUrl String?
+  websiteUrl   String?
+  timezone     String   @default("Europe/Bucharest")
 }
 
 model CheckIn {

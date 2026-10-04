@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/club_profile.dart';
 import 'package:clubsy/services/club_service.dart';
 
 typedef ClubFetch = Future<List<ClubModel>> Function({
@@ -20,6 +21,14 @@ class ClubSearchController extends GetxController {
   final results = <ClubModel>[].obs;
   final isLoading = false.obs;
   final query = ''.obs;
+
+  /// Narrows [results] to one music genre; null shows every genre.
+  final genre = Rxn<String>();
+
+  List<ClubModel> get filteredResults => clubsWithGenre(results, genre.value);
+
+  void toggleGenre(String value) =>
+      genre.value = genre.value == value ? null : value;
 
   Timer? _debounce;
 

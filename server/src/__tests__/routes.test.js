@@ -1,6 +1,7 @@
 import { jest } from "@jest/globals";
 import jwt from "jsonwebtoken";
 import request from "supertest";
+import { Prisma } from "@prisma/client";
 
 const userFindUnique = jest.fn();
 const userFindMany = jest.fn();
@@ -140,6 +141,51 @@ describe("club routes", () => {
       .set(auth(adminToken))
       .send({ imageUrl: "http://x.com/a.png" });
     expect(res.status).toBe(400);
+  });
+
+  it.each([
+    ["description", "x".repeat(501)],
+    ["genres", ["techno", "polka"]],
+    ["openingHours", { mon: [{ open: "25:00", close: "05:00" }] }],
+    ["openingHours", { funday: [{ open: "22:00", close: "05:00" }] }],
+    ["openingHours", "always"],
+    ["websiteUrl", "http://club.ro"],
+    ["instagramUrl", "not a url"],
+    ["timezone", "Mars/Olympus"],
+  ])("PATCH /api/clubs/:id rejects an invalid %s", async (field, value) => {
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ [field]: value });
+    expect(res.status).toBe(400);
+    expect(clubUpdate).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /api/clubs/:id saves profile fields and clears opening hours with null", async () => {
+    clubUpdate.mockResolvedValue(club);
+    const hours = { fri: [{ open: "23:00", close: "05:00" }] };
+    const res = await request(app)
+      .patch("/api/clubs/c1")
+      .set(auth(adminToken))
+      .send({ genres: ["techno", "live"], openingHours: hours, websiteUrl: "" });
+    expect(res.status).toBe(200);
+    expect(clubUpdate).toHaveBeenCalledWith({
+      where: { id: "c1" },
+      data: { genres: ["techno", "live"], openingHours: hours, websiteUrl: null },
+    });
+
+    await request(app).patch("/api/clubs/c1").set(auth(adminToken)).send({ openingHours: null });
+    expect(clubUpdate.mock.calls[1][0].data.openingHours).toBe(Prisma.DbNull);
+  });
+
+  it("GET /api/clubs filters by a known genre and ignores an unknown one", async () => {
+    clubFindMany.mockResolvedValue([club]);
+    clubCount.mockResolvedValue(1);
+    await request(app).get("/api/clubs?genre=techno").set(auth(userToken));
+    expect(clubFindMany.mock.calls[0][0].where.genres).toEqual({ has: "techno" });
+
+    await request(app).get("/api/clubs?genre=polka").set(auth(userToken));
+    expect(clubFindMany.mock.calls[1][0].where).not.toHaveProperty("genres");
   });
 
   it("PATCH /api/clubs/:id applies a partial update and returns qrSecret", async () => {

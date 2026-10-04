@@ -8,6 +8,24 @@ class ClubModel {
   final String imageUrl;
   final bool isApproved;
   final String? qrCode;
+  final String? description;
+  final List<String> genres;
+  final Map<String, dynamic>? openingHours;
+  final String? instagramUrl;
+  final String? websiteUrl;
+  final String timezone;
+
+  /// The club's own wall-clock time when the response was built (server-side,
+  /// in [timezone]), advanced by the time elapsed since it was received.
+  final DateTime? _localNowAtFetch;
+  final DateTime _fetchedAt = DateTime.now();
+
+  DateTime get localNow {
+    final base = _localNowAtFetch;
+    return base == null
+        ? DateTime.now()
+        : base.add(DateTime.now().difference(_fetchedAt));
+  }
 
   ClubModel({
     required this.id,
@@ -19,7 +37,14 @@ class ClubModel {
     required this.imageUrl,
     required this.isApproved,
     this.qrCode,
-  });
+    this.description,
+    this.genres = const [],
+    this.openingHours,
+    this.instagramUrl,
+    this.websiteUrl,
+    this.timezone = 'Europe/Bucharest',
+    DateTime? localNow,
+  }) : _localNowAtFetch = localNow;
 
   factory ClubModel.fromMap(Map<String, dynamic> map) {
     return ClubModel(
@@ -32,6 +57,17 @@ class ClubModel {
       imageUrl: map['imageUrl'],
       isApproved: map['isApproved'] ?? false,
       qrCode: map['qrCode'],
+      description: map['description'],
+      genres: List<String>.from(map['genres'] ?? const []),
+      openingHours: map['openingHours'] == null
+          ? null
+          : Map<String, dynamic>.from(map['openingHours']),
+      instagramUrl: map['instagramUrl'],
+      websiteUrl: map['websiteUrl'],
+      timezone: map['timezone'] ?? 'Europe/Bucharest',
+      localNow: map['localNow'] is String
+          ? DateTime.tryParse(map['localNow'])
+          : null,
     );
   }
 
@@ -45,5 +81,11 @@ class ClubModel {
     'imageUrl': imageUrl,
     'isApproved': isApproved,
     'qrCode': qrCode,
+    'description': description,
+    'genres': genres,
+    'openingHours': openingHours,
+    'instagramUrl': instagramUrl,
+    'websiteUrl': websiteUrl,
+    'timezone': timezone,
   };
 }
