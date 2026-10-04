@@ -1170,7 +1170,7 @@ Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now descri
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B97 Admin footfall "How often guests come": visit-frequency buckets and a regulars count — status: approved
+- [x] B97 Admin footfall "How often guests come": visit-frequency buckets and a regulars count — status: done
   - Why: the decided business model is venue-side B2B (PLAN decision 6), and "reward your regulars" (B24) is the pitch. The footfall report has a returning-visitor rate, but it can't tell real regulars apart from people who came twice. A breakdown of guests by nights in the window answers "who would we be rewarding?", aggregate only (principle 2).
   - Scope: server and client, no schema change.
     - Server pure logic: in `computeClubFootfall` in `server/src/services/footfallService.js`, add `visitFrequency: {once, twice, threePlus}` to the result.
