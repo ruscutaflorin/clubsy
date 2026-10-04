@@ -892,3 +892,34 @@ follows the 8.0 decisions below.
       - Verified by: Jest (a check-in from tonight is not visible until 06:00; one-sided sharing is
         not visible; hidden check-ins and blocked users are excluded; no `checkedInAt` time is in
         the payload), `pnpm test` and `flutter test`.
+
+## Phase 9 — Test-audit follow-ups
+
+Goal: close the gaps the 2026-10-04 test audit found (PR #4). No schema changes. New tests must
+pass the testing policy in `.nightshift/rules.md`.
+
+- [ ] 9.1 Server: cover the empty club update and remove the dead `signOut` controller.
+      - Scope: in `server/src/__tests__/routes.test.js`, add one supertest case:
+        `PATCH /api/clubs/:id` as ADMIN with a body that sets no editable field (e.g. `{}`)
+        returns 400 `{message: "No fields to update"}` and never calls `club.update`. Delete the
+        unrouted `signOut` export from `server/src/controllers/authController.js`. No route
+        uses it, and the client signs out by dropping its token.
+      - Out: adding a sign-out route or token revocation (that's 7.7).
+      - Verified by: the new case fails if the `Object.keys(data).length === 0` guard in
+        `updateClub` is removed, `grep -rn signOut server/src` finds nothing, and `pnpm test`
+        passes.
+
+- [ ] 9.2 Client: make the date-dependent history and recap widget tests deterministic.
+      - Goal: `on_this_night_test.dart` ("history page shows the On this night card", "history
+        page has no card when nothing matches") and `recap_test.dart` ("page shows comparison",
+        "page hides comparison without previous check-ins") build their fixtures from
+        `DateTime.now()`, so their result depends on the day they run (month ends, 29 Feb, a run
+        that crosses midnight).
+      - Scope: give `CheckInHistoryPage` and `RecapPage` an optional `DateTime? now` constructor
+        parameter (default `DateTime.now()`, matching `BeenAWhileCard(now:)` and
+        `YearlyGoalCard(now:)`), use it where they call `DateTime.now()` today
+        (`check_in_history_page.dart` `onThisNight(...)`, `recap_page.dart` `_now`), and pin a
+        fixed `now` in those four tests. Keep their assertions otherwise unchanged.
+      - Out: changing the on-this-night or recap rules.
+      - Verified by: the four tests pass with `now` pinned to 2025-02-28, 2026-03-31 and
+        2026-10-02 (check locally, then keep one), and `flutter test` passes.
