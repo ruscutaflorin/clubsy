@@ -110,6 +110,15 @@ describe("PATCH /api/auth/me", () => {
     }
   );
 
+  it("toggles shareNightsWithFriends and rejects non-booleans", async () => {
+    const res = await patch({ shareNightsWithFriends: true });
+    expect(res.status).toBe(200);
+    expect(userUpdate.mock.calls[0][0].data).toEqual({ shareNightsWithFriends: true });
+    expect(userUpdate.mock.calls[0][0].select.shareNightsWithFriends).toBe(true);
+    expect((await patch({ shareNightsWithFriends: "true" })).status).toBe(400);
+    expect(userUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("400 for a 51-character name", async () => {
     const res = await patch({ name: "a".repeat(51) });
     expect(res.status).toBe(400);

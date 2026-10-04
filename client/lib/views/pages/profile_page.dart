@@ -21,6 +21,7 @@ import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/map_milestones_card.dart';
 import 'package:clubsy/widgets/next_goals_card.dart';
 import 'package:clubsy/widgets/personal_records_card.dart';
+import 'package:clubsy/widgets/privacy_section.dart';
 import 'package:clubsy/widgets/rhythm_card.dart';
 import 'package:clubsy/widgets/streak_nudge_banner.dart';
 
@@ -461,6 +462,7 @@ class ProfilePage extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          const PrivacySection(),
           ListTile(
             key: const Key('privacyTile'),
             leading: const Icon(Icons.privacy_tip_outlined),

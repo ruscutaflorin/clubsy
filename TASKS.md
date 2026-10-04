@@ -874,7 +874,7 @@ follows the 8.0 decisions below.
         either direction; unblocking doesn't restore the friendship), `pnpm test` and
         `flutter test`.
 
-- [ ] 8.3 Privacy settings: control who sees my nights.
+- [x] 8.3 Privacy settings: control who sees my nights.
       - Schema: `User.shareNightsWithFriends Boolean @default(false)` and `CheckIn.hiddenFromFriends
         Boolean @default(false)`.
       - Client: a Privacy section in Profile with a clear explanation, and a per-check-in "Hide

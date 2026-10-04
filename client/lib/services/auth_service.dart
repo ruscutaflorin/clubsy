@@ -133,10 +133,16 @@ class AuthService {
     String? name,
     String? username,
     String? homeCity,
+    bool? shareNightsWithFriends,
   }) async {
     final data = await _api.patch(
       '/auth/me',
-      body: {'name': ?name, 'username': ?username, 'homeCity': ?homeCity},
+      body: {
+        'name': ?name,
+        'username': ?username,
+        'homeCity': ?homeCity,
+        'shareNightsWithFriends': ?shareNightsWithFriends,
+      },
       expireSession: false,
     ) as Map<String, dynamic>;
     final user = data['user'] as Map<String, dynamic>;

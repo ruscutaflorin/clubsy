@@ -37,10 +37,12 @@ class FakeAuthService extends AuthService {
     String? name,
     String? username,
     String? homeCity,
+    bool? shareNightsWithFriends,
   }) async {
     saved.add({'name': name, 'username': username, 'homeCity': homeCity});
     _user = {
       ..._user,
+      'shareNightsWithFriends': ?shareNightsWithFriends,
       'name': ?name,
       'username': ?username,
       'homeCity': ?homeCity,

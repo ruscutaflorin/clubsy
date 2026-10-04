@@ -86,10 +86,15 @@ class CheckInService {
     String id, {
     String? note,
     int? vibe,
+    bool? hiddenFromFriends,
   }) async {
     final data = await _api.patch(
       '/check-ins/$id',
-      body: {'note': ?note, 'vibe': ?vibe},
+      body: {
+        'note': ?note,
+        'vibe': ?vibe,
+        'hiddenFromFriends': ?hiddenFromFriends,
+      },
     );
     return CheckInModel.fromMap(data);
   }
