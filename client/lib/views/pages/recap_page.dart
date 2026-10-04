@@ -89,6 +89,7 @@ class RecapCard extends StatelessWidget {
         'Busiest night: ${_weekdays[recap.busiestWeekday! - 1]}',
       if (latest != null) 'Latest night: ${_hhmm(latest)}',
       '${recap.newClubs} new clubs',
+      if (recap.topGenre != null) 'Your sound: ${recap.topGenre}',
     ];
     return AspectRatio(
       aspectRatio: 9 / 16,

@@ -31,24 +31,29 @@ Recap _nights(int n) => Recap(
   newClubs: 0,
 );
 
-CheckInModel ci(String clubId, DateTime at, {String city = 'Cluj'}) =>
-    CheckInModel(
-      id: '$clubId-$at',
-      clubId: clubId,
-      checkedInAt: at,
-      verificationMethod: 'QR',
-      distanceMeters: 10,
-      club: ClubModel(
-        id: clubId,
-        name: 'Secret $clubId',
-        address: '1 Main St',
-        city: city,
-        latitude: 46,
-        longitude: 23.5,
-        imageUrl: 'http://img',
-        isApproved: true,
-      ),
-    );
+CheckInModel ci(
+  String clubId,
+  DateTime at, {
+  String city = 'Cluj',
+  List<String> genres = const [],
+}) => CheckInModel(
+  id: '$clubId-$at',
+  clubId: clubId,
+  checkedInAt: at,
+  verificationMethod: 'QR',
+  distanceMeters: 10,
+  club: ClubModel(
+    id: clubId,
+    name: 'Secret $clubId',
+    address: '1 Main St',
+    city: city,
+    latitude: 46,
+    longitude: 23.5,
+    imageUrl: 'http://img',
+    isApproved: true,
+    genres: genres,
+  ),
+);
 
 void main() {
   final from = DateTime(2026, 9, 1, 6);
@@ -108,6 +113,19 @@ void main() {
       expect(r.distinctCities, 2);
     });
 
+    test('top genre only counts check-ins inside the period', () {
+      final r = buildRecap(
+        [
+          ci('a', DateTime(2026, 8, 20, 23), genres: ['house']),
+          ci('a', DateTime(2026, 8, 21, 23), genres: ['house']),
+          ci('b', DateTime(2026, 9, 6, 23), genres: ['techno']),
+        ],
+        from: from,
+        to: to,
+      );
+      expect(r.topGenre, 'techno');
+    });
+
     test('latest night is closest to 06:00 and weekday uses the night', () {
       final r = buildRecap(
         [
@@ -125,7 +143,9 @@ void main() {
 
   group('RecapCard', () {
     final recap = buildRecap(
-      [ci('a', DateTime(2026, 9, 5, 23))],
+      [
+        ci('a', DateTime(2026, 9, 5, 23), genres: ['techno']),
+      ],
       from: from,
       to: to,
     );
@@ -147,6 +167,7 @@ void main() {
       await tester.pumpWidget(host(true));
       expect(find.textContaining('Secret'), findsNothing);
       expect(find.text('Top spot: 1 visits'), findsOneWidget);
+      expect(find.text('Your sound: techno'), findsOneWidget);
     });
 
     testWidgets('shows club names when allowed', (tester) async {
