@@ -8,7 +8,9 @@ import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/vibe_widgets.dart';
 
 class CheckInHistoryPage extends StatefulWidget {
-  const CheckInHistoryPage({super.key});
+  final DateTime? now;
+
+  const CheckInHistoryPage({super.key, this.now});
 
   @override
   State<CheckInHistoryPage> createState() => _CheckInHistoryPageState();
@@ -105,7 +107,7 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
           final summary = searching ? null : monthSummary(checkIns);
           final memories = searching
               ? <NightMemory>[]
-              : onThisNight(checkIns, DateTime.now().toLocal());
+              : onThisNight(checkIns, (widget.now ?? DateTime.now()).toLocal());
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
