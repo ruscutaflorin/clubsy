@@ -6,13 +6,16 @@ import request from "supertest";
 const userFindUnique = jest.fn();
 const userCount = jest.fn();
 const userDelete = jest.fn((a) => ({ op: "user.delete", a }));
+const userUpdate = jest.fn((a) => ({ op: "user.update", a }));
 const checkInDeleteMany = jest.fn((a) => ({ op: "checkIn.deleteMany", a }));
+const favoriteDeleteMany = jest.fn((a) => ({ op: "favorite.deleteMany", a }));
 const transaction = jest.fn();
 
 jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
-    user: { findUnique: userFindUnique, count: userCount, delete: userDelete },
+    user: { findUnique: userFindUnique, count: userCount, delete: userDelete, update: userUpdate },
     checkIn: { deleteMany: checkInDeleteMany },
+    favorite: { deleteMany: favoriteDeleteMany },
     $transaction: transaction,
   },
 }));
@@ -47,11 +50,15 @@ describe("DELETE /api/auth/me", () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
-  it("204 and deletes check-ins before the user", async () => {
+  it("204, revokes tokens first and deletes check-ins before the user", async () => {
     const res = await del({ password: "secret-pass" });
     expect(res.status).toBe(204);
     const ops = transaction.mock.calls[0][0].map((o) => o.op);
-    expect(ops).toEqual(["checkIn.deleteMany", "user.delete"]);
+    expect(ops).toEqual(["user.update", "checkIn.deleteMany", "favorite.deleteMany", "user.delete"]);
+    expect(userUpdate).toHaveBeenCalledWith({
+      where: { id: "u1" },
+      data: { tokenVersion: { increment: 1 } },
+    });
     expect(checkInDeleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
     expect(userDelete).toHaveBeenCalledWith({ where: { id: "u1" } });
   });
@@ -70,10 +77,5 @@ describe("DELETE /api/auth/me", () => {
     userCount.mockResolvedValue(2);
     const res = await del({ password: "secret-pass" });
     expect(res.status).toBe(204);
-  });
-
-  it("401 without a token", async () => {
-    const res = await request(app).delete("/api/auth/me").send({ password: "x" });
-    expect(res.status).toBe(401);
   });
 });

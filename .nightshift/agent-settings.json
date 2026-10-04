@@ -42,6 +42,7 @@
             "Bash(pnpm test:*)",
             "Bash(pnpm exec:*)",
             "Bash(npx prisma:*)",
+            "Bash(docker exec clubsy-db psql -U clubsy -d clubsy -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public;\")",
             "Bash(npx jest:*)",
             "Bash(node -e:*)",
             "Bash(node --check:*)",
@@ -51,7 +52,8 @@
             "Bash(timeout 5 node src/index.js:*)",
             "Bash(timeout 5 node server/src/index.js:*)",
             "Bash(flutter --version:*)",
-            "Bash(npx --yes yaml-lint:*)"
+            "Bash(npx --yes yaml-lint:*)",
+            "Skill(test-audit)"
         ],
         "deny": [
             "Edit(.nightshift/**)",

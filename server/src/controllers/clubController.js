@@ -1,13 +1,57 @@
 import prisma from "../prisma/client.js";
+import { Prisma } from "@prisma/client";
 import { validationResult } from "express-validator";
+import { GENRES } from "../utils/genres.js";
+import { localNowString } from "../utils/openingHours.js";
 import { displayKey, generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
 // qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
 const forRole = (club, role) => {
-  if (role === "ADMIN") return club;
-  const { qrSecret, ...rest } = club;
+  // `favorites` holds the caller's own rows only (see favoriteInclude).
+  const { favorites, ...plain } = club;
+  // `localNow` is the club's own wall-clock time, for the client's "Open now".
+  const withNow = {
+    ...plain,
+    ...(favorites && { isFavorite: favorites.length > 0 }),
+    ...(club.timezone && { localNow: localNowString(club.timezone) }),
+  };
+  if (role === "ADMIN") return withNow;
+  const { qrSecret, ...rest } = withNow;
   return rest;
 };
+
+// Aggregate venue "vibe" over recent check-ins. Below VIBE_MIN_RATINGS the field is
+// null (k-anonymity) and only the average and count ever leave the server.
+const VIBE_MIN_RATINGS = 5;
+const VIBE_WINDOW_DAYS = 90;
+
+const vibeByClub = async (clubIds) => {
+  if (clubIds.length === 0) return new Map();
+  const since = new Date(Date.now() - VIBE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const rows = await prisma.checkIn.groupBy({
+    by: ["clubId"],
+    where: { clubId: { in: clubIds }, vibe: { not: null }, vibeAt: { gte: since } },
+    _avg: { vibe: true },
+    _count: { vibe: true },
+  });
+  return new Map(
+    rows
+      .filter((row) => row._count.vibe >= VIBE_MIN_RATINGS)
+      .map((row) => [
+        row.clubId,
+        { average: Math.round(row._avg.vibe * 10) / 10, count: row._count.vibe },
+      ]),
+  );
+};
+
+const withVibe = async (clubs) => {
+  const vibes = await vibeByClub(clubs.map((club) => club.id));
+  return clubs.map((club) => ({ ...club, vibe: vibes.get(club.id) ?? null }));
+};
+
+// Joins only the caller's favourite rows, so `isFavorite` never reflects anyone else.
+const favoriteInclude = (userId) =>
+  userId ? { include: { favorites: { where: { userId }, select: { id: true } } } } : {};
 
 // Shared error mapping: Prisma P2025 (record not found) is a 404, not a 500.
 const handleClubError = (res, error, label, message) => {
@@ -18,7 +62,30 @@ const handleClubError = (res, error, label, message) => {
   return res.status(500).json({ message });
 };
 
-const EDITABLE_FIELDS = ["name", "address", "city", "latitude", "longitude", "imageUrl"];
+const EDITABLE_FIELDS = [
+  "name",
+  "address",
+  "city",
+  "latitude",
+  "longitude",
+  "imageUrl",
+  "description",
+  "genres",
+  "openingHours",
+  "instagramUrl",
+  "websiteUrl",
+  "timezone",
+];
+
+// Profile fields a create may set; empty URLs mean "not set".
+const profileData = (body) => ({
+  description: body.description || undefined,
+  genres: body.genres,
+  openingHours: body.openingHours ?? undefined,
+  instagramUrl: body.instagramUrl || undefined,
+  websiteUrl: body.websiteUrl || undefined,
+  timezone: body.timezone,
+});
 
 export const createClub = async (req, res) => {
   try {
@@ -37,6 +104,7 @@ export const createClub = async (req, res) => {
         latitude,
         longitude,
         imageUrl: imageUrl || undefined,
+        ...profileData(req.body),
         qrSecret: generateQrSecret(),
       },
     });
@@ -60,7 +128,7 @@ const parsePositiveInt = (value, fallback) => {
 
 export const getClubs = async (req, res) => {
   try {
-    const { search, city } = req.query;
+    const { search, city, genre, sort } = req.query;
     const page = parsePositiveInt(req.query.page, 1);
     const limit = Math.min(parsePositiveInt(req.query.limit, 20), 50);
     const skip = (page - 1) * limit;
@@ -68,6 +136,7 @@ export const getClubs = async (req, res) => {
     const where = {
       ...(req.user?.role !== "ADMIN" && { isApproved: true }),
       ...(city && { city: { equals: city, mode: "insensitive" } }),
+      ...(GENRES.includes(genre) && { genres: { has: genre } }),
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -77,15 +146,38 @@ export const getClubs = async (req, res) => {
       }),
     };
 
-    const [clubs, total] = await Promise.all([
-      prisma.club.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: "asc" },
-      }),
-      prisma.club.count({ where }),
-    ]);
+    let clubs;
+    let total;
+    if (sort === "vibe") {
+      // Ratings live on check-ins, so rank in memory: best average first, unrated last.
+      const all = await withVibe(
+        await prisma.club.findMany({
+          where,
+          orderBy: { name: "asc" },
+          ...favoriteInclude(req.user?.id),
+        }),
+      );
+      all.sort(
+        (a, b) =>
+          (b.vibe?.average ?? -1) - (a.vibe?.average ?? -1) ||
+          (b.vibe?.count ?? 0) - (a.vibe?.count ?? 0),
+      );
+      total = all.length;
+      clubs = all.slice(skip, skip + limit);
+    } else {
+      const [rows, count] = await Promise.all([
+        prisma.club.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { name: "asc" },
+          ...favoriteInclude(req.user?.id),
+        }),
+        prisma.club.count({ where }),
+      ]);
+      clubs = await withVibe(rows);
+      total = count;
+    }
 
     res.json({
       clubs: clubs.map((club) => forRole(club, req.user?.role)),
@@ -102,13 +194,17 @@ export const getClubById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const club = await prisma.club.findUnique({ where: { id } });
+    const club = await prisma.club.findUnique({
+      where: { id },
+      ...favoriteInclude(req.user?.id),
+    });
 
     if (!club || (!club.isApproved && req.user?.role !== "ADMIN")) {
       return res.status(404).json({ message: "Club not found" });
     }
 
-    res.json(forRole(club, req.user?.role));
+    const [withRating] = await withVibe([club]);
+    res.json(forRole(withRating, req.user?.role));
   } catch (error) {
     console.error("Get club error:", error);
     res.status(500).json({ message: "Error fetching club" });
@@ -154,7 +250,16 @@ export const updateClub = async (req, res) => {
 
     const data = {};
     for (const field of EDITABLE_FIELDS) {
-      if (req.body[field] !== undefined) data[field] = req.body[field];
+      const value = req.body[field];
+      if (value === undefined) continue;
+      if (field === "openingHours" && value === null) {
+        // Prisma Json columns need an explicit marker to clear.
+        data[field] = Prisma.DbNull;
+      } else if (value === "" && (field === "instagramUrl" || field === "websiteUrl")) {
+        data[field] = null;
+      } else {
+        data[field] = value;
+      }
     }
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ message: "No fields to update" });
@@ -208,6 +313,53 @@ export const rotateClubQr = async (req, res) => {
   } catch (error) {
     console.error("Rotate club QR error:", error);
     res.status(500).json({ message: "Error rotating club QR" });
+  }
+};
+
+export const getFavorites = async (req, res) => {
+  try {
+    const rows = await prisma.favorite.findMany({
+      where: { userId: req.user.id, club: { isApproved: true } },
+      include: { club: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({
+      clubs: rows.map((row) => forRole({ ...row.club, favorites: [row] }, req.user.role)),
+    });
+  } catch (error) {
+    console.error("Get favorites error:", error);
+    res.status(500).json({ message: "Error fetching favorites" });
+  }
+};
+
+export const addFavorite = async (req, res) => {
+  try {
+    const club = await prisma.club.findUnique({ where: { id: req.params.id } });
+    if (!club || !club.isApproved) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+    const userId = req.user.id;
+    await prisma.favorite.upsert({
+      where: { userId_clubId: { userId, clubId: club.id } },
+      create: { userId, clubId: club.id },
+      update: {},
+    });
+    res.json({ isFavorite: true });
+  } catch (error) {
+    console.error("Add favorite error:", error);
+    res.status(500).json({ message: "Error saving favorite" });
+  }
+};
+
+export const removeFavorite = async (req, res) => {
+  try {
+    await prisma.favorite.deleteMany({
+      where: { userId: req.user.id, clubId: req.params.id },
+    });
+    res.status(204).end();
+  } catch (error) {
+    console.error("Remove favorite error:", error);
+    res.status(500).json({ message: "Error removing favorite" });
   }
 };
 

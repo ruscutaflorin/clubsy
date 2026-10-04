@@ -2,7 +2,25 @@ import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
+import crypto from "node:crypto";
 import config from "../config.js";
+import { getEmailSender } from "../services/emailService.js";
+
+const issueToken = (user) =>
+  jwt.sign(
+    { userId: user.id, email: user.email, role: user.role, tv: user.tokenVersion ?? 0 },
+    config.JWT_SECRET,
+    { expiresIn: config.JWT_EXPIRES_IN }
+  );
+
+const profileSelect = {
+  username: true,
+  homeCity: true,
+  acceptedTermsAt: true,
+  termsVersion: true,
+  ageConfirmedAt: true,
+  shareNightsWithFriends: true,
+};
 
 export const signUp = async (req, res) => {
   try {
@@ -29,22 +47,22 @@ export const signUp = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user in database
+    // Create user in database; consent is validated by the route and stamped here
+    const now = new Date();
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         role: "USER",
+        acceptedTermsAt: now,
+        termsVersion: config.TERMS_VERSION,
+        ageConfirmedAt: now,
       },
     });
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN }
-    );
+    const token = issueToken(user);
 
     res.status(201).json({
       message: "User created successfully",
@@ -91,11 +109,7 @@ export const signIn = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN }
-    );
+    const token = issueToken(user);
 
     res.json({
       user: {
@@ -112,10 +126,18 @@ export const signIn = async (req, res) => {
   }
 };
 
-export const signOut = async (req, res) => {
-  // Since we're using JWT, we don't need to do anything on the server side
-  // The client should remove the token
-  res.json({ message: "Signed out successfully" });
+// Invalidates every token issued so far, including the caller's.
+export const signOutAll = async (req, res) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    res.json({ message: "Signed out of all devices" });
+  } catch (error) {
+    console.error("Sign out all error:", error);
+    res.status(500).json({ message: "Error signing out" });
+  }
 };
 
 export const getCurrentUser = async (req, res) => {
@@ -128,6 +150,7 @@ export const getCurrentUser = async (req, res) => {
         name: true,
         role: true,
         createdAt: true,
+        ...profileSelect,
       },
     });
 
@@ -148,7 +171,19 @@ export const exportMyData = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        username: true,
+        homeCity: true,
+        acceptedTermsAt: true,
+        termsVersion: true,
+        ageConfirmedAt: true,
+        shareNightsWithFriends: true,
+      },
     });
 
     if (!user) {
@@ -163,6 +198,10 @@ export const exportMyData = async (req, res) => {
         checkedInAt: true,
         distanceMeters: true,
         verificationMethod: true,
+        note: true,
+        vibe: true,
+        vibeAt: true,
+        hiddenFromFriends: true,
         club: {
           select: {
             id: true,
@@ -176,12 +215,66 @@ export const exportMyData = async (req, res) => {
       },
     });
 
+    const userId = req.user.id;
+    const otherSelect = { username: true, name: true };
+    const [favorites, friendshipRows, blocks, reportsFiled] = await Promise.all([
+      prisma.favorite.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          createdAt: true,
+          club: { select: { id: true, name: true, city: true } },
+        },
+      }),
+      prisma.friendship.findMany({
+        where: { OR: [{ requesterId: userId }, { addresseeId: userId }] },
+        orderBy: { createdAt: "asc" },
+        select: {
+          status: true,
+          createdAt: true,
+          respondedAt: true,
+          requesterId: true,
+          requester: { select: otherSelect },
+          addressee: { select: otherSelect },
+        },
+      }),
+      prisma.block.findMany({
+        where: { blockerId: userId },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true, blocked: { select: otherSelect } },
+      }),
+      prisma.report.findMany({
+        where: { reporterId: userId },
+        orderBy: { createdAt: "asc" },
+        select: { reason: true, details: true, status: true, createdAt: true },
+      }),
+    ]);
+
+    const friendships = friendshipRows.map((f) => {
+      const sent = f.requesterId === userId;
+      return {
+        status: f.status,
+        direction: sent ? "sent" : "received",
+        createdAt: f.createdAt,
+        respondedAt: f.respondedAt,
+        other: sent ? f.addressee : f.requester,
+      };
+    });
+
     const exportedAt = new Date();
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="clubsy-export-${exportedAt.toISOString().slice(0, 10)}.json"`
     );
-    res.json({ exportedAt: exportedAt.toISOString(), user, checkIns });
+    res.json({
+      exportedAt: exportedAt.toISOString(),
+      user,
+      checkIns,
+      favorites,
+      friendships,
+      blocks,
+      reportsFiled,
+    });
   } catch (error) {
     console.error("Export data error:", error);
     res.status(500).json({ message: "Error exporting data" });
@@ -215,17 +308,24 @@ export const changePassword = async (req, res) => {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: await bcrypt.hash(newPassword, 10) },
+      data: {
+        password: await bcrypt.hash(newPassword, 10),
+        tokenVersion: { increment: 1 },
+      },
     });
 
-    res.json({ message: "Password changed" });
+    // Other devices are signed out; this one gets a fresh token.
+    res.json({
+      message: "Password changed",
+      token: issueToken({ ...user, tokenVersion: (user.tokenVersion ?? 0) + 1 }),
+    });
   } catch (error) {
     console.error("Change password error:", error);
     res.status(500).json({ message: "Error changing password" });
   }
 };
 
-// Changes the display name of the signed-in user. Only `name` is ever written.
+// Updates name, username and homeCity of the signed-in user. Only the fields sent are written.
 export const updateMyProfile = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -238,16 +338,61 @@ export const updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const data = {};
+    if (req.body.name !== undefined) data.name = req.body.name;
+    if (req.body.homeCity !== undefined) data.homeCity = req.body.homeCity || null;
+    if (req.body.shareNightsWithFriends !== undefined) {
+      data.shareNightsWithFriends = req.body.shareNightsWithFriends;
+    }
+    if (req.body.username !== undefined) {
+      data.username = req.body.username;
+      const taken = await prisma.user.findFirst({
+        where: {
+          username: { equals: data.username, mode: "insensitive" },
+          NOT: { id: req.user.id },
+        },
+        select: { id: true },
+      });
+      if (taken) {
+        return res.status(409).json({ message: "Username is already taken" });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name: req.body.name },
-      select: { id: true, email: true, name: true, role: true },
+      data,
+      select: { id: true, email: true, name: true, role: true, ...profileSelect },
     });
 
     res.json({ user });
   } catch (error) {
+    if (error?.code === "P2002") {
+      return res.status(409).json({ message: "Username is already taken" });
+    }
     console.error("Update profile error:", error);
     res.status(500).json({ message: "Error updating profile" });
+  }
+};
+
+// Live availability check for the edit-profile form. The caller's own username counts as free.
+export const checkUsernameAvailable = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const taken = await prisma.user.findFirst({
+      where: {
+        username: { equals: req.query.u, mode: "insensitive" },
+        NOT: { id: req.user.id },
+      },
+      select: { id: true },
+    });
+    res.json({ available: !taken });
+  } catch (error) {
+    console.error("Username check error:", error);
+    res.status(500).json({ message: "Error checking username" });
   }
 };
 
@@ -279,9 +424,10 @@ export const deleteMyAccount = async (req, res) => {
 
     // Every task that adds user-owned rows (favourites, friendships, reports, ...)
     // must add its table to this transaction, before the user delete.
-    // When 7.7 lands, bump tokenVersion first.
     await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } }),
       prisma.checkIn.deleteMany({ where: { userId } }),
+      prisma.favorite.deleteMany({ where: { userId } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);
 
@@ -289,5 +435,90 @@ export const deleteMyAccount = async (req, res) => {
   } catch (error) {
     console.error("Delete account error:", error);
     res.status(500).json({ message: "Error deleting account" });
+  }
+};
+
+const RESET_CODE_TTL_MS = 15 * 60 * 1000;
+
+const hashCode = (code) => crypto.createHash("sha256").update(code).digest("hex");
+
+// Always 202, whether or not the email belongs to an account.
+export const forgotPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: req.body.email } });
+    if (user) {
+      const code = crypto.randomInt(0, 1000000).toString().padStart(6, "0");
+      // Only the newest code works.
+      await prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashCode(code),
+          expiresAt: new Date(Date.now() + RESET_CODE_TTL_MS),
+        },
+      });
+      await getEmailSender().send({
+        to: user.email,
+        subject: "Your Clubsy password reset code",
+        text: `Your Clubsy password reset code is ${code}. It expires in 15 minutes. If you didn't ask for it, ignore this email.`,
+      });
+    }
+  } catch (error) {
+    // Don't leak account existence through failures either.
+    console.error("Forgot password error:", error);
+  }
+  res.status(202).json({ message: "If that email has an account, a code is on its way" });
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, code, newPassword } = req.body;
+    const invalid = () => res.status(400).json({ message: "Invalid or expired code" });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return invalid();
+
+    const token = await prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        tokenHash: hashCode(code),
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (!token) return invalid();
+
+    // Claim the token atomically so concurrent requests can't both use it.
+    const claimed = await prisma.passwordResetToken.updateMany({
+      where: { id: token.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count !== 1) return invalid();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: await bcrypt.hash(newPassword, 10),
+        tokenVersion: { increment: 1 },
+      },
+    });
+
+    res.json({ message: "Password reset" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Error resetting password" });
   }
 };

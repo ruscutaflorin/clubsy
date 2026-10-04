@@ -34,6 +34,10 @@ String _shortDate(String iso) {
   return '${d.day} ${_months[d.month - 1]}';
 }
 
+/// "★4.3 from 27 ratings"; only meaningful when [v] has an average.
+String vibeLabel(VibeSummary v) =>
+    '★${v.average!.toStringAsFixed(1)} from ${v.count} ratings';
+
 /// Plain-text venue report to paste into a message. Aggregates only: no
 /// user ids, names, emails or distances.
 String footfallSummaryText(String clubName, ClubFootfallModel m) {
@@ -43,6 +47,7 @@ String footfallSummaryText(String clubName, ClubFootfallModel m) {
     'Unique visitors: ${m.uniqueVisitors}',
     'Returning visitors: ${_pct(m.returningVisitorRate)}',
     'First-time visitors: ${_pct(m.firstTimeShare)}',
+    'Regulars (3+ nights): ${m.visitFrequency.threePlus}',
   ];
 
   var bestDay = -1;
@@ -66,6 +71,10 @@ String footfallSummaryText(String clubName, ClubFootfallModel m) {
     lines.add(
       'Best week: week of ${_shortDate(bestWeek.weekStart)} · ${bestWeek.checkIns} check-ins',
     );
+  }
+  final vibe = m.vibe;
+  if (vibe != null && vibe.average != null) {
+    lines.add('Guest vibe: ${vibeLabel(vibe)}');
   }
   return lines.join('\n');
 }

@@ -129,9 +129,33 @@ class AuthController extends GetxController {
   Future<void> changePassword(String current, String next) =>
       _authService.changePassword(current, next);
 
+  /// Revokes all sessions server-side, then clears this device too.
+  Future<void> signOutAll() async {
+    await _authService.signOutAll();
+    await signOut();
+  }
+
   Future<void> updateName(String name) async {
     _user.value = await _authService.updateName(name);
   }
+
+  Future<void> updateProfile({
+    String? name,
+    String? username,
+    String? homeCity,
+    bool? shareNightsWithFriends,
+  }) async {
+    final user = await _authService.updateProfile(
+      name: name,
+      username: username,
+      homeCity: homeCity,
+      shareNightsWithFriends: shareNightsWithFriends,
+    );
+    _user.value = {...?_user.value, ...user};
+  }
+
+  Future<bool> isUsernameAvailable(String username) =>
+      _authService.isUsernameAvailable(username);
 
   Future<void> signOut() async {
     debugPrint('AuthController: Signing out user...');

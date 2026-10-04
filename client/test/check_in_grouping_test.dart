@@ -92,6 +92,27 @@ void main() {
     });
   });
 
+  group('filterBestNights', () {
+    final groups = groupByNight([
+      _named('1', 'Five', 'Cluj', DateTime(2026, 9, 12, 23)).withDiary(vibe: 5),
+      _named('2', 'Two', 'Cluj', DateTime(2026, 9, 13, 1)).withDiary(vibe: 2),
+      _named('3', 'Three', 'Cluj', DateTime(2026, 8, 1, 23)).withDiary(vibe: 3),
+      _named('4', 'Unrated', 'Cluj', DateTime(2026, 7, 1, 23)),
+    ]);
+
+    test('keeps only 4+ check-ins and drops empty nights', () {
+      final r = filterBestNights(groups);
+      expect(r.length, 1);
+      expect(r.first.checkIns.single.club.name, 'Five');
+    });
+
+    test('minVibe raises the bar; empty input stays empty', () {
+      expect(filterBestNights(groups, minVibe: 5).length, 1);
+      expect(filterBestNights(groups, minVibe: 6), isEmpty);
+      expect(filterBestNights([]), isEmpty);
+    });
+  });
+
   test('23:00 and 02:00 next day share a night, 07:00 starts a new one', () {
     final groups = groupByNight([
       _ci('1', 'a', DateTime(2026, 9, 12, 23)),

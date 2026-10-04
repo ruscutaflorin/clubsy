@@ -5,9 +5,12 @@ import 'package:clubsy/data/classes/check_in_grouping.dart';
 import 'package:clubsy/data/classes/on_this_night.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
+import 'package:clubsy/widgets/vibe_widgets.dart';
 
 class CheckInHistoryPage extends StatefulWidget {
-  const CheckInHistoryPage({super.key});
+  final DateTime? now;
+
+  const CheckInHistoryPage({super.key, this.now});
 
   @override
   State<CheckInHistoryPage> createState() => _CheckInHistoryPageState();
@@ -16,6 +19,7 @@ class CheckInHistoryPage extends StatefulWidget {
 class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
   final _searchController = TextEditingController();
   String _query = '';
+  bool _bestOnly = false;
 
   @override
   void dispose() {
@@ -50,6 +54,18 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
       await controller.removeCheckIn(id);
     } catch (_) {
       Get.snackbar('Error', "Couldn't remove this visit. Try again.");
+    }
+  }
+
+  Future<void> _toggleHidden(
+    ClubController controller,
+    String id,
+    bool hidden,
+  ) async {
+    try {
+      await controller.setHiddenFromFriends(id, hidden);
+    } catch (_) {
+      Get.snackbar('Error', "Couldn't update this visit. Try again.");
     }
   }
 
@@ -88,11 +104,13 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
           }
 
           final searching = _query.trim().isNotEmpty;
-          final groups = filterNightGroups(groupByNight(checkIns), _query);
-          final summary = searching ? null : monthSummary(checkIns);
-          final memories = searching
+          final filtering = searching || _bestOnly;
+          var groups = filterNightGroups(groupByNight(checkIns), _query);
+          if (_bestOnly) groups = filterBestNights(groups);
+          final summary = filtering ? null : monthSummary(checkIns);
+          final memories = filtering
               ? <NightMemory>[]
-              : onThisNight(checkIns, DateTime.now().toLocal());
+              : onThisNight(checkIns, (widget.now ?? DateTime.now()).toLocal());
           return ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             children: [
@@ -119,7 +137,27 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
               ),
-              if (searching)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilterChip(
+                    key: const Key('history_best_nights'),
+                    label: const Text('★4+ nights'),
+                    selected: _bestOnly,
+                    onSelected: (value) => setState(() => _bestOnly = value),
+                  ),
+                ),
+              ),
+              if (_bestOnly && groups.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    'No nights rated ★4 or more yet. Rate a night from its diary entry.',
+                    key: Key('history_best_empty'),
+                  ),
+                )
+              else if (searching)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Text(
@@ -197,7 +235,39 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
                       leading: const Icon(Icons.local_bar),
                       title: Text(checkIn.club.name),
                       subtitle: Text(
-                        '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                        [
+                          '${checkIn.club.city} · ${formatTime(checkIn.checkedInAt.toLocal())}',
+                          if (checkIn.vibe != null) '★' * checkIn.vibe!,
+                          if (checkIn.note != null) checkIn.note!,
+                        ].join('\n'),
+                      ),
+                      isThreeLine: checkIn.vibe != null || checkIn.note != null,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: Key('hide_from_friends_${checkIn.id}'),
+                            tooltip: checkIn.hiddenFromFriends
+                                ? 'Hidden from friends (tap to show)'
+                                : 'Hide from friends',
+                            icon: Icon(
+                              checkIn.hiddenFromFriends
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () => _toggleHidden(
+                              clubController,
+                              checkIn.id,
+                              !checkIn.hiddenFromFriends,
+                            ),
+                          ),
+                          IconButton(
+                            key: Key('edit_diary_${checkIn.id}'),
+                            tooltip: 'Note and rating',
+                            icon: const Icon(Icons.edit_note),
+                            onPressed: () => showDiaryEditor(context, checkIn),
+                          ),
+                        ],
                       ),
                       onTap: () =>
                           Get.to(() => ClubDetailsPage(club: checkIn.club)),

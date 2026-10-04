@@ -41,13 +41,8 @@ void main() {
     ],
   });
 
-  test('parses a fixture with a null value', () {
-    expect(fixture.criteria, hasLength(4));
-    expect(fixture.criteria[2].value, isNull);
-    expect(fixture.criteria[3].met, isTrue);
-    expect(fixture.wacu, hasLength(8));
-  });
-
+  // Parsing is exercised through the rendered section: the null activation value
+  // shows as an em dash and the two met criteria get a check icon.
   testWidgets('renders the scorecard section', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

@@ -1,4 +1,5 @@
 import { jest } from "@jest/globals";
+import request from "supertest";
 
 const findUnique = jest.fn();
 const create = jest.fn();
@@ -9,7 +10,8 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
 const bcrypt = (await import("bcryptjs")).default;
 const jwt = (await import("jsonwebtoken")).default;
 const { signUp, signIn, getCurrentUser } = await import("../controllers/authController.js");
-const { signUpValidation, signInValidation } = await import("../routes/authRoutes.js");
+const { default: config } = await import("../config.js");
+const { default: app } = await import("../app.js");
 
 const makeRes = () => {
   const res = {};
@@ -18,20 +20,23 @@ const makeRes = () => {
   return res;
 };
 
-// Runs the route's real express-validator chain against a bare req, the way Express
-// would before the controller sees it, so validation is exercised end to end.
-const validated = async (validators, body) => {
-  const req = { body };
-  for (const validator of validators) {
-    await validator.run(req);
-  }
-  return req;
+// Validation goes through the real routes; the sign-in/up limiter allows 10 requests per
+// minute per IP in this file, and these tests send 6.
+const validSignUp = {
+  email: "a@b.com",
+  password: "password1",
+  name: "A",
+  acceptTerms: true,
+  ageConfirmed: true,
 };
+const signUpRequest =(body) => request(app).post("/api/auth/signup").send(body);
+const signInRequest = (body) => request(app).post("/api/auth/signin").send(body);
 
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.JWT_SECRET = "test-secret";
   jest.spyOn(console, "error").mockImplementation(() => {});
+  jest.spyOn(console, "log").mockImplementation(() => {});
 });
 
 describe("signUp", () => {
@@ -51,56 +56,39 @@ describe("signUp", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("rejects a bad email with 400 {errors} and creates no user", async () => {
-    const req = await validated(signUpValidation, {
-      email: "not-an-email",
-      password: "password1",
-      name: "A",
-    });
-    const res = makeRes();
-    await signUp(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json.mock.calls[0][0].errors).toBeDefined();
+  it.each([
+    ["a bad email", { email: "not-an-email", password: "password1", name: "A" }],
+    ["a short password", { email: "a@b.c", password: "short", name: "A" }],
+    ["a missing name", { email: "a@b.c", password: "password1", name: "" }],
+  ])("POST /signup rejects %s with 400 {errors} and creates no user", async (_label, body) => {
+    const res = await signUpRequest(body);
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeDefined();
     expect(findUnique).not.toHaveBeenCalled();
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("rejects a short password with 400 {errors} and creates no user", async () => {
-    const req = await validated(signUpValidation, {
-      email: "a@b.c",
-      password: "short",
-      name: "A",
-    });
-    const res = makeRes();
-    await signUp(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("rejects a missing name with 400 {errors} and creates no user", async () => {
-    const req = await validated(signUpValidation, {
-      email: "a@b.c",
-      password: "password1",
-      name: "",
-    });
-    const res = makeRes();
-    await signUp(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(create).not.toHaveBeenCalled();
-  });
-
-  it("accepts valid input and returns 201 with a token", async () => {
+  it("POST /signup accepts valid input and returns 201 with a token", async () => {
     findUnique.mockResolvedValue(null);
     create.mockImplementation(async ({ data }) => ({ id: "u1", ...data }));
-    const req = await validated(signUpValidation, {
-      email: "a@b.com",
-      password: "password1",
-      name: "A",
-    });
-    const res = makeRes();
-    await signUp(req, res);
-    expect(res.status).toHaveBeenCalledWith(201);
-    expect(res.json.mock.calls[0][0].token).toBeDefined();
+    const res = await signUpRequest(validSignUp);
+    expect(res.status).toBe(201);
+    expect(typeof res.body.token).toBe("string");
+    const stored = create.mock.calls[0][0].data;
+    expect(stored.termsVersion).toBe(config.TERMS_VERSION);
+    expect(stored.acceptedTermsAt).toBeInstanceOf(Date);
+    expect(stored.ageConfirmedAt).toBeInstanceOf(Date);
+  });
+
+  it.each([
+    ["terms not accepted", { acceptTerms: false }],
+    ["terms missing", { acceptTerms: undefined }],
+    ["age not confirmed", { ageConfirmed: false }],
+    ["age missing", { ageConfirmed: undefined }],
+  ])("POST /signup rejects %s with 400 and creates no user", async (_label, override) => {
+    const res = await signUpRequest({ ...validSignUp, ...override });
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("stores a hashed password and never returns it", async () => {
@@ -127,11 +115,10 @@ describe("signIn", () => {
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
-  it("rejects a missing password with 400 {errors}", async () => {
-    const req = await validated(signInValidation, { email: "a@b.c", password: "" });
-    const res = makeRes();
-    await signIn(req, res);
-    expect(res.status).toHaveBeenCalledWith(400);
+  it("POST /signin rejects a missing password with 400 {errors}", async () => {
+    const res = await signInRequest({ email: "a@b.c", password: "" });
+    expect(res.status).toBe(400);
+    expect(res.body.errors).toBeDefined();
     expect(findUnique).not.toHaveBeenCalled();
   });
 
@@ -169,10 +156,9 @@ describe("signIn", () => {
 });
 
 describe("signIn email normalization", () => {
-  it("looks the user up by the lowercased email", async () => {
+  it("POST /signin looks the user up by the lowercased email", async () => {
     findUnique.mockResolvedValue(null);
-    const req = await validated(signInValidation, { email: "ANA@X.COM", password: "pw" });
-    await signIn(req, makeRes());
+    await signInRequest({ email: "ANA@X.COM", password: "pw" });
     expect(findUnique).toHaveBeenCalledWith({ where: { email: "ana@x.com" } });
   });
 });

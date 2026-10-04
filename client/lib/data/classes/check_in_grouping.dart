@@ -71,6 +71,18 @@ List<NightGroup> filterNightGroups(List<NightGroup> groups, String query) {
   return result;
 }
 
+/// Keeps the check-ins rated [minVibe] or more and drops nights left empty.
+List<NightGroup> filterBestNights(List<NightGroup> groups, {int minVibe = 4}) {
+  final result = <NightGroup>[];
+  for (final group in groups) {
+    final best = group.checkIns
+        .where((c) => c.vibe != null && c.vibe! >= minVibe)
+        .toList();
+    if (best.isNotEmpty) result.add(NightGroup(group.night, best));
+  }
+  return result;
+}
+
 /// "Sat 12 Sep", with a year suffix ("Sat 12 Sep 2025") outside [now]'s year.
 String formatNightLabel(DateTime night, {DateTime? now}) {
   final year = (now ?? DateTime.now()).year;

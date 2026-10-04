@@ -1,3 +1,5 @@
+import 'package:clubsy/data/classes/check_in_model.dart';
+import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/auth_service.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -29,12 +31,54 @@ class FakeAuthService extends AuthService {
   }
 }
 
+CheckInModel _visit(List<String> genres) => CheckInModel(
+  id: 'c1',
+  clubId: 'a',
+  checkedInAt: DateTime(2026, 9, 5, 23),
+  verificationMethod: 'QR',
+  distanceMeters: 10,
+  club: ClubModel(
+    id: 'a',
+    name: 'A',
+    address: '1 Main St',
+    city: 'Cluj',
+    latitude: 46,
+    longitude: 23.5,
+    imageUrl: 'http://img',
+    isApproved: true,
+    genres: genres,
+  ),
+);
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     Get.testMode = true;
   });
   tearDown(Get.reset);
+
+  for (final (genres, expected) in [
+    (['techno'], 'Your sound: techno'),
+    (<String>[], null),
+  ]) {
+    testWidgets('profile your sound for genres $genres', (tester) async {
+      Get.put(AuthController(authService: FakeAuthService()));
+      Get.put(ThemeController());
+      final clubs = Get.put(ClubController());
+      await tester.pumpWidget(const MaterialApp(home: ProfilePage()));
+      await tester.pump();
+      clubs.myCheckIns.assignAll([_visit(genres)]);
+      await tester.pump();
+      if (expected == null) {
+        expect(find.byKey(const Key('yourSoundText')), findsNothing);
+      } else {
+        expect(
+          tester.widget<Text>(find.byKey(const Key('yourSoundText'))).data,
+          expected,
+        );
+      }
+    });
+  }
 
   testWidgets('edit name validates, saves and updates the header', (
     tester,

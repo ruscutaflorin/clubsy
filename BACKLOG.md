@@ -605,7 +605,7 @@ Product-owner proposals, 2026-10-03 (dawn). Schema-free: map milestones, data po
 
 Product-owner proposals, 2026-10-03 (morning). Schema-free: a longer venue window, a personal yearly goal, and club pairings.
 
-- [ ] B67 Admin footfall window: choose 4, 12, 26 or 52 weeks on a club's footfall report — status: approved
+- [x] B67 Admin footfall window: choose 4, 12, 26 or 52 weeks on a club's footfall report — status: done
   - Why: the B38/B51/B60 footfall report always covers 12 weeks. When pitching a venue (pilot step 5.6, PLAN monetization direction), a new partner wants "the last month", and a renewal conversation wants "the last 6 months / year". A window selector makes the same verified numbers fit each conversation, including the B60 copied summary, which already says "last <weekly.length> weeks". No schema change.
   - Scope: no schema change; admin-only; aggregates only.
     - Server: in `server/src/controllers/adminController.js`, `getClubFootfall` reads an optional `weeks` query param (default 12) and accepts only `4`, `12`, `26` or `52`. Anything else returns 400 `{message: "weeks must be 4, 12, 26 or 52"}` before any Prisma call (mirror the `ALLOWED_DAYS` check in `getMetrics`). Replace the fixed `FOOTFALL_WEEKS` with the chosen value in both the `since` window and the `computeClubFootfall({... weeks})` call. `computeDistanceHealth` uses the same window's check-ins. The response shape doesn't change, so `weekly.length === weeks`. The route stays `GET /api/admin/clubs/:id/footfall` in `server/src/routes/adminRoutes.js`.
@@ -754,4 +754,537 @@ Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data qualit
   - Why: B68's yearly goal lives on the Recap page, so the check-in at the door (core loop step 2), where it matters most, doesn't mention it. When a check-in starts a new night, a line on the success sheet ("Night 23 of 30 for 2026 · 2 ahead of pace") turns the goal into an immediate reward.
   - Scope: client only, no server or schema change. In `client/lib/widgets/check_in_success_sheet.dart`, read the stored `yearly_goal_<year>` preference the way `YearlyGoalCard` does. Show a line only when a goal is set and the check-in is the first one of its night, built with `yearlyGoalProgress` and `goalPaceLine` from `client/lib/data/classes/yearly_goal.dart`. Show nothing without a goal or for a second club on the same night. Check the success sheet's existing tests before changing its constructor. Out: notifications, server goals.
   - Acceptance: widget tests pump the success sheet with `SharedPreferences.setMockInitialValues({'yearly_goal_2026': 30})` and fixture check-ins. A first check-in of the night finds "of 30 for 2026"; a second club on the same night finds nothing; no stored goal finds nothing. `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These close the privacy gap they left in the data export, add the first per-friend page, and make the new opening-hours data useful when choosing where to go.
+
+- [x] B76 "Download my data" covers everything Phases 7 and 8 added: profile, notes, favourites, friends, blocks and reports — status: done
+  - Why: principle 2 promises that users can export their data, but `exportMyData` still returns only the Phase 5 fields. It leaves out username, home city, consent records, privacy settings, night notes and vibe ratings, favourites, friendships, blocks and the reports a user filed. An export that skips the private diary and the social graph doesn't keep that promise, and the pilot's legal review (5.7) will check it.
+  - Scope: server only, no schema change, no client change. The client already saves whatever JSON the endpoint returns, and the CSV (B64) stays check-ins only.
+    - In `exportMyData` in `server/src/controllers/authController.js` (`GET /api/auth/me/export`), add `username`, `homeCity`, `acceptedTermsAt`, `termsVersion`, `ageConfirmedAt` and `shareNightsWithFriends` to the `user` `select`. Never select `password` or `tokenVersion`.
+    - Add `note`, `vibe`, `vibeAt` and `hiddenFromFriends` to each check-in's `select`.
+    - Add these top-level keys, each loaded with an explicit `select`:
+      - `favorites: [{createdAt, club: {id, name, city}}]` from `prisma.favorite.findMany({ where: { userId } })`.
+      - `friendships: [{status, direction: "sent"|"received", createdAt, respondedAt, other: {username, name}}]`, one entry per `Friendship` row where the user is the requester or the addressee. `direction` is "sent" when the user is the requester. Leave out the other user's id and email.
+      - `blocks: [{createdAt, blocked: {username, name}}]` for blocks the user made. Leave out blocks *against* the user, because they would reveal who blocked them.
+      - `reportsFiled: [{reason, details, status, createdAt}]` for reports the user filed. Leave out the reported user's identity, and leave out reports *against* the user, because they would reveal the reporters.
+    - Keep the `Content-Disposition` header and the existing keys (`exportedAt`, `user`, `checkIns`) unchanged.
+    - Out: other users' data, the admin `handledBy` field, password reset tokens.
+  - Acceptance:
+    - Extend `server/src/__tests__/exportMyData.test.js` (mocked Prisma, supertest):
+      - A user with one favourite, one accepted friendship they received, one block they made and one report they filed gets `favorites`, `friendships` (with `direction: "received"`), `blocks` and `reportsFiled`, each with exactly one entry.
+      - A check-in fixture with `note: "great DJ"` and `vibe: 4` comes back with both fields.
+      - The serialised body contains no `password`, no `tokenVersion`, no email of the other user and no `reportedUserId`.
+      - `prisma.block.findMany` is filtered by `blockerId` (the caller) and `prisma.report.findMany` by `reporterId` (the caller), never by `blockedId` or `reportedUserId`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [x] B77 A friend's nights: tap a friend to see the nights they share with you and the clubs you've both been to — status: done
+  - Why: the 8.4 feed mixes all friends together, and the friend list leads nowhere. "Where has Ana been?" and "we've both been to 4 of the same clubs" are the natural next steps for the regular and the explorer. The page shows only what 8.0 already lets a friend see (clubs and night dates of ended, unhidden nights, with sharing on both sides), so it exposes nothing new (principles 2 and 3).
+  - Scope: no schema change.
+    - Server, in `server/src/controllers/feedController.js`: add `getFriendNights` for a new `GET /api/feed/friends/:userId` route (authMiddleware) in `server/src/routes/feedRoutes.js`.
+      - Reuse `visibleCheckInsWhere(req.user.id)` unchanged. Narrow it to the one friend with `AND: [{ userId: req.params.userId }]` and keep the existing `userId: { in: friendIds }`. That way a non-friend, a blocked user and a user who doesn't share all get the same empty list, never an error that tells them apart.
+      - Page it exactly like `getFeed` (`PAGE_SIZE`, `page`, `hasMore`) and map rows to `{id, nightDate, club: {id, name, city}}`, never `checkedInAt`.
+      - On page 1 only, add `sharedClubCount`: the number of distinct clubs in the friend's visible check-ins that are also in the caller's own check-ins (`prisma.checkIn.findMany({ where: { userId: req.user.id }, distinct: ["clubId"], select: { clubId: true } })`). It is 0 when the viewer doesn't share.
+    - Client service: add `getFriendNights(String userId, {int page = 1})` to `client/lib/services/feed_service.dart`. It returns the existing `FeedPage` model plus `sharedClubCount` (extend the model, or add a small wrapper next to `FeedPage`, with `fromJson` defaulting the count to 0).
+    - Client page: add `client/lib/views/pages/friend_nights_page.dart`.
+      - The app bar shows the friend's label.
+      - When N > 0, a header (`Key('sharedClubCount')`) shows "You've both been to N clubs".
+      - Below it, the nights list ("Sat 12 Sep · Club X, Cluj") reuses `formatNightLabel` from `client/lib/data/classes/check_in_grouping.dart`, with a "Load more" button while `hasMore` is true.
+      - An empty list shows "No shared nights yet. They appear here when you both share your nights."
+      - The page takes the service as an optional constructor parameter so tests can pass a fake.
+    - In `client/lib/views/pages/friends_page.dart`, give the `ListTile`s of accepted friends (not pending requests) an `onTap` that pushes the page with `Get.to`.
+    - Out: friends' badges, stats or maps, any check-in time, anything about tonight.
+  - Acceptance:
+    - Jest tests in `server/src/__tests__/feed.test.js` (mocked Prisma, supertest):
+      - The Prisma `where` contains the friend-id `in` filter, the requested `userId`, and the not-hidden and night-ended conditions.
+      - A viewer with sharing off gets `{nights: [], sharedClubCount: 0}` and no check-in query runs.
+      - When the friend's visible clubs are A and B and the viewer's clubs are B and C, `sharedClubCount` is 1.
+      - The body contains no `checkedInAt`.
+      - No token gives 401.
+    - A Flutter widget test in a new `client/test/friend_nights_test.dart` pumps `FriendNightsPage` with a fake service (no HTTP). It finds "You've both been to 3 clubs" and a club name. With an empty fixture it finds "No shared nights yet" and no `Key('sharedClubCount')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [x] B78 "Open now" filter in club search — status: done
+  - Why: 7.2 added opening hours, but they only show on a club's own page. On a night out, "where can I go right now?" is step 4 of the core loop, and the search screen can't answer it. One chip next to the genre chips turns the schedule into a decision.
+  - Scope: client only, no server change.
+    - Pure function: in `client/lib/data/classes/club_profile.dart`, add `List<ClubModel> clubsOpenAt(List<ClubModel> clubs, DateTime now)` next to `clubsWithGenre`. It keeps the clubs where `openingChipText(<the club's opening hours>, now) == 'Open now'`, and drops clubs with no schedule. Take the opening-hours field from `ClubModel`, and derive `now` the same way `ClubDetailsPage` does when it calls `openingChipText`.
+    - Controller: in `client/lib/src/core/controllers/club_search_controller.dart`, add `final openNow = false.obs` and a toggle method, and apply `clubsOpenAt` after `clubsWithGenre` in `filteredResults`. Give the controller an optional `DateTime Function()` clock (default `DateTime.now`) so tests can pin the time.
+    - Page: in `client/lib/views/pages/club_search_page.dart`, add an "Open now" `FilterChip` (`Key('openNowFilter')`) before the genre chips. When the filter leaves no results, show "No clubs open right now".
+    - Out: server-side filtering, "opens soon", filtering the map.
+  - Acceptance:
+    - Flutter unit tests in `client/test/club_profile_test.dart`:
+      - With a Friday 23:00-05:00 schedule, `clubsOpenAt` keeps the club at Saturday 02:00 and drops it at Saturday 06:00.
+      - A club with null hours is dropped.
+      - An empty list gives an empty list.
+    - A Flutter test in `client/test/club_search_controller_test.dart` with a pinned clock: turning on both `openNow` and a genre keeps only clubs that match both, and turning `openNow` off restores the genre-only result.
+    - A widget test in `client/test/club_search_page_test.dart` taps `Key('openNowFilter')` and finds "No clubs open right now" when no fixture club is open.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B79 Find a night by what I wrote: history search matches my night notes — status: proposed
+  - Why: 7.4 turned the history into a diary ("great DJ, went with Ana"), but the B50 search only matches club name and city, so "the night with Ana" can't be found. Notes are the user's own data and the search runs on the device, so this exposes nothing (principle 2).
+  - Scope: client only. Make `filterNightGroups` in `client/lib/data/classes/check_in_grouping.dart` also match `checkIn.note` (case-insensitive, null-safe), and update its doc comment. Change the search field hint in `client/lib/views/pages/check_in_history_page.dart` to "Search clubs, cities or notes". Out: server-side search, searching friends' data.
+  - Acceptance: extend the existing `filterNightGroups` cases in `client/test/check_in_grouping_test.dart` with two checks: "ana" finds a check-in whose note is "went with Ana", and a check-in with a null note doesn't match or crash. `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B80 Moderation that has teeth: an admin can suspend an account from the reports queue — status: proposed
+  - Why: 8.2 lets admins mark a report ACTIONED, but nothing happens to the reported account, so a harasser keeps full access. Principle 3 requires a real moderation path before the social layer grows, and B2, B3 and B5 all depend on one.
+  - Scope: needs a human policy decision first: what a suspension does (sign-in refused, or hidden from social features only), whether it is timed or permanent, what the user is told, and how appeals work. Once that's decided, the likely build is:
+    - Schema: `User.suspendedAt DateTime?` and `suspendedReason`, with a migration.
+    - Routes: `POST /api/admin/users/:id/suspend` and `/unsuspend` (admin only, never the last admin). Suspending increments `tokenVersion`, reusing 7.7.
+    - Enforcement: `authMiddleware` and `signIn` reject suspended users with 403 `{message}`, and suspended users are filtered out of friend and feed queries next to the block helper in `server/src/utils/blocks.js`.
+    - Client: a "Suspend" action in the admin reports queue.
+  - Acceptance (once decided):
+    - Jest tests: a suspended user's old token gets 403 or 401, their sign-in is refused, they disappear from a friend's feed, and a non-admin gets 403 on the suspend route.
+    - A Flutter widget test for the admin action.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+---
+
+Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe ratings into the data model, but favourites only show up as a heart and a map layer, and ratings only as a crowd average. These items make both part of the "where next?" and "look back" steps of the core loop.
+
+- [x] B81 "Want to go" list: my favourited clubs on one page, not-yet-visited first, with today's opening status — status: done
+  - Why: 7.3 lets a user heart clubs ("Want to go"), but the only way to see the list is the map layer. "Which of my saved places haven't I been to, and which is open tonight?" has no answer in the app. A list page turns favourites into step 4 of the core loop (find the next place to go). It also makes `tickedOffList` on the success sheet a goal the user can see. It uses only the user's own data (principle 2).
+  - Scope: client only, no server or schema change. `ClubController.favoriteIds` and `ClubController.clubs` already hold everything.
+    - Pure logic: add `List<WantToGoEntry> wantToGoList(List<ClubModel> clubs, Set<String> favoriteIds, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, with a small `WantToGoEntry {ClubModel club; int nights}` class. `nights` comes from `nightsPerClub(checkIns)` in the same file. Clubs with 0 nights come first, then visited ones, alphabetical by name (case-insensitive) within each group. Favourite ids with no matching club are skipped.
+    - Page: add `client/lib/views/pages/want_to_go_page.dart` (`WantToGoPage`). It reads `Get.find<ClubController>()` inside an `Obx`.
+      - Each row shows the club name, the city, and a trailing status: "Not been yet" for unvisited clubs, "Been · N nights" for visited ones ("1 night" singular).
+      - When `openingChipText(club.openingHours, club.localNow)` from `client/lib/data/classes/club_profile.dart` returns a value, append it to the subtitle after the city, called the same way `ClubDetailsPage` calls it ("Cluj · Open now").
+      - Tapping a row pushes `ClubDetailsPage` with `Get.to`. Each row has an un-heart `IconButton` (`Key('unfavorite_<clubId>')`) that calls `ClubController.toggleFavorite`.
+      - With no favourites, show "Nothing saved yet. Tap the heart on a club to add it here."
+    - Entry point: in `client/lib/views/pages/profile_page.dart`, add a `ListTile` (`Key('openWantToGo')`, title "Want to go", trailing count of favourites) next to the existing "Friends" tile. It pushes `WantToGoPage` with `Get.to`.
+    - Out: sorting by distance (needs location on this page), sharing the list, reordering, server changes.
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`:
+      - Favourites "Zeta" (unvisited), "alpha" (visited on 2 nights) and "Beta" (unvisited) come back as Beta, Zeta, alpha, with `nights` 0, 0, 2.
+      - A favourite id with no matching club is skipped, and an empty favourites set gives an empty list.
+    - Widget tests in a new `client/test/want_to_go_test.dart` pump `WantToGoPage` with a fixture `ClubController` (no HTTP), the same way `client/test/club_map_page_test.dart` does:
+      - They find "Not been yet" for an unvisited favourite and "Been · 2 nights" for a visited one.
+      - With no favourites, they find "Nothing saved yet".
+      - Tapping `Key('unfavorite_<id>')` removes the row (the fixture service's `setFavorite` succeeds).
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B82 "You rated it ★4.3 over 5 nights": my own vibe rating on a club's page — status: done
+  - Why: 7.4 asks for a vibe rating after each night, and 7.5 shows the crowd's average on the club page, but the user's own ratings disappear into the history. "Is this my kind of place?" is best answered by what I thought myself. Showing my rating next to the crowd score rewards the rating habit and helps decide where to go next. It uses only the user's own data (principle 2).
+  - Scope: client only, no server or schema change. `CheckInModel.vibe` (nullable int, 1-5) is already loaded into `ClubController.myCheckIns`.
+    - Pure logic: add `({double average, int count})? myVibeAtClub(String clubId, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`. It averages the non-null `vibe` values of my check-ins at that club and returns null when there are none.
+    - Text: add `String myVibeText(({double average, int count}) v)` to `client/lib/data/classes/club_profile.dart`, next to `vibeText`. It returns "You rated it ★4.3 over 5 nights", with one decimal and "1 night" for a single rating.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add `Text(myVibeText(...), key: const Key('myVibeText'))` directly below the existing `Text(vibeText(club.vibe), key: const Key('vibeText'))`. Show it only when `myVibeAtClub` is non-null. Read `clubController.myCheckIns` inside an `Obx` so the line updates after the user rates a night.
+    - Out: showing my ratings to anyone else, editing ratings from the club page, changing the aggregate score.
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`:
+      - Ratings 4, 5 and null at club A, plus 1 at club B, give A `(average: 4.5, count: 2)`.
+      - A club with only null ratings gives null, and an empty list gives null.
+    - A unit test in `client/test/club_profile_test.dart`: `myVibeText((average: 4.25, count: 5))` is "You rated it ★4.3 over 5 nights", and a count of 1 says "1 night".
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests there, pump the page with fixture check-ins:
+      - A club I rated shows `Key('myVibeText')` containing "You rated it".
+      - A club I never rated has no `Key('myVibeText')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B83 Recap "Highest rated": the club I rated best in the period — status: proposed
+  - Why: the recap (Wrapped) counts nights and names the most-visited club, but ignores the vibe ratings 7.4 collects. "Your highest-rated club of September: Club X ★4.8" is a line people would want to share, and it rewards rating nights.
+  - Scope: client only.
+    - Extend `Recap`/`buildRecap` in `client/lib/data/classes/recap.dart` with `topRatedClub` and its average, picked from the period's check-ins that have a non-null `vibe`.
+    - A club needs at least 2 rated nights, so one lucky night doesn't win. Break ties by the number of ratings, then by name.
+    - Add a line to `RecapCard` in `client/lib/views/pages/recap_page.dart`. It hides the club name under the existing `hideClubNames` toggle, the same way the top-club line does. Notes are never shown.
+    - Out: friends' ratings, server changes.
+  - Acceptance:
+    - Unit tests in `client/test/recap_test.dart`:
+      - 2 rated nights at A averaging 4.5 beat 3 at B averaging 4.0.
+      - A single rated night gives no top-rated club.
+      - Ratings outside the period are ignored.
+    - A widget test finds the line, and finds no club name in it when `hideClubNames` is on.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B84 "Friends who've been here": the names behind the friend count on a club page — status: proposed
+  - Why: the club page shows how many friends have been to a club (`GET /api/feed/clubs/:clubId/friends-count`), but not who, so "ask Ana what it's like" is impossible. The names would come from the same visibility rule as the feed (ended, unhidden nights, sharing on both sides, not blocked), so they show nothing 8.0 doesn't already allow.
+  - Scope: needs a quick product/safety confirmation first. The count was deliberately built as an aggregate, so someone should confirm that listing friend names per club fits 8.0's rules. If confirmed:
+    - Server: add `GET /api/feed/clubs/:clubId/friends` in `server/src/controllers/feedController.js`. It reuses `visibleCheckInsWhere(req.user.id)` exactly like `getClubFriendCount` and returns `[{userId, username, name, nights}]`, with distinct night counts and no dates or times.
+    - Client: make the friend count on `ClubDetailsPage` tappable. It opens a sheet that lists those friends, and tapping one pushes `FriendNightsPage`.
+    - Out: last-visit dates, anything about tonight.
+  - Acceptance:
+    - Supertest tests in `server/src/__tests__/feed.test.js`:
+      - A viewer with sharing off gets `[]` and no check-in query runs.
+      - The `where` keeps the friend, not-hidden and night-ended filters.
+      - The body has no `checkedInAt` and no email.
+      - No token gives 401.
+    - A widget test for the sheet, with a fake service.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B85 Admin reports queue: group open reports by reported user, with their report history — status: proposed
+  - Why: `listReports` returns one row per report, with an `openReports` count and a `flagged` flag. Three reports against one account show as three separate rows, and an admin can't see past ACTIONED or DISMISSED reports against the same person. Grouping by user makes repeat offenders obvious, which principle 3 needs before the social layer grows. It also prepares the ground for the suspension action (B80) once its policy is decided.
+  - Scope: server and client, no schema change.
+    - Server: add `GET /api/admin/reports/users` (admin only) in `server/src/controllers/reportController.js`, built with `prisma.report.groupBy`. It returns one entry for each reported user with at least one OPEN report: `{user: {id, username, name}, open, actioned, dismissed, reasons: {HARASSMENT: n, ...}, latestAt}`. Entries are sorted by `open` descending, then `latestAt` descending.
+    - Client: in `client/lib/views/pages/admin/admin_reports_page.dart`, add a "By user" toggle that shows this list. Tapping a user filters the existing per-report list to that user.
+    - Out: suspension (B80), reporter identities in the grouped view.
+  - Acceptance:
+    - Supertest tests (mocked Prisma): no token gives 401, a non-admin gets 403, and an admin gets 200 with the sort order and per-status counts above.
+    - A widget test for the toggle, with a fake `AdminService`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+---
+
+Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genres, but genres only show as chips on a club page and as a search filter. These items turn them into a taste profile ("your sound") that feeds the "where next?" step of the core loop. They also add an admin check so pilot clubs actually have the genres and hours these features need.
+
+- [x] B86 "Your sound": my top music genres from my nights, on Profile and on the recap card — status: done
+  - Why: the regular wants to know what their nights say about them, and the recap card is the part people share. "Your sound: techno · house" is a fun piece of identity that comes only from verified check-ins (principle 5) and uses only the user's own data (principle 2). It is also the base for genre-based suggestions (B87).
+  - Scope: client only, no server or schema change. `CheckInModel.club.genres` is already loaded into `ClubController.myCheckIns`.
+    - Pure logic: add a new `client/lib/data/classes/genre_taste.dart` with `List<({String genre, int nights})> genreNights(List<CheckInModel> checkIns)`.
+      - For each genre, count the distinct nights (use `nightOf(checkIn.checkedInAt.toLocal())` from `client/lib/data/classes/check_in_grouping.dart`) with at least one check-in at a club tagged with that genre.
+      - Sort by nights descending, then by genre name. Clubs with no genres add nothing.
+    - In the same file, add `String? yourSoundText(List<({String genre, int nights})> g)`. It returns "Your sound: techno · house · latin" (top 3 at most), or null when the list is empty.
+    - Profile: in `client/lib/views/pages/profile_page.dart`, directly below the stats card, show `Text(..., key: const Key('yourSoundText'))` inside an `Obx` over `ClubController.myCheckIns`. Show it only when `yourSoundText` is non-null.
+    - Recap: add a nullable `String? topGenre` field to `Recap` in `client/lib/data/classes/recap.dart`, and in `buildRecap` set it to the first entry of `genreNights` over the period's check-ins. In `RecapCard` (`client/lib/views/pages/recap_page.dart`), add the line "Your sound: techno" to `lines` when `topGenre` is non-null. Genres aren't identifying, so the line also shows when `hideClubNames` is on.
+    - Out: friends' genres, editing a taste profile by hand, server changes.
+  - Acceptance:
+    - Unit tests in a new `client/test/genre_taste_test.dart`:
+      - Two check-ins on the same night at two techno clubs count techno once.
+      - A night at a techno+house club and a night at a house-only club give house 2 then techno 1.
+      - A club with no genres adds nothing. An empty list gives an empty list, and `yourSoundText` of it is null.
+      - `yourSoundText` caps at 3 genres.
+    - A case added to `client/test/recap_test.dart`: `buildRecap` sets `topGenre` only from check-ins inside the period.
+    - Widget tests:
+      - In `client/test/edit_name_test.dart` (which already pumps `ProfilePage` with a fixture `ClubController`), find `Key('yourSoundText')` with "Your sound: techno" for a fixture with techno nights, and none when no visited club has genres.
+      - A `RecapCard` test in `client/test/recap_test.dart` finds "Your sound: techno" with `hideClubNames: true`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B87 "You might like": unvisited clubs that match my sound, on the Want to go page (after B86) — status: approved
+  - Why: core loop step 4 ("find the next place to go") has a list of places the user saved (B81), but nothing suggests new ones. This ranks the clubs I haven't been to by how well their genres match my own nights. It is a personal "where next?" that needs no other user's data (principle 2) and no server change.
+  - Scope: client only. It is built only after B86 has landed on `develop` (B86 is in flight on its own branch; do not start B87 until `client/lib/data/classes/genre_taste.dart` with `genreNights` exists) and reuses `genreNights` from `client/lib/data/classes/genre_taste.dart`.
+    - Pure logic: add `List<ClubModel> soundMatches(List<ClubModel> clubs, List<CheckInModel> checkIns, Set<String> favoriteIds, {int limit = 5})` to `client/lib/data/classes/genre_taste.dart`.
+      - Skip clubs that aren't `isApproved`, clubs I've checked in at, clubs already in `favoriteIds`, and clubs with no genres.
+      - Score each club as the sum of my `genreNights` counts over its genres, and drop clubs that score 0.
+      - Sort by score descending, then by name (case-insensitive), and respect `limit`.
+    - Page: in `client/lib/views/pages/want_to_go_page.dart`, add a "You might like" section (`Key('youMightLike')`). Put it below the favourites list, or below the empty-state text when there are no favourites, and show it only when `soundMatches` is non-empty. It reads `ClubController.clubs`, `myCheckIns` and `favoriteIds` inside the existing `Obx`.
+      - Each row has `Key('suggest_<clubId>')` and shows the club name, with the subtitle "<city> · <genres joined by ' · '>".
+      - Each row has a heart `IconButton` (`Key('suggestFavorite_<clubId>')`) that calls `ClubController.toggleFavorite`, which moves the club up into the list.
+      - Tapping a row pushes `ClubDetailsPage` with `Get.to`.
+    - Out: distance ranking (that's B39), friends' tastes, server-side recommendations.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - With 3 techno nights and 1 house night, an unvisited techno+house club ranks above an unvisited techno-only club, which ranks above a house-only club.
+      - Visited, favourited and unapproved clubs, and clubs with no matching genre, are excluded.
+      - `limit` is respected, and having no check-ins gives an empty list.
+    - Widget tests in `client/test/want_to_go_test.dart`, with the existing fixture `ClubController`:
+      - A matching unvisited club shows under `Key('youMightLike')`.
+      - Tapping `Key('suggestFavorite_<id>')` moves it into the favourites list (a `Key('wantToGo_<id>')` row appears).
+      - With no genre data in my nights, `Key('youMightLike')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: done
+  - Why: a club with no hours or genres drops out of "Open now" (B78), the Want to go opening status (B81) and the genre features (B86, B87), so a half-filled pilot club becomes invisible to them. Admins onboarding ~10 partner clubs need to see what's missing at a glance. This extends the B72 data health check they already use.
+  - Scope: server and client, no schema change.
+    - Server: in `server/src/services/clubDataService.js`, make `findClubDataIssues` also return `incompleteProfiles: [{id, name, city, isApproved, missing}]`.
+      - `missing` lists these keys in this order: `"openingHours"` when it is null or an object with no days, `"genres"` when the array is empty or missing, and `"description"` when it is null or blank.
+      - Clubs missing nothing are left out.
+      - Sort approved clubs first, then by the length of `missing` descending, then by name.
+    - In `getClubDataHealth` in `server/src/controllers/adminController.js`, add `description`, `genres` and `openingHours` to the `select`.
+    - Client model: in `client/lib/data/classes/club_data_health_model.dart`, add an `IncompleteProfileEntry` with `fromMap`, plus an `incompleteProfiles` list on `ClubDataHealthModel` that defaults to empty when the key is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_data_health_page.dart`, add an "Incomplete profiles" section that follows the existing sections' pattern, including their empty state.
+      - Each row shows the club name, the city and "Missing: opening hours, genres".
+      - Tapping a row opens `AdminClubFormPage` for that club, the same way the admin clubs list does.
+    - Out: auto-filling data, nagging venues, blocking approval of incomplete clubs.
+  - Acceptance:
+    - Unit tests added to `server/src/__tests__/clubDataService.test.js`:
+      - A club with hours, genres and a description isn't listed.
+      - A club with `openingHours: null`, `genres: []` and a blank description lists all three, in that order.
+      - An approved club sorts before an unapproved one that misses more.
+    - Extend the existing `GET /api/admin/clubs/data-health` case in `server/src/__tests__/routes.test.js`: the response has an `incompleteProfiles` entry for a mocked club without genres.
+    - Widget tests in `client/test/admin_club_data_health_test.dart`:
+      - A fixture with one incomplete club shows "Missing: opening hours, genres".
+      - A payload without `incompleteProfiles` still parses and renders.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B89 "Genre hopper" badge: nights out at clubs covering 4 music genres — status: proposed
+  - Why: the explorer persona responds to collections, and the badges reward the number of clubs and cities but not variety of sound. A genre badge nudges people to try a new kind of night, and it can only be earned through verified check-ins (principle 5).
+  - Scope: mostly server.
+    - Add `{id: "genre_hopper_4", title: "Genre hopper", description: "Go out at clubs covering 4 music genres.", kind: "genres", target: 4}` to `server/src/services/badgeCatalogue.js`.
+    - Add a `kind === "genres"` branch to `evaluate` in `server/src/services/gamificationService.js`, shaped like the `clubs`/`cities` branch but adding every entry of `c.club.genres`. `getMyAchievements` already includes `club`.
+    - Add an icon for `genre_hopper_4` in `client/lib/views/pages/achievements_page.dart`.
+    - Product question first: a club tagged with 4 genres would award the badge in a single night. Decide whether a multi-genre club should count only its first genre.
+    - Out: per-genre badges.
+  - Acceptance:
+    - Cases added to `server/src/__tests__/gamificationService.test.js`: the badge is earned on the night the fourth genre appears, progress caps at 4, and clubs with no genres add no progress.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B90 "2 of your Want to go clubs are open now" on the map — status: proposed
+  - Why: on a night out the map is the first screen, but the open status of saved clubs only shows on the Want to go page. A one-line chip turns the saved list into a plan for tonight (core loop step 4), using only the user's own favourites.
+  - Scope: client only.
+    - Add a pure `int openFavoritesCount(List<ClubModel> clubs, Set<String> favoriteIds)` next to `clubsOpenAt` in `client/lib/data/classes/club_profile.dart`. It uses each club's `localNow`, the way `openingChipText` callers do.
+    - Add a dismissible chip on `ClubMapPage` (`Key('openFavoritesChip')`). Show it only when the count is above 0. Tapping it pushes `WantToGoPage`.
+    - Product question first: the map already has the near-me button, the error banner, the visited toggle and the streak nudge. Decide whether this chip belongs there or only on the Want to go page.
+    - Out: push notifications.
+  - Acceptance:
+    - Unit tests for the count: closed clubs and clubs with null hours are excluded, and a non-favourite open club isn't counted.
+    - A widget test on `ClubMapPage` that the chip shows when the count is above 0 and is hidden at 0.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' nights (8.4, B77) now hold data that only partly reaches the people who would act on it. These items give venues the rating feedback that supports the B2B direction, turn a friend's history into "where next?" ideas, and make opening hours useful for planning tonight.
+
+- [x] B91 Admin footfall "Guest vibe": the rating summary for a club over the report window, aggregate only — status: done
+  - Why: the decided monetization is venue-side B2B (PLAN decision 6), and the footfall report is what admins show partner venues. It says how many people came but not how they felt about the night, even though 7.4 collects a 1-5 vibe rating on check-ins. An aggregate rating with the same 5-rating floor as the public club score adds venue value without exposing any single guest (principle 2).
+  - Scope: server and client, no schema change.
+    - Server pure logic: in `server/src/services/footfallService.js`, add `export const computeVibeSummary = (ratings, { min = 5 } = {})`. `ratings` is an array of ints 1-5 (nulls are ignored).
+      - It returns `{count, average, distribution}`. `count` is the number of ratings.
+      - When `count < min`, `average` and `distribution` are `null`, so a handful of ratings can't be tied to people.
+      - Otherwise `average` is rounded to one decimal, and `distribution` is a 5-element array of counts for ratings 1..5.
+    - Server route: in `getClubFootfall` in `server/src/controllers/adminController.js`, add `vibe: true` to the existing `checkIn.findMany` `select`, and add `vibe: computeVibeSummary(checkIns.map((c) => c.vibe))` to the response. It uses the same window as the rest of the report, and no ids leave the server.
+    - Client model: in `client/lib/data/classes/club_footfall_model.dart`, add a `VibeSummary {int count; double? average; List<int>? distribution}` with `fromMap`, and a nullable `vibe` field on `ClubFootfallModel` that is null when the key is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_footfall_page.dart`, add a "Guest vibe" section (`Key('footfallVibe')`) after the existing sections. With an average it shows "★4.3 from 27 ratings" and one row per star level (5 down to 1) with its count. Below the floor it shows "Not enough ratings yet (3 of 5)".
+    - Copy summary: in `footfallSummaryText` in `client/lib/data/classes/footfall_summary.dart`, add the line "Guest vibe: ★4.3 from 27 ratings" when an average is present, and no line otherwise.
+    - Out: per-guest ratings or notes (notes never leave the user), changing the public club vibe score, vibe in the club ranking (B94).
+  - Acceptance:
+    - Unit tests added to `server/src/__tests__/footfallService.test.js`:
+      - Ratings `[5, 4, 4, null, 3, 5]` give count 5, average 4.2 and distribution `[0, 0, 1, 2, 2]`.
+      - Four ratings give count 4 with `average` and `distribution` null.
+    - Extend the existing "defaults to 12 weekly buckets" case in `server/src/__tests__/routes.test.js`: with mocked rows carrying `vibe`, the body has `vibe.count`, and the existing no-`userId` assertion still holds.
+    - Flutter tests:
+      - In `client/test/admin_club_footfall_test.dart`, a fixture with an average shows "★4.3 from 27 ratings", and a fixture below the floor shows "Not enough ratings yet".
+      - A payload without `vibe` still parses and renders.
+      - In `client/test/footfall_summary_test.dart`, the summary contains "Guest vibe: ★4.3" only when an average is present.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: done
+  - Why: core loop step 4 ("find the next place to go") gets its best ideas from friends, and B77 already counts the clubs we've both been to. The clubs a friend has been to and I've never tried are the natural next suggestion. They come only from that friend's already-visible nights (the same `visibleCheckInsWhere` rule: ended, unhidden, both sharing, not blocked), so nothing new is revealed (principles 2 and 3).
+  - Scope: server and client, no schema change.
+    - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, change the `theirs` query to also select `club: { select: { id: true, name: true, city: true } }`. Add `newToYou` to the body: the friend's distinct clubs whose id isn't in `mineIds`, sorted by name, each `{id, name, city}`. The `base` null branch returns `newToYou: []`. Keep `sharedClubCount` unchanged. No dates or counts per club.
+    - Client model: in `client/lib/data/classes/feed_model.dart`, add `List<({String id, String name, String? city})> newToYou` to `FeedPage`, defaulting to empty when the key is absent.
+    - Client page: in `client/lib/views/pages/friend_nights_page.dart`, keep the page-1 `newToYou` in state the way `_sharedClubCount` is kept. When it is non-empty, show a section `Key('newToYou')` above the nights list titled "Been there, you haven't". Each row has `Key('newToYou_<clubId>')` and shows the club name and city.
+      - Tapping a row finds the club in `Get.find<ClubController>().clubs` by id and pushes `ClubDetailsPage(club: ...)` with `Get.to`. When the club isn't in the loaded list (e.g. unapproved), the row isn't tappable.
+    - Out: the friend's visit counts or dates per club, suggestions merged from several friends, anything about tonight.
+  - Acceptance:
+    - Supertest tests added to `server/src/__tests__/feed.test.js`:
+      - With the friend's clubs c1 and c2 and my club c1, page 1 returns `newToYou` with only c2, and the body has no `checkedInAt`.
+      - A viewer with sharing off gets `newToYou: []`.
+      - Page 2 has no `newToYou`.
+    - Widget tests in `client/test/friend_nights_test.dart`, with the existing fake `FeedService`:
+      - A page-1 result with one new club shows `Key('newToYou')` and the club name.
+      - An empty `newToYou` shows no section.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B93 "Until 05:00" and "Next: Fri 23:00": when a club closes, or when it next opens — status: done
+  - Why: the opening chip says "Open now", "Opens 23:00" or "Closed", but on a night out the next question is "how long have I got?", and on a Tuesday it's "when can I go?". Answering both on the club page and the Want to go list helps plan tonight (core loop step 4) from data 7.2 already stores.
+  - Scope: client only, no server or schema change. Leave `openingChipText` and its tests unchanged, because `clubsOpenAt` and the chip colour compare against its exact strings.
+    - Pure logic: add `String? openingDetailText(Map<String, dynamic>? hours, DateTime now)` to `client/lib/data/classes/club_profile.dart`, next to `openingChipText`, reusing `_slots`, `_minutes` and `weekdayKeys`.
+      - When the club is open (today's slot, or yesterday's slot running past midnight), it returns "Until HH:MM", the close time of that slot.
+      - When it is closed and has no later slot today, it returns "Next: <Ddd> HH:MM" for the earliest slot in the following 7 days, with a 3-letter English day name ("Fri").
+      - It returns null when `openingChipText` would say "Opens HH:MM" (already said), and when the club has no schedule.
+    - UI:
+      - In `client/lib/views/pages/club_details_page.dart`, show `Text(detail, key: const Key('openingDetailText'))` next to the existing `Key('openStatusChip')` when the detail is non-null, using `club.localNow` like the chip.
+      - In `client/lib/views/pages/want_to_go_page.dart`, append the detail to the existing status in the subtitle ("Cluj · Open now · Until 05:00").
+    - Out: holiday or exception hours, countdowns, notifications.
+  - Acceptance:
+    - Unit tests added to the `openingChipText` area of `client/test/club_profile_test.dart`, using the same Friday 23:00-05:00 fixture:
+      - Saturday 02:00 gives "Until 05:00", and Friday 23:30 gives "Until 05:00".
+      - Saturday 06:00 gives "Next: Fri 23:00".
+      - Friday 18:00 gives null, and null hours give null.
+    - A widget test in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests, finds `Key('openingDetailText')` for a club with hours and none for a club without.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B94 Admin club ranking shows each club's guest vibe next to its check-ins (after B91) — status: proposed
+  - Why: the ranking (B65) shows which clubs are growing, but not which ones guests rate well. Together they tell an admin which venues to pitch first. It reuses B91's `computeVibeSummary` and its 5-rating floor.
+  - Scope: server and client, no schema change. Build only after B91 has landed.
+    - Server: in `getClubRanking` in `server/src/controllers/adminController.js`, also select `vibe` for the current window and attach `vibe: {count, average}` to each entry through `computeVibeSummary`.
+    - Client: show "★4.3" on each ranking row when an average is present.
+    - Out: sorting the ranking by vibe, vibe in the pilot report text.
+  - Acceptance:
+    - Jest: a club below the floor has `vibe.average` null, and no ids leave the endpoint.
+    - A widget test for the star label.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now describe the user's taste, but they don't show up when it matters: at the door, and on a club page while deciding where to go. The footfall report also can't yet tell a venue how many real regulars it has, which is the basis for "reward your regulars" (B24, PLAN decision 6).
+
+- [x] B95 "More like this": clubs in the same city with a similar sound, on a club's page — status: done
+  - Why: core loop step 4 ("find the next place to go") often starts from a club page, and "if you like this place, try these" is the natural next question. It uses only public club data (city and genres from 7.2), so it reveals nothing about any user (principle 2). It also works for unvisited clubs and for new users with no history.
+  - Scope: client only, no server or schema change. `ClubController.clubs` already holds the approved clubs with `city` and `genres`.
+    - Pure logic: add `List<({ClubModel club, List<String> shared})> similarClubs(ClubModel club, List<ClubModel> clubs, {int limit = 3})` to `client/lib/data/classes/genre_taste.dart`.
+      - Candidates are `isApproved` clubs other than `club` (compared by id), in the same city (trimmed, case-insensitive), that share at least one genre with `club` (trimmed, case-insensitive).
+      - `shared` lists the shared genres in `club.genres` order.
+      - Sort by `shared.length` descending, then by name (case-insensitive), and respect `limit`.
+      - A club with no genres gives an empty list.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add a "More like this" section (`Key('similarClubs')`) after the existing `Key('pairedClubs')` section.
+      - Place it outside any visited-only block, so it also shows for clubs I haven't been to.
+      - Read `clubController.clubs` inside an `Obx`, and show the section only when `similarClubs` is non-empty.
+      - Each row is a `ListTile` with `Key('similar_<clubId>')`, the club name as the title, and the shared genres joined by " · " as the subtitle.
+      - Tapping a row pushes `ClubDetailsPage(club: ...)` with `Get.to`, the same way the paired-club rows do.
+    - Out: ranking by distance, personal taste (B87), other users' data, server-side recommendations.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - For a Cluj techno+house club, a Cluj techno+house club ranks above a Cluj techno-only club.
+      - A Bucharest techno club, an unapproved Cluj techno club, a Cluj latin club and the club itself are all excluded.
+      - Matching ignores case and surrounding spaces ("Techno " matches "techno"), and `limit` is respected.
+      - A club with no genres gives an empty list.
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests:
+      - With a fixture similar club, `Key('similarClubs')` and that club's name are shown.
+      - With no similar club, `Key('similarClubs')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B96 "Your first techno night!": a new-genre line on the check-in success sheet — status: done
+  - Why: the success sheet is the reward moment of the core loop (step 2). It celebrates a new club and a new city, but not a new kind of night, even though B86 now builds "Your sound" from genres. Marking the first night in a genre rewards exploring (the explorer persona), and it comes only from verified check-ins and the user's own history (principles 2 and 5).
+  - Scope: client only, no server or schema change.
+    - Pure logic: add `List<String> newGenres(List<String> clubGenres, List<CheckInModel> previousCheckIns)` to `client/lib/data/classes/genre_taste.dart`.
+      - It returns the genres in `clubGenres`, in order and without duplicates, that don't appear in any previous check-in's `club.genres`.
+      - The comparison is trimmed and case-insensitive, and returned values keep `clubGenres`' spelling.
+    - Text: in the same file, add `String? newGenreText(List<String> genres)`:
+      - One genre gives "Your first techno night!", and two give "Your first techno and house night!".
+      - Three or more give "Your first techno, house and latin night!", using only the first three.
+      - An empty list gives null.
+    - Controller: in `ClubController.checkIn` (`client/lib/src/core/controllers/club_controller.dart`), add `List<String> newGenres` to the returned record.
+      - Compute it before the new record joins `myCheckIns`, next to `checkInOutcome`.
+      - Use `checkInRecord.club.genres`. When that is empty, fall back to the genres of the matching club in `clubs` (by id).
+      - A user's very first check-in gives an empty list, so a first night doesn't say "first" for every genre. The sheet already says "New place on your map!".
+    - UI: in `client/lib/views/pages/check_in_page.dart`, when `newGenreText` is non-null, add a bold, centred `Text(..., key: const Key('newGenreText'))` to the success sheet `extras`. It goes after `tickedOffList` and before the unlocked badges.
+    - Out: genre badges (B89), recap changes, server changes.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - A techno+house club after nights at techno clubs gives `["house"]`.
+      - "Techno" after "techno " gives an empty list.
+      - `newGenreText` covers one, two and four genres (four uses only the first three), and an empty list gives null.
+    - Cases added to `client/test/club_controller_test.dart`, using the existing fake check-in service:
+      - After an earlier check-in at a techno club, checking in at a house club returns `newGenres == ["house"]`.
+      - A first-ever check-in returns an empty `newGenres`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B97 Admin footfall "How often guests come": visit-frequency buckets and a regulars count — status: done
+  - Why: the decided business model is venue-side B2B (PLAN decision 6), and "reward your regulars" (B24) is the pitch. The footfall report has a returning-visitor rate, but it can't tell real regulars apart from people who came twice. A breakdown of guests by nights in the window answers "who would we be rewarding?", aggregate only (principle 2).
+  - Scope: server and client, no schema change.
+    - Server pure logic: in `computeClubFootfall` in `server/src/services/footfallService.js`, add `visitFrequency: {once, twice, threePlus}` to the result.
+      - It counts unique visitors by their distinct nights at the club inside the window, reusing the existing `nightsByUser` map.
+      - Also add `regulars`, equal to `threePlus`. No ids are returned.
+    - Controller: `getClubFootfall` in `server/src/controllers/adminController.js` should already pass the computed result through. Check this, and wire the new fields in only if it doesn't.
+    - Client model: in `client/lib/data/classes/club_footfall_model.dart`, add `once`, `twice` and `threePlus` ints to `ClubFootfallModel`, or a small `VisitFrequency` class with `fromMap`. Each defaults to 0 when `visitFrequency` is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_footfall_page.dart`, add a "How often guests come" section (`Key('footfallFrequency')`) after the returning/first-time figures. It has three rows, "1 night", "2 nights" and "3+ nights (regulars)", each with its count.
+    - Copy summary: in `footfallSummaryText` in `client/lib/data/classes/footfall_summary.dart`, add the line "Regulars (3+ nights): N" after the "First-time visitors" line.
+    - Out: naming or listing the regulars, perks or rewards (B24), changes to the club ranking.
+  - Acceptance:
+    - A unit test added to `server/src/__tests__/footfallService.test.js`:
+      - Four users give `{once: 2, twice: 1, threePlus: 1}` and `regulars` 1: one on 1 night, one with two check-ins on the same night, one on 2 nights and one on 4 nights.
+      - Check-ins outside the window don't count.
+    - Extend the existing footfall route case in `server/src/__tests__/routes.test.js`: the body has `visitFrequency`, and the existing no-`userId` assertion still holds.
+    - Flutter tests:
+      - In `client/test/admin_club_footfall_test.dart`, a fixture with `visitFrequency` shows `Key('footfallFrequency')` with "3+ nights (regulars)" and its count.
+      - A payload without `visitFrequency` still parses and renders.
+      - In `client/test/footfall_summary_test.dart`, a fixture with `threePlus: 4` gives a summary containing "Regulars (3+ nights): 4".
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B98 "Their sound": a friend's top genres on their nights page — status: proposed
+  - Why: B92 shows the clubs a friend has been to that I haven't, but not what kind of nights they like, and "we both love techno" is how a plan starts. The genres would come only from the friend's already-visible nights (`visibleCheckInsWhere`: ended, unhidden, both sharing, not blocked).
+  - Scope: needs a quick product/safety confirmation first. A taste summary is a new kind of data derived about another user, so someone should confirm it fits 8.0's rules and decide whether the friend's privacy setting should cover it. If confirmed:
+    - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, add `theirSound: [genre, ...]`, at most the top 3 genres by distinct visible nights. Add `genres` to the club select that `newToYou` already uses. The `base` null branch returns `[]`.
+    - Client: in `client/lib/data/classes/feed_model.dart` and `client/lib/views/pages/friend_nights_page.dart`, show "Their sound: techno · house" (`Key('theirSound')`) under the header. Add "You both like techno" when it overlaps with the user's own `genreNights`.
+    - Out: per-night genre detail, genres from hidden or ongoing nights.
+  - Acceptance:
+    - Supertest tests in `server/src/__tests__/feed.test.js`:
+      - A viewer with sharing off gets `theirSound: []`.
+      - Page 2 has no `theirSound`.
+      - The existing visibility `where` is unchanged.
+    - Widget tests in `client/test/friend_nights_test.dart`: `Key('theirSound')` shows for a non-empty list and is absent for an empty one.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (night, latest). Club pages can now suggest places with a similar sound, but not the ones a short walk away, which is how a night with several clubs actually gets planned. And the diary holds months of vibe ratings, but the user has no way to find just their best nights.
+
+- [x] B99 "Round the corner": approved clubs within walking distance of this one, on its page — status: done
+  - Why: B69 shows that people combine clubs on the same night, and core loop step 4 ("find the next place to go") often happens mid-night, on a club page. "Club Y · 350 m away" answers "where do we go after this?". It uses only public club coordinates, not the user's location or anyone else's data (principle 2), and it works for unvisited clubs and new users.
+  - Scope: client only, no server or schema change. `ClubController.clubs` already holds approved clubs with `latitude`/`longitude`.
+    - Pure logic, in `client/lib/data/classes/club_directions.dart` next to `formatDistance`:
+      - `double distanceMeters(double lat1, double lng1, double lat2, double lng2)`: haversine with an Earth radius of 6371000 m, matching `distanceInMeters` in `server/src/utils/geo.js`. Don't use `Geolocator` here, so the helper stays pure.
+      - `List<({ClubModel club, double meters})> nearbyClubs(ClubModel club, List<ClubModel> clubs, {double maxMeters = 1000, int limit = 3})`. Candidates are `isApproved` clubs other than `club` (compared by id) within `maxMeters`. Sort by distance ascending, then by name (case-insensitive), and respect `limit`.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add a "Round the corner" section (`Key('nearbyClubs')`) directly after the existing `Key('similarClubs')` section, built the same way. It is not limited to visited clubs, it reads `clubController.clubs` inside an `Obx`, and it shows only when `nearbyClubs` is non-empty.
+      - Each row is a `ListTile` with `Key('nearby_<clubId>')`, the club name as the title, and `"${formatDistance(meters)} away"` as the subtitle.
+      - Tapping a row pushes `ClubDetailsPage(club: ...)` with `Get.to`, like the similar-club rows.
+      - A club that is also in "More like this" may appear in both sections.
+    - Out: the user's own location (that's B39), walking routes, opening status in the rows.
+  - Acceptance:
+    - Unit tests added to `client/test/club_directions_test.dart`:
+      - `distanceMeters` for two points 0.009° of latitude apart is about 1000 m (within 5 m), and identical points give 0.
+      - `nearbyClubs`: a club 300 m away ranks above one 800 m away. A club 1.5 km away, an unapproved club 100 m away and the club itself are excluded. `limit` is respected.
+    - Widget tests in `client/test/pages_widget_test.dart`, in a new group next to `ClubDetailsPage similar clubs`:
+      - With a fixture club about 300 m away, `Key('nearbyClubs')` and that club's name are shown, with a subtitle ending in "m away".
+      - With no club within 1 km, `Key('nearbyClubs')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [x] B100 "Best nights" filter in the history diary: only the nights I rated ★4 or more — status: done
+  - Why: 7.4 asks for a vibe rating after every night (the morning prompt in `vibe_prompt.dart` keeps people rating), but the diary can only be searched by club or city. "Show me my best nights" is the look-back step (core loop step 3) at its most rewarding, and it is also the quickest way to answer "where should we go again?". It uses only the user's own data, on the device (principle 2).
+  - Scope: client only, no server or schema change.
+    - Pure logic: in `client/lib/data/classes/check_in_grouping.dart`, next to `filterNightGroups`, add `List<NightGroup> filterBestNights(List<NightGroup> groups, {int minVibe = 4})`. It keeps the check-ins whose `vibe` is non-null and `>= minVibe`, and drops nights left empty, the same way `filterNightGroups` does.
+    - UI: in `client/lib/views/pages/check_in_history_page.dart`:
+      - Below the `Key('history_search')` field, add a `FilterChip` (`Key('history_best_nights')`, label "★4+ nights") that keeps a `_bestOnly` bool in the page state.
+      - When it is on, apply `filterBestNights` after `filterNightGroups`, so it combines with the search. Hide the month summary and the "On this night" memories while it is on, the same way they are hidden while searching.
+      - When the filtered list is empty, show `Text("No nights rated ★4 or more yet. Rate a night from its diary entry.", key: const Key('history_best_empty'))`.
+    - Out: other thresholds in the UI, sorting by rating, recap changes (B83), notes search (B79).
+  - Acceptance:
+    - Unit tests added to `client/test/check_in_grouping_test.dart`:
+      - A night with check-ins rated 5 and 2 keeps only the 5. A night rated 3 and a night with null ratings are dropped.
+      - `minVibe: 5` keeps only the 5s, and an empty list gives an empty list.
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `CheckInHistoryPage search` group:
+      - With fixture check-ins at "Club A" (vibe 5) and "Club B" (vibe 2), tapping `Key('history_best_nights')` shows "Club A" and no longer shows "Club B".
+      - With no check-in rated 4 or more, tapping the chip shows `Key('history_best_empty')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B101 "Open tonight" filter on the Want to go page (after B87) — status: proposed
+  - Why: the Want to go list (B81) shows each saved club's opening status, but on a Friday evening the question is "which of my saved places can I go to tonight?". A filter turns the saved list into a plan for tonight (core loop step 4). It also settles B90's open question by keeping this on the Want to go page rather than the map.
+  - Scope: client only. Build it only after B87 has landed on `develop`, because both edit `client/lib/views/pages/want_to_go_page.dart` and `client/test/want_to_go_test.dart`.
+    - Pure logic: in `client/lib/data/classes/club_profile.dart`, next to `clubsOpenAt`, add `bool openTonight(ClubModel club)`. It is true when `openingChipText(club.openingHours, club.localNow)` is "Open now" or starts with "Opens ", using each club's own `localNow`. Leave `clubsOpenAt` unchanged.
+    - UI: a `FilterChip` (`Key('wantToGoOpenTonight')`, "Open tonight") above the list in `WantToGoPage`. When it is on, only entries whose club passes `openTonight` are shown. With none, it shows "None of your saved clubs open tonight". The "You might like" section from B87 isn't filtered.
+    - Out: the map chip (B90), notifications.
+  - Acceptance:
+    - Unit tests in `client/test/club_profile_test.dart`: an open club and a club that opens later today pass, and a closed club and a club with null hours don't.
+    - Widget tests in `client/test/want_to_go_test.dart`: with the chip on, a closed favourite's `Key('wantToGo_<id>')` row disappears and an open one stays.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B102 Change my email, confirmed by a code sent to the new address — status: proposed
+  - Why: email is the only way back into an account (7.6 password reset), but there is no way to change it. A user who loses access to their old inbox loses their verified history the next time they forget their password. This completes the account basics alongside 7.6, 7.7, B43 and B74.
+  - Scope: needs a product decision first: whether the old address also gets a "your email was changed" notice, and whether a change signs out other sessions (reusing 7.7's `tokenVersion`). Once decided, the likely build is:
+    - Schema: `User.pendingEmail`, a hashed code and an expiry, with a migration, or reuse the 7.6 reset-code storage if its shape fits.
+    - Server: `POST /api/auth/me/email` takes the current password and the new email. It returns 409 when the email is taken, sends a 6-digit code through `server/src/services/emailService.js`, and is rate-limited like the reset routes. `POST /api/auth/me/email/confirm` takes the code and swaps the email.
+    - Client: a "Change email" tile on Profile, and a two-step page modelled on `forgot_password_page.dart`.
+    - Out: changing the username, social sign-in (B31).
+  - Acceptance (once decided):
+    - Supertest tests with a fake email sender: a wrong password is rejected, a taken email gives 409, a wrong or expired code is rejected, and a correct code changes the email with no code in any response body.
+    - A widget test for the two steps, with a fake service.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B103 Admin club ranking shows each club's regulars next to its check-ins (after B97) — status: proposed
+  - Why: the ranking (B65) shows which clubs are growing, and B97 counts the guests who came on 3+ nights to one club. Putting the regulars count on the ranking tells an admin which venues already have a loyal crowd to pitch "reward your regulars" to (B24, PLAN decision 6), without opening each footfall report.
+  - Scope: server and client, no schema change. Build it only after B97 has landed, and reuse B97's frequency counting in `server/src/services/footfallService.js` rather than re-implementing it.
+    - Server: in `getClubRanking` in `server/src/controllers/adminController.js`, select `userId` and `checkedInAt` for the current window and attach `regulars` (a count, no ids) to each entry.
+    - Client: parse `regulars` in `client/lib/data/classes/club_ranking_model.dart` (0 when absent) and show "N regulars" on each ranking row.
+    - Out: sorting by regulars, naming regulars.
+  - Acceptance:
+    - Jest: a club with one user on 3 nights and one on 1 night has `regulars: 1`, and no `userId` appears in the body.
+    - A Flutter model test for the missing key, and a widget test for the label.
+    - `node .nightshift/test-all.mjs` passes.
   - Size: S

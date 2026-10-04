@@ -80,6 +80,25 @@ class CheckInService {
         .toList();
   }
 
+  /// Updates the private diary fields. Pass only what changes; an explicit
+  /// empty [note] clears it.
+  Future<CheckInModel> updateCheckIn(
+    String id, {
+    String? note,
+    int? vibe,
+    bool? hiddenFromFriends,
+  }) async {
+    final data = await _api.patch(
+      '/check-ins/$id',
+      body: {
+        'note': ?note,
+        'vibe': ?vibe,
+        'hiddenFromFriends': ?hiddenFromFriends,
+      },
+    );
+    return CheckInModel.fromMap(data);
+  }
+
   Future<void> deleteCheckIn(String id) async {
     await _api.delete('/check-ins/$id');
   }

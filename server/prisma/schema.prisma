@@ -8,29 +8,67 @@ datasource db {
 }
 
 model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  name                String
+  role                Role                 @default(USER)
+  tokenVersion        Int                  @default(0)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  checkIns            CheckIn[]
+  favorites           Favorite[]
+  passwordResetTokens PasswordResetToken[]
+  friendshipsSent     Friendship[]         @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]         @relation("FriendshipAddressee")
+  blocksMade          Block[]              @relation("BlockBlocker")
+  blocksReceived      Block[]              @relation("BlockBlocked")
+  reportsMade         Report[]             @relation("ReportReporter")
+  reportsAgainst      Report[]             @relation("ReportReported")
+  reportsHandled      Report[]             @relation("ReportHandler")
+
+  username        String?   @unique
+  homeCity        String?
+  acceptedTermsAt DateTime?
+  termsVersion    String?
+  ageConfirmedAt  DateTime?
+
+  shareNightsWithFriends Boolean @default(false)
+}
+
+model PasswordResetToken {
   id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  role      Role      @default(USER)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  checkIns  CheckIn[]
+
+  @@index([userId])
 }
 
 model Club {
-  id         String    @id @default(uuid())
+  id         String     @id @default(uuid())
   name       String
   address    String
   city       String
   latitude   Float
   longitude  Float
-  qrSecret   String    @unique
-  imageUrl   String    @default("https://picsum.photos/400/200")
-  isApproved Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  qrSecret   String     @unique
+  imageUrl   String     @default("https://picsum.photos/400/200")
+  isApproved Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   checkIns   CheckIn[]
+  favorites  Favorite[]
+
+  description  String?
+  genres       String[]
+  openingHours Json?
+  instagramUrl String?
+  websiteUrl   String?
+  timezone     String   @default("Europe/Bucharest")
 }
 
 model CheckIn {
@@ -40,12 +78,91 @@ model CheckIn {
   checkedInAt        DateTime           @default(now())
   verificationMethod VerificationMethod
   distanceMeters     Float
+  note               String?
+  vibe               Int?
+  vibeAt             DateTime?
+  hiddenFromFriends  Boolean            @default(false)
   createdAt          DateTime           @default(now())
   user               User               @relation(fields: [userId], references: [id])
   club               Club               @relation(fields: [clubId], references: [id])
 
   @@index([userId])
   @@index([clubId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  clubId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  club      Club     @relation(fields: [clubId], references: [id])
+
+  @@unique([userId, clubId])
+  @@index([clubId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  ACTIONED
+  DISMISSED
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  reporterId     String
+  reporter       User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUserId String
+  reportedUser   User         @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reason         ReportReason
+  details        String?
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  handledById    String?
+  handledBy      User?        @relation("ReportHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt      DateTime?
+
+  @@index([reportedUserId, status])
+  @@index([status, createdAt])
 }
 
 enum Role {

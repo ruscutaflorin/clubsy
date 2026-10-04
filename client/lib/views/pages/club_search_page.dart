@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:clubsy/data/classes/club_profile.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/club_search_controller.dart';
 import 'package:clubsy/views/pages/club_details_page.dart';
@@ -23,39 +24,91 @@ class ClubSearchPage extends StatelessWidget {
           onChanged: searchController.search,
         ),
       ),
-      body: Obx(() {
-        if (searchController.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (searchController.query.value.trim().isEmpty) {
-          return const Center(child: Text('Start typing to search clubs'));
-        }
-
-        if (searchController.results.isEmpty) {
-          return const Center(child: Text('No clubs found'));
-        }
-
-        final visited = clubController.visitedClubIds;
-
-        return ListView.builder(
-          itemCount: searchController.results.length,
-          itemBuilder: (context, index) {
-            final club = searchController.results[index];
-            final isVisited = visited.contains(club.id);
-
-            return ListTile(
-              leading: Icon(
-                isVisited ? Icons.check_circle : Icons.location_on_outlined,
-                color: isVisited ? Colors.green : null,
+      body: Column(
+        children: [
+          SizedBox(
+            height: 48,
+            child: Obx(
+              () => ListView(
+                key: const Key('genreFilter'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      key: const Key('openNowFilter'),
+                      label: const Text('Open now'),
+                      selected: searchController.openNow.value,
+                      onSelected: (_) => searchController.toggleOpenNow(),
+                    ),
+                  ),
+                  for (final g in clubGenres)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: FilterChip(
+                        label: Text(g),
+                        selected: searchController.genre.value == g,
+                        onSelected: (_) => searchController.toggleGenre(g),
+                      ),
+                    ),
+                ],
               ),
-              title: Text(club.name),
-              subtitle: Text(club.city),
-              onTap: () => Get.to(() => ClubDetailsPage(club: club)),
-            );
-          },
-        );
-      }),
+            ),
+          ),
+          Expanded(child: _results(searchController, clubController)),
+        ],
+      ),
     );
+  }
+
+  Widget _results(
+    ClubSearchController searchController,
+    ClubController clubController,
+  ) {
+    return Obx(() {
+      if (searchController.isLoading.value) {
+        return const Center(child: CircularProgressIndicator());
+      }
+
+      if (searchController.query.value.trim().isEmpty) {
+        return const Center(child: Text('Start typing to search clubs'));
+      }
+
+      final results = searchController.filteredResults;
+      if (results.isEmpty) {
+        return Center(
+          child: Text(
+            searchController.openNow.value
+                ? 'No clubs open right now'
+                : 'No clubs found',
+          ),
+        );
+      }
+
+      final visited = clubController.visitedClubIds;
+
+      return ListView.builder(
+        itemCount: results.length,
+        itemBuilder: (context, index) {
+          final club = results[index];
+          final isVisited = visited.contains(club.id);
+
+          return ListTile(
+            leading: Icon(
+              isVisited ? Icons.check_circle : Icons.location_on_outlined,
+              color: isVisited ? Colors.green : null,
+            ),
+            title: Text(club.name),
+            subtitle: Text(
+              club.vibe == null
+                  ? club.city
+                  : '${club.city} · ${vibeText(club.vibe)}',
+            ),
+            onTap: () => Get.to(() => ClubDetailsPage(club: club)),
+          );
+        },
+      );
+    });
   }
 }

@@ -27,8 +27,17 @@ void main() {
       expect(clubsForMap([a, b, c], {'a', 'c'}, true), [a, c]);
     });
 
-    test('returns an empty list when nothing is visited', () {
-      expect(clubsForMap([a, b, c], {}, true), isEmpty);
+    test('want-to-go shows only favourites, regardless of visited', () {
+      expect(
+        clubsForMap(
+          [a, b, c],
+          {'a'},
+          true,
+          favoriteIds: {'b'},
+          wantToGoOnly: true,
+        ),
+        [b],
+      );
     });
   });
 

@@ -7,6 +7,9 @@ class CheckInModel {
   final String verificationMethod;
   final double distanceMeters;
   final ClubModel club;
+  final String? note;
+  final int? vibe;
+  final bool hiddenFromFriends;
 
   CheckInModel({
     required this.id,
@@ -15,6 +18,9 @@ class CheckInModel {
     required this.verificationMethod,
     required this.distanceMeters,
     required this.club,
+    this.note,
+    this.vibe,
+    this.hiddenFromFriends = false,
   });
 
   factory CheckInModel.fromMap(Map<String, dynamic> map) {
@@ -25,6 +31,9 @@ class CheckInModel {
       verificationMethod: map['verificationMethod'],
       distanceMeters: (map['distanceMeters'] as num).toDouble(),
       club: ClubModel.fromMap(map['club']),
+      note: map['note'] as String?,
+      vibe: (map['vibe'] as num?)?.toInt(),
+      hiddenFromFriends: map['hiddenFromFriends'] == true,
     );
   }
 
@@ -35,5 +44,34 @@ class CheckInModel {
     'verificationMethod': verificationMethod,
     'distanceMeters': distanceMeters,
     'club': club.toMap(),
+    'note': note,
+    'vibe': vibe,
+    'hiddenFromFriends': hiddenFromFriends,
   };
+
+  CheckInModel withHidden(bool hidden) => CheckInModel(
+    id: id,
+    clubId: clubId,
+    checkedInAt: checkedInAt,
+    verificationMethod: verificationMethod,
+    distanceMeters: distanceMeters,
+    club: club,
+    note: note,
+    vibe: vibe,
+    hiddenFromFriends: hidden,
+  );
+
+  /// A copy with the diary fields replaced as given. The server returns the
+  /// full record on update, so `null` here means "cleared", not "unchanged".
+  CheckInModel withDiary({String? note, int? vibe}) => CheckInModel(
+    id: id,
+    clubId: clubId,
+    checkedInAt: checkedInAt,
+    verificationMethod: verificationMethod,
+    distanceMeters: distanceMeters,
+    club: club,
+    note: note,
+    vibe: vibe,
+    hiddenFromFriends: hiddenFromFriends,
+  );
 }

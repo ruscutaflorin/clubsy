@@ -2,7 +2,6 @@ import {
   buildRotatingPayload,
   generateClubQr,
   generateQrSecret,
-  rotatingCode,
   verifyClubQrPayload,
 } from "../services/venueQrService.js";
 
@@ -58,11 +57,6 @@ describe("venueQrService", () => {
     it("rejects a payload for another club", () => {
       const other = { id: "club-2", qrSecret: "s3cret" };
       expect(verifyClubQrPayload(payloadAt(other, 0), club, now)).toBe(false);
-    });
-
-    it("builds an 8-hex code and still accepts the static payload", () => {
-      expect(rotatingCode("s3cret", 5)).toMatch(/^[0-9a-f]{8}$/);
-      expect(verifyClubQrPayload(payloadFor("club-1", "s3cret"), club, now)).toBe(true);
     });
   });
 

@@ -90,13 +90,12 @@ void main() {
     final controller = _FakeClubController();
     controller.myCheckIns.value = list;
     Get.put<ClubController>(controller);
-    await tester.pumpWidget(const GetMaterialApp(home: CheckInHistoryPage()));
+    await tester.pumpWidget(GetMaterialApp(home: CheckInHistoryPage(now: now)));
   }
 
   testWidgets('history page shows the On this night card', (tester) async {
-    final d = DateTime.now();
     await pump(tester, [
-      _ci('1', 'a', DateTime(d.year - 1, d.month, d.day, 12)),
+      _ci('1', 'a', DateTime(now.year - 1, now.month, now.day, 12)),
     ]);
     expect(find.text('On this night'), findsOneWidget);
     expect(find.text('1 year ago'), findsOneWidget);
@@ -104,11 +103,10 @@ void main() {
   });
 
   testWidgets('history page has no card when nothing matches', (tester) async {
-    final d = DateTime.now();
     final other = DateTime(
-      d.year - 1,
-      d.month,
-      d.day,
+      now.year - 1,
+      now.month,
+      now.day,
     ).add(const Duration(days: 40));
     await pump(tester, [_ci('1', 'a', other)]);
     expect(find.text('On this night'), findsNothing);

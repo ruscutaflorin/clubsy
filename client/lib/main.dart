@@ -6,6 +6,7 @@ import 'package:clubsy/src/core/controllers/theme_controller.dart';
 import 'package:clubsy/src/core/controllers/navigation_controller.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/src/core/controllers/feed_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,7 @@ Future<void> main() async {
   Get.put(NavigationController());
   Get.put(AuthController());
   Get.put(ClubController());
+  Get.put(FeedController());
 
   runApp(const MyApp());
 }

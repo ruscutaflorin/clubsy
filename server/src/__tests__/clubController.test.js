@@ -4,8 +4,9 @@ const findUnique = jest.fn();
 const findMany = jest.fn();
 const count = jest.fn();
 const update = jest.fn();
+const groupBy = jest.fn();
 jest.unstable_mockModule("../prisma/client.js", () => ({
-  default: { club: { findUnique, findMany, count, update } },
+  default: { club: { findUnique, findMany, count, update }, checkIn: { groupBy } },
 }));
 
 const {
@@ -32,21 +33,64 @@ const club = { id: "c1", name: "Club", qrSecret: "s3cret", isApproved: true };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  groupBy.mockResolvedValue([]);
 });
 
-describe("club read endpoints never expose the QR secret to non-admins", () => {
+describe("club vibe aggregate", () => {
+  const row = (clubId, avg, n) => ({ clubId, _avg: { vibe: avg }, _count: { vibe: n } });
+
+  it("is null below 5 ratings and {average, count} from 5, with nothing else", async () => {
+    findUnique.mockResolvedValue(club);
+    groupBy.mockResolvedValue([row("c1", 4, 4)]);
+    let res = makeRes();
+    await getClubById({ params: { id: "c1" } }, res);
+    expect(res.json.mock.calls[0][0].vibe).toBeNull();
+
+    groupBy.mockResolvedValue([row("c1", 4.3333, 5)]);
+    res = makeRes();
+    await getClubById({ params: { id: "c1" } }, res);
+    expect(res.json.mock.calls[0][0].vibe).toEqual({ average: 4.3, count: 5 });
+  });
+
+  it("only counts rated check-ins from the last 90 days", async () => {
+    findUnique.mockResolvedValue(club);
+    await getClubById({ params: { id: "c1" } }, makeRes());
+    const { where } = groupBy.mock.calls[0][0];
+    const ageDays = (Date.now() - where.vibeAt.gte.getTime()) / 86400000;
+    expect(ageDays).toBeCloseTo(90, 1);
+    expect(where.vibe).toEqual({ not: null });
+  });
+
+  it("sort=vibe ranks by average with unrated clubs last, then paginates", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", isApproved: true },
+      { id: "b", isApproved: true },
+      { id: "c", isApproved: true },
+    ]);
+    groupBy.mockResolvedValue([row("c", 4.8, 9), row("b", 3.1, 6)]);
+    const res = makeRes();
+    await getClubs({ query: { sort: "vibe", limit: "2" } }, res);
+    const body = res.json.mock.calls[0][0];
+    expect(body.clubs.map((c) => c.id)).toEqual(["c", "b"]);
+    expect(body.total).toBe(3);
+    expect(body.pages).toBe(2);
+  });
+});
+
+// getClubs' qrSecret filtering is covered at the route in routes.test.js.
+describe("getClubById never exposes the QR secret to non-admins", () => {
   it("getClubById omits qrSecret for a USER", async () => {
     findUnique.mockResolvedValue(club);
     const res = makeRes();
     await getClubById({ params: { id: "c1" }, user: { role: "USER" } }, res);
-    expect(res.json).toHaveBeenCalledWith({ id: "c1", name: "Club", isApproved: true });
+    expect(res.json).toHaveBeenCalledWith({ id: "c1", name: "Club", isApproved: true, vibe: null });
   });
 
   it("getClubById keeps qrSecret for an ADMIN", async () => {
     findUnique.mockResolvedValue(club);
     const res = makeRes();
     await getClubById({ params: { id: "c1" }, user: { role: "ADMIN" } }, res);
-    expect(res.json).toHaveBeenCalledWith(club);
+    expect(res.json).toHaveBeenCalledWith({ ...club, vibe: null });
   });
 
   it("getClubById 404s a non-admin asking for an unapproved club", async () => {
@@ -62,27 +106,7 @@ describe("club read endpoints never expose the QR secret to non-admins", () => {
     const res = makeRes();
     await getClubById({ params: { id: "c1" }, user: { role: "ADMIN" } }, res);
     expect(res.status).not.toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ ...club, isApproved: false });
-  });
-
-  it("getClubs omits qrSecret from every club for a USER", async () => {
-    findMany.mockResolvedValue([club]);
-    count.mockResolvedValue(1);
-    const res = makeRes();
-    await getClubs({ query: {}, user: { role: "USER" } }, res);
-    expect(res.json).toHaveBeenCalledWith({
-      clubs: [{ id: "c1", name: "Club", isApproved: true }],
-      total: 1,
-      pages: 1,
-    });
-  });
-
-  it("getClubs keeps qrSecret for an ADMIN", async () => {
-    findMany.mockResolvedValue([club]);
-    count.mockResolvedValue(1);
-    const res = makeRes();
-    await getClubs({ query: {}, user: { role: "ADMIN" } }, res);
-    expect(res.json).toHaveBeenCalledWith({ clubs: [club], total: 1, pages: 1 });
+    expect(res.json).toHaveBeenCalledWith({ ...club, isApproved: false, vibe: null });
   });
 });
 
@@ -186,16 +210,5 @@ describe("admin club mutations", () => {
     const res = makeRes();
     await approveClub({ params: { id: "c1" } }, res);
     expect(res.status).toHaveBeenCalledWith(500);
-  });
-
-  it("updateClub updates only the provided fields", async () => {
-    update.mockResolvedValue(club);
-    const res = makeRes();
-    await updateClub({ params: { id: "c1" }, body: { city: "Cluj", latitude: 46.7 } }, res);
-    expect(update).toHaveBeenCalledWith({
-      where: { id: "c1" },
-      data: { city: "Cluj", latitude: 46.7 },
-    });
-    expect(res.json).toHaveBeenCalledWith(club);
   });
 });

@@ -43,8 +43,10 @@ in this repo should reintroduce event/ticketing/cart concepts.
   tasks (`.nightshift/config.json` service `postgres`), and `server/.env` already points at it: use
   that `DATABASE_URL`, never invent a connection string. The database holds seed data only and is
   disposable. If `prisma migrate dev` reports drift or migrations the branch doesn't have (left by
-  an earlier attempt), run `cd server && npx prisma migrate reset --force` (it re-applies the
-  branch's migrations and re-seeds), then retry. Server tests still mock Prisma and never need
+  an earlier attempt), reset it with exactly
+  `docker exec clubsy-db psql -U clubsy -d clubsy -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`
+  then `cd server && npx prisma migrate deploy && npx prisma db seed`, then retry. Don't use
+  `prisma migrate reset`: Prisma refuses it when run by an AI agent. Server tests still mock Prisma and never need
   the database. If the database is unreachable, end `BLOCKED: no database available`.
 - To verify the server boots without crashing, run exactly `timeout 5 node server/src/index.js`
   (that precise command, from the repo root) — it is the one allowlisted in `.claude/settings.json`.
@@ -68,3 +70,28 @@ tiny ones:
 - Up to 8 consecutive small/independent tasks may be batched into one session automatically (see
   .nightshift/config.json's batch setting); writing tasks with that in mind (self-contained,
   ordered so related ones are adjacent) helps the batcher combine them.
+
+## Testing policy
+
+Full guidance is in the `test-audit` skill (`.claude/skills/test-audit/SKILL.md`): load it whenever
+you write, change or review tests. The short version is binding even if the skill doesn't load.
+
+- **Authoring gate**: before adding a test, answer: (1) what observable behavior or contract it
+  protects, (2) what credible regression makes it fail, (3) why existing coverage doesn't already
+  catch that (one owner per contract, at the strongest boundary: supertest routes on the server,
+  pure helpers/models or user-visible widget behavior on the client; extend a table case rather
+  than adding a near-duplicate), (4) whether it needs a production seam no production caller uses
+  (if so, test at the real boundary instead). No answer, no test.
+- **Junk patterns** fail the gate: assertion-free probes, copied inventories/catalogues/export
+  lists, source or string greps, re-asserting what a mock was told to return, expected values
+  computed by the code under test, replaying a shared helper's arithmetic in every caller's suite,
+  negative tests that pass for an unrelated reason (e.g. a 401 when validation is the claim), and
+  names that promise more than the test checks.
+- Bug regression tests must fail on the pre-fix code and pass after the fix; one regression at the
+  owner boundary is enough.
+- "Missing tests" alone is not a reason to add one: untested behavior gets a test only when it
+  passes the gate.
+- **Deleting or consolidating tests** is allowed only in a `TASKS.md` task tagged `[test-audit]`,
+  following the skill's audit workflow. Each removed or merged test gets a one-line evidence note
+  (what it detected, which stronger test still covers it) in the commit body. Every other task
+  never deletes, skips or weakens tests.

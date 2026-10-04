@@ -31,24 +31,29 @@ Recap _nights(int n) => Recap(
   newClubs: 0,
 );
 
-CheckInModel ci(String clubId, DateTime at, {String city = 'Cluj'}) =>
-    CheckInModel(
-      id: '$clubId-$at',
-      clubId: clubId,
-      checkedInAt: at,
-      verificationMethod: 'QR',
-      distanceMeters: 10,
-      club: ClubModel(
-        id: clubId,
-        name: 'Secret $clubId',
-        address: '1 Main St',
-        city: city,
-        latitude: 46,
-        longitude: 23.5,
-        imageUrl: 'http://img',
-        isApproved: true,
-      ),
-    );
+CheckInModel ci(
+  String clubId,
+  DateTime at, {
+  String city = 'Cluj',
+  List<String> genres = const [],
+}) => CheckInModel(
+  id: '$clubId-$at',
+  clubId: clubId,
+  checkedInAt: at,
+  verificationMethod: 'QR',
+  distanceMeters: 10,
+  club: ClubModel(
+    id: clubId,
+    name: 'Secret $clubId',
+    address: '1 Main St',
+    city: city,
+    latitude: 46,
+    longitude: 23.5,
+    imageUrl: 'http://img',
+    isApproved: true,
+    genres: genres,
+  ),
+);
 
 void main() {
   final from = DateTime(2026, 9, 1, 6);
@@ -108,6 +113,19 @@ void main() {
       expect(r.distinctCities, 2);
     });
 
+    test('top genre only counts check-ins inside the period', () {
+      final r = buildRecap(
+        [
+          ci('a', DateTime(2026, 8, 20, 23), genres: ['house']),
+          ci('a', DateTime(2026, 8, 21, 23), genres: ['house']),
+          ci('b', DateTime(2026, 9, 6, 23), genres: ['techno']),
+        ],
+        from: from,
+        to: to,
+      );
+      expect(r.topGenre, 'techno');
+    });
+
     test('latest night is closest to 06:00 and weekday uses the night', () {
       final r = buildRecap(
         [
@@ -125,7 +143,9 @@ void main() {
 
   group('RecapCard', () {
     final recap = buildRecap(
-      [ci('a', DateTime(2026, 9, 5, 23))],
+      [
+        ci('a', DateTime(2026, 9, 5, 23), genres: ['techno']),
+      ],
       from: from,
       to: to,
     );
@@ -147,6 +167,7 @@ void main() {
       await tester.pumpWidget(host(true));
       expect(find.textContaining('Secret'), findsNothing);
       expect(find.text('Top spot: 1 visits'), findsOneWidget);
+      expect(find.text('Your sound: techno'), findsOneWidget);
     });
 
     testWidgets('shows club names when allowed', (tester) async {
@@ -174,6 +195,8 @@ void main() {
       expect(r.$2, DateTime(2026, 1, 1, 6));
     });
 
+    final now = DateTime(2026, 10, 2, 12);
+
     Future<void> pump(WidgetTester tester, List<CheckInModel> items) async {
       SharedPreferences.setMockInitialValues({});
       Get.reset();
@@ -183,12 +206,11 @@ void main() {
       );
       Get.put<ClubController>(c);
       c.myCheckIns.assignAll(items);
-      await tester.pumpWidget(const GetMaterialApp(home: RecapPage()));
+      await tester.pumpWidget(GetMaterialApp(home: RecapPage(now: now)));
       await tester.pump();
     }
 
     testWidgets('page shows comparison', (tester) async {
-      final now = DateTime.now();
       final last = lastMonthRange(now).$1;
       final prev = previousMonthRange(now).$1;
       await pump(tester, [
@@ -206,7 +228,7 @@ void main() {
     testWidgets('page hides comparison without previous check-ins', (
       tester,
     ) async {
-      final last = lastMonthRange(DateTime.now()).$1;
+      final last = lastMonthRange(now).$1;
       await pump(tester, [ci('a', DateTime(last.year, last.month, 5, 23))]);
       expect(find.byKey(const Key('recapComparison')), findsNothing);
     });

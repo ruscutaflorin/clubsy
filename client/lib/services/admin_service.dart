@@ -1,3 +1,4 @@
+import 'package:clubsy/data/classes/admin_report_model.dart';
 import 'package:clubsy/data/classes/club_data_health_model.dart';
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
@@ -65,6 +66,17 @@ class AdminService {
     return PilotScorecardModel.fromMap(Map<String, dynamic>.from(data));
   }
 
+  Future<List<AdminReport>> getOpenReports() async {
+    final data = await _api.get('/admin/reports');
+    return (data['reports'] as List)
+        .map((r) => AdminReport.fromMap(r as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// [status] is ACTIONED or DISMISSED.
+  Future<void> resolveReport(String id, String status) =>
+      _api.post('/admin/reports/$id/resolve', body: {'status': status});
+
   Future<ClubRankingModel> getClubRanking() async {
     final data = await _api.get('/admin/clubs/ranking');
     return ClubRankingModel.fromJson(Map<String, dynamic>.from(data));
@@ -75,8 +87,8 @@ class AdminService {
     return ClubDataHealthModel.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<ClubFootfallModel> getClubFootfall(String id) async {
-    final data = await _api.get('/admin/clubs/$id/footfall');
+  Future<ClubFootfallModel> getClubFootfall(String id, {int weeks = 12}) async {
+    final data = await _api.get('/admin/clubs/$id/footfall?weeks=$weeks');
     return ClubFootfallModel.fromMap(Map<String, dynamic>.from(data));
   }
 

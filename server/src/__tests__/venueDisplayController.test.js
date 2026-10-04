@@ -46,16 +46,26 @@ describe("GET /venue-display/:clubId/qr", () => {
 });
 
 describe("GET /venue-display/:clubId", () => {
-  it("renders an escaped page with a nonce-based CSP", async () => {
+  it("renders an escaped html page with an inline QR and a nonce-based CSP", async () => {
     const res = await request(app).get(`/venue-display/c1?key=${key}`);
     expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toMatch(/text\/html/);
+    expect(res.text).toContain('src="data:image/png');
     expect(res.text).toContain("Club &lt;b&gt;One&lt;/b&gt;");
     expect(res.text).not.toContain("<b>One</b>");
     const nonce = /script-src 'nonce-([^']+)'/.exec(res.headers["content-security-policy"])[1];
     expect(res.text).toContain(`<script nonce="${nonce}">`);
   });
 
-  it("404s on a wrong key", async () => {
+  it("404s on a wrong key, a missing key and an unknown club", async () => {
     expect((await request(app).get("/venue-display/c1?key=bad")).status).toBe(404);
+    expect((await request(app).get("/venue-display/c1")).status).toBe(404);
+    clubFindUnique.mockResolvedValue(null);
+    expect((await request(app).get(`/venue-display/zzz?key=${key}`)).status).toBe(404);
+  });
+
+  it("stops accepting the old key once the QR secret is rotated", async () => {
+    clubFindUnique.mockResolvedValue({ ...club, qrSecret: "rotated" });
+    expect((await request(app).get(`/venue-display/c1?key=${key}`)).status).toBe(404);
   });
 });

@@ -2,7 +2,26 @@ import {
   computeClubFootfall,
   computeClubRanking,
   computeDistanceHealth,
+  computeVibeSummary,
 } from "../services/footfallService.js";
+
+describe("computeVibeSummary", () => {
+  it("averages and buckets ratings, ignoring nulls", () => {
+    expect(computeVibeSummary([5, 4, 4, null, 3, 5])).toEqual({
+      count: 5,
+      average: 4.2,
+      distribution: [0, 0, 1, 2, 2],
+    });
+  });
+
+  it("withholds average and distribution below the floor", () => {
+    expect(computeVibeSummary([5, 5, 4, 4])).toEqual({
+      count: 4,
+      average: null,
+      distribution: null,
+    });
+  });
+});
 
 describe("computeDistanceHealth", () => {
   it("is insufficient with null numbers for no data", () => {
@@ -79,6 +98,27 @@ describe("computeClubFootfall", () => {
     expect(out.uniqueVisitors).toBe(2);
     expect(out.returningVisitorRate).toBe(0.5);
     expect(out.firstTimeShare).toBe(1);
+  });
+
+  it("buckets visitors by distinct nights in the window and ignores older check-ins", () => {
+    const out = computeClubFootfall({
+      checkIns: [
+        { userId: "a", checkedInAt: "2026-10-02T22:00:00Z" },
+        { userId: "b", checkedInAt: "2026-10-02T21:00:00Z" },
+        { userId: "b", checkedInAt: "2026-10-02T23:00:00Z" },
+        { userId: "c", checkedInAt: "2026-09-25T22:00:00Z" },
+        { userId: "c", checkedInAt: "2026-10-02T22:00:00Z" },
+        { userId: "d", checkedInAt: "2026-09-11T22:00:00Z" },
+        { userId: "d", checkedInAt: "2026-09-18T22:00:00Z" },
+        { userId: "d", checkedInAt: "2026-09-25T22:00:00Z" },
+        { userId: "d", checkedInAt: "2026-10-02T22:00:00Z" },
+        { userId: "a", checkedInAt: "2025-01-01T22:00:00Z" },
+        { userId: "a", checkedInAt: "2025-01-02T22:00:00Z" },
+      ],
+      now,
+    });
+    expect(out.visitFrequency).toEqual({ once: 2, twice: 1, threePlus: 1 });
+    expect(out.regulars).toBe(1);
   });
 
   it("contains no userId in the output", () => {

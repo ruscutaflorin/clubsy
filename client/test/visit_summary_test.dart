@@ -23,7 +23,27 @@ CheckInModel fixtureCheckIn(String clubId, DateTime at) => CheckInModel(
   club: fixtureClub(clubId),
 );
 
+CheckInModel rated(String clubId, int day, int? vibe) =>
+    fixtureCheckIn(clubId, DateTime(2026, 9, day, 23)).withDiary(vibe: vibe);
+
 void main() {
+  group('myVibeAtClub', () {
+    test('averages non-null ratings at that club only', () {
+      final result = myVibeAtClub('a', [
+        rated('a', 1, 4),
+        rated('a', 2, 5),
+        rated('a', 3, null),
+        rated('b', 4, 1),
+      ]);
+      expect(result, (average: 4.5, count: 2));
+    });
+
+    test('null when nothing was rated or there are no check-ins', () {
+      expect(myVibeAtClub('a', [rated('a', 1, null)]), isNull);
+      expect(myVibeAtClub('a', []), isNull);
+    });
+  });
+
   group('nightsPerClub', () {
     test('counts distinct nights per club', () {
       final result = nightsPerClub([
@@ -190,6 +210,39 @@ void main() {
     test('empty without shared nights', () {
       expect(pairedClubs('a', [at('a', n1)]), isEmpty);
       expect(pairedClubs('a', []), isEmpty);
+    });
+  });
+
+  group('wantToGoList', () {
+    ClubModel named(String id, String name) => ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: 46,
+      longitude: 23.5,
+      imageUrl: 'http://img',
+      isApproved: true,
+    );
+
+    final clubs = [named('z', 'Zeta'), named('a', 'alpha'), named('b', 'Beta')];
+
+    test('unvisited first, then visited, alphabetical ignoring case', () {
+      final result = wantToGoList(
+        clubs,
+        <String>{'z', 'a', 'b'},
+        [
+          fixtureCheckIn('a', DateTime(2026, 9, 12, 23)),
+          fixtureCheckIn('a', DateTime(2026, 9, 19, 23)),
+        ],
+      );
+      expect(result.map((e) => e.club.name), ['Beta', 'Zeta', 'alpha']);
+      expect(result.map((e) => e.nights), [0, 0, 2]);
+    });
+
+    test('skips unknown ids; empty favourites give an empty list', () {
+      expect(wantToGoList(clubs, <String>{'gone'}, []), isEmpty);
+      expect(wantToGoList(clubs, <String>{}, []), isEmpty);
     });
   });
 }

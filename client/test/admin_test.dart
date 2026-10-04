@@ -135,6 +135,7 @@ void main() {
 
     testWidgets('Admin tile shown for ADMIN', (tester) async {
       await pumpProfile(tester, 'ADMIN');
+      await tester.scrollUntilVisible(find.byKey(const Key('adminTile')), 300);
       expect(find.byKey(const Key('adminTile')), findsOneWidget);
     });
 

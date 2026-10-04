@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
@@ -9,14 +10,21 @@ import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/change_password_page.dart';
+import 'package:clubsy/views/pages/edit_profile_page.dart';
+import 'package:clubsy/views/pages/blocked_users_page.dart';
+import 'package:clubsy/views/pages/friends_page.dart';
+import 'package:clubsy/views/pages/friends_feed_page.dart';
+import 'package:clubsy/src/core/controllers/friend_controller.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
+import 'package:clubsy/views/pages/want_to_go_page.dart';
 import 'package:clubsy/widgets/been_a_while_card.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/map_milestones_card.dart';
 import 'package:clubsy/widgets/next_goals_card.dart';
 import 'package:clubsy/widgets/personal_records_card.dart';
+import 'package:clubsy/widgets/privacy_section.dart';
 import 'package:clubsy/widgets/rhythm_card.dart';
 import 'package:clubsy/widgets/streak_nudge_banner.dart';
 
@@ -273,6 +281,14 @@ class _EditNameDialogState extends State<EditNameDialog> {
   }
 }
 
+Widget _friendsTrailing(int pending) => Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    if (pending > 0) Badge(label: Text('$pending')),
+    const Icon(Icons.chevron_right),
+  ],
+);
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -355,6 +371,12 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ],
                 ),
+                Obx(() {
+                  final username = authController.user?['username'];
+                  return username == null
+                      ? const SizedBox.shrink()
+                      : Text('@$username', key: const Key('profileHandle'));
+                }),
                 Obx(() => Text(authController.user?['email'] ?? '')),
               ],
             ),
@@ -389,6 +411,20 @@ class ProfilePage extends StatelessWidget {
             );
           }),
           Obx(() {
+            final text = yourSoundText(
+              genreNights(clubController.myCheckIns.toList()),
+            );
+            if (text == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                text,
+                key: const Key('yourSoundText'),
+                textAlign: TextAlign.center,
+              ),
+            );
+          }),
+          Obx(() {
             final a = clubController.achievements.value;
             if (a == null) return const SizedBox.shrink();
             return Padding(
@@ -411,6 +447,42 @@ class ProfilePage extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Get.to(() => const RecapPage()),
           ),
+          ListTile(
+            key: const Key('friendsTile'),
+            leading: const Icon(Icons.people),
+            title: const Text('Friends'),
+            trailing: Get.isRegistered<FriendController>()
+                ? Obx(
+                    () => _friendsTrailing(
+                      Get.find<FriendController>().pendingCount,
+                    ),
+                  )
+                : _friendsTrailing(0),
+            onTap: () => Get.to(() => const FriendsPage()),
+          ),
+          ListTile(
+            key: const Key('openWantToGo'),
+            leading: const Icon(Icons.favorite),
+            title: const Text('Want to go'),
+            trailing: Obx(
+              () => Text('${Get.find<ClubController>().favoriteIds.length}'),
+            ),
+            onTap: () => Get.to(() => const WantToGoPage()),
+          ),
+          ListTile(
+            key: const Key('friendsFeedTile'),
+            leading: const Icon(Icons.nightlife),
+            title: const Text("Friends' nights"),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const FriendsFeedPage()),
+          ),
+          ListTile(
+            key: const Key('blockedUsersTile'),
+            leading: const Icon(Icons.block),
+            title: const Text('Blocked users'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const BlockedUsersPage()),
+          ),
           const SizedBox(height: 24),
           Obx(
             () => authController.isAdmin
@@ -423,6 +495,7 @@ class ProfilePage extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
+          const PrivacySection(),
           ListTile(
             key: const Key('privacyTile'),
             leading: const Icon(Icons.privacy_tip_outlined),
@@ -452,6 +525,13 @@ class ProfilePage extends StatelessWidget {
             onTap: _exportMyCheckInsCsv,
           ),
           ListTile(
+            key: const Key('editProfileTile'),
+            leading: const Icon(Icons.person_outline),
+            title: const Text('Edit profile'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const EditProfilePage()),
+          ),
+          ListTile(
             key: const Key('changePasswordTile'),
             leading: const Icon(Icons.lock_outline),
             title: const Text('Change password'),
@@ -464,6 +544,22 @@ class ProfilePage extends StatelessWidget {
             onTap: () async {
               await authController.signOut();
               Get.offAllNamed('/login');
+            },
+          ),
+          ListTile(
+            key: const Key('signOutAllTile'),
+            leading: const Icon(Icons.devices_other, color: Colors.red),
+            title: const Text(
+              'Sign out of all devices',
+              style: TextStyle(color: Colors.red),
+            ),
+            onTap: () async {
+              try {
+                await authController.signOutAll();
+                Get.offAllNamed('/login');
+              } catch (_) {
+                Get.snackbar('Error', 'Could not sign out of all devices');
+              }
             },
           ),
           ListTile(

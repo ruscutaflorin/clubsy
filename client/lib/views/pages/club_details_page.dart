@@ -6,9 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clubsy/data/classes/club_directions.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/club_profile.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/services/location_lookup.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/src/core/controllers/feed_controller.dart';
 import 'package:clubsy/views/pages/check_in_primer_page.dart';
 
 const _maxNightRows = 20;
@@ -24,6 +27,7 @@ class ClubDetailsPage extends StatefulWidget {
 
 class _ClubDetailsPageState extends State<ClubDetailsPage> {
   String? _distance;
+  int _friendCount = 0;
 
   ClubModel get club => widget.club;
 
@@ -31,6 +35,14 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
   void initState() {
     super.initState();
     _loadDistance();
+    _loadFriendCount();
+  }
+
+  Future<void> _loadFriendCount() async {
+    if (!Get.isRegistered<FeedController>()) return;
+    final count = await Get.find<FeedController>().friendCountForClub(club.id);
+    if (!mounted || count == 0) return;
+    setState(() => _friendCount = count);
   }
 
   Future<void> _loadDistance() async {
@@ -53,6 +65,102 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
     }
   }
 
+  Future<void> _openLink(String url) async {
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened) Get.snackbar('Link', 'Could not open $url');
+  }
+
+  List<Widget> _profileSection(BuildContext context) {
+    final status = openingChipText(club.openingHours, club.localNow);
+    final detail = openingDetailText(club.openingHours, club.localNow);
+    final description = club.description;
+    return [
+      const SizedBox(height: 8),
+      Text(vibeText(club.vibe), key: const Key('vibeText')),
+      Obx(() {
+        final mine = myVibeAtClub(
+          club.id,
+          Get.find<ClubController>().myCheckIns,
+        );
+        if (mine == null) return const SizedBox.shrink();
+        return Text(myVibeText(mine), key: const Key('myVibeText'));
+      }),
+      if (_friendCount > 0) ...[
+        const SizedBox(height: 8),
+        Text(
+          friendsHaveBeenHereText(_friendCount),
+          key: const Key('friendsHereText'),
+        ),
+      ],
+      if (status != null) ...[
+        const SizedBox(height: 8),
+        Chip(
+          key: const Key('openStatusChip'),
+          avatar: Icon(
+            Icons.access_time,
+            size: 18,
+            color: status == 'Open now' ? Colors.white : null,
+          ),
+          label: Text(status),
+          backgroundColor: status == 'Open now' ? Colors.green : null,
+          labelStyle: status == 'Open now'
+              ? const TextStyle(color: Colors.white)
+              : null,
+        ),
+        if (detail != null) Text(detail, key: const Key('openingDetailText')),
+      ],
+      if (club.genres.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Wrap(
+          key: const Key('genreChips'),
+          spacing: 6,
+          children: [for (final g in club.genres) Chip(label: Text(g))],
+        ),
+      ],
+      if (description != null && description.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text(description),
+      ],
+      if (status != null)
+        ExpansionTile(
+          key: const Key('openingHoursTile'),
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Opening hours'),
+          children: [
+            for (final row in openingHoursRows(club.openingHours))
+              ListTile(
+                dense: true,
+                title: Text(row.day),
+                trailing: Text(row.hours),
+              ),
+          ],
+        ),
+      if (club.instagramUrl != null || club.websiteUrl != null)
+        Wrap(
+          spacing: 8,
+          children: [
+            if (club.instagramUrl != null)
+              TextButton.icon(
+                key: const Key('instagramLink'),
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: const Text('Instagram'),
+                onPressed: () => _openLink(club.instagramUrl!),
+              ),
+            if (club.websiteUrl != null)
+              TextButton.icon(
+                key: const Key('websiteLink'),
+                icon: const Icon(Icons.language),
+                label: const Text('Website'),
+                onPressed: () => _openLink(club.websiteUrl!),
+              ),
+          ],
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final clubController = Get.find<ClubController>();
@@ -61,11 +169,29 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
       appBar: AppBar(
         title: Text(club.name),
         actions: [
+          Obx(() {
+            final isFavorite = clubController.favoriteIds.contains(club.id);
+            return IconButton(
+              key: const Key('favoriteToggle'),
+              icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+              color: isFavorite ? Colors.redAccent : null,
+              tooltip: isFavorite ? 'Remove from Want to go' : 'Want to go',
+              onPressed: () async {
+                try {
+                  await clubController.toggleFavorite(club.id);
+                } catch (_) {
+                  Get.snackbar('Want to go', 'Could not update your list');
+                }
+              },
+            );
+          }),
           IconButton(
             key: const Key('shareClub'),
             icon: const Icon(Icons.share),
             tooltip: 'Share',
-            onPressed: () => Share.share(clubShareText(club)),
+            onPressed: () => SharePlus.instance.share(
+              ShareParams(text: clubShareText(club)),
+            ),
           ),
         ],
       ),
@@ -79,6 +205,9 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
         final pairings = isVisited
             ? pairedClubs(club.id, clubController.myCheckIns)
             : <ClubPairing>[];
+
+        final similar = similarClubs(club, clubController.clubs);
+        final nearby = nearbyClubs(club, clubController.clubs);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -108,6 +237,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                 const SizedBox(height: 4),
                 Text('$_distance from you'),
               ],
+              ..._profileSection(context),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 key: const Key('directionsButton'),
@@ -180,6 +310,48 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                     ],
                   ),
               ],
+              if (similar.isNotEmpty)
+                Column(
+                  key: const Key('similarClubs'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'More like this',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    for (final s in similar)
+                      ListTile(
+                        key: Key('similar_${s.club.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(s.club.name),
+                        subtitle: Text(s.shared.join(' · ')),
+                        onTap: () =>
+                            Get.to(() => ClubDetailsPage(club: s.club)),
+                      ),
+                  ],
+                ),
+              if (nearby.isNotEmpty)
+                Column(
+                  key: const Key('nearbyClubs'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'Round the corner',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    for (final n in nearby)
+                      ListTile(
+                        key: Key('nearby_${n.club.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(n.club.name),
+                        subtitle: Text('${formatDistance(n.meters)} away'),
+                        onTap: () =>
+                            Get.to(() => ClubDetailsPage(club: n.club)),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,

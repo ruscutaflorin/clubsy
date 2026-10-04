@@ -37,6 +37,17 @@ export const computeDistanceHealth = (distances, { limit = MAX_CHECK_IN_DISTANCE
   return { count, medianMeters, p90Meters, nearLimitShare, status };
 };
 
+// Aggregate 1-5 vibe ratings; below `min` ratings the average and distribution are withheld.
+export const computeVibeSummary = (ratings, { min = 5 } = {}) => {
+  const valid = ratings.filter((r) => Number.isInteger(r) && r >= 1 && r <= 5);
+  const count = valid.length;
+  if (count < min) return { count, average: null, distribution: null };
+  const distribution = [0, 0, 0, 0, 0];
+  for (const r of valid) distribution[r - 1] += 1;
+  const average = Math.round((valid.reduce((a, b) => a + b, 0) / count) * 10) / 10;
+  return { count, average, distribution };
+};
+
 // Pure aggregation over one club's check-in rows (no database); returns aggregates only, never ids.
 // `firstVisits` is [{ userId, firstCheckInAt }]: each visitor's earliest check-in at this club ever.
 // `byWeekday` is indexed like Date#getUTCDay (0 = Sunday), by the night a check-in belongs to.
@@ -96,6 +107,12 @@ export const computeClubFootfall = ({
     if (!cameBefore) firstTime += 1;
   }
   const uniqueVisitors = nightsByUser.size;
+  const visitFrequency = { once: 0, twice: 0, threePlus: 0 };
+  for (const nights of nightsByUser.values()) {
+    if (nights.size >= 3) visitFrequency.threePlus += 1;
+    else if (nights.size === 2) visitFrequency.twice += 1;
+    else visitFrequency.once += 1;
+  }
 
   return {
     totalCheckIns,
@@ -108,6 +125,8 @@ export const computeClubFootfall = ({
       uniqueVisitors: w.users.size,
     })),
     byWeekday,
+    visitFrequency,
+    regulars: visitFrequency.threePlus,
   };
 };
 

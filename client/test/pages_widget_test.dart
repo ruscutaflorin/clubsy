@@ -43,7 +43,7 @@ void main() {
   group('ClubDetailsPage', () {
     final club = fixtureClub('a', 'Club Alpha');
 
-    testWidgets('shows club info and no visited chip by default', (
+    testWidgets('shows club info and no visit history by default', (
       tester,
     ) async {
       await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
@@ -55,6 +55,7 @@ void main() {
       expect(find.text('Checked in before'), findsNothing);
       expect(find.text('Not on your map yet'), findsOneWidget);
       expect(find.text('Directions'), findsOneWidget);
+      expect(find.byKey(const Key('nightsHereTile')), findsNothing);
     });
 
     testWidgets('shows visited chip and a 1-visit summary with one check-in', (
@@ -105,12 +106,63 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Sat 14 Mar 2026'), findsOneWidget);
     });
+  });
 
-    testWidgets('hides the nights tile for an unvisited club', (tester) async {
+  group('ClubDetailsPage opening detail', () {
+    testWidgets('shows when the club closes, and nothing without hours', (
+      tester,
+    ) async {
+      final withHours = ClubModel(
+        id: 'h',
+        name: 'Club Hours',
+        address: '1 Main St',
+        city: 'Cluj',
+        latitude: 46,
+        longitude: 23.5,
+        imageUrl: 'http://localhost/img.png',
+        isApproved: true,
+        openingHours: {
+          'fri': [
+            {'open': '23:00', 'close': '05:00'},
+          ],
+        },
+        localNow: DateTime(2026, 10, 3, 2),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: ClubDetailsPage(club: withHours)),
+      );
+      tester.takeException();
+      expect(find.byKey(const Key('openingDetailText')), findsOneWidget);
+      expect(find.text('Until 05:00'), findsOneWidget);
+
+      await tester.pumpWidget(
+        MaterialApp(home: ClubDetailsPage(club: fixtureClub('n', 'Club None'))),
+      );
+      tester.takeException();
+      expect(find.byKey(const Key('openingDetailText')), findsNothing);
+    });
+  });
+
+  group('ClubDetailsPage my vibe', () {
+    final club = fixtureClub('a', 'Club Alpha');
+
+    testWidgets('shows my own rating when I rated a night here', (
+      tester,
+    ) async {
+      controller.myCheckIns.add(fixtureCheckIn('1', club).withDiary(vibe: 4));
       await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
       tester.takeException();
 
-      expect(find.byKey(const Key('nightsHereTile')), findsNothing);
+      final line = tester.widget<Text>(find.byKey(const Key('myVibeText')));
+      expect(line.data, contains('You rated it'));
+    });
+
+    testWidgets('hides the line when I never rated this club', (tester) async {
+      controller.myCheckIns.add(fixtureCheckIn('1', club));
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('myVibeText')), findsNothing);
     });
   });
 
@@ -148,6 +200,73 @@ void main() {
       tester.takeException();
 
       expect(find.byKey(const Key('pairedClubs')), findsNothing);
+    });
+  });
+
+  group('ClubDetailsPage similar clubs', () {
+    ClubModel withGenres(String id, String name, {double lat = 46}) =>
+        ClubModel(
+          id: id,
+          name: name,
+          address: '1 Main St',
+          city: 'Cluj',
+          latitude: lat,
+          longitude: 23.5,
+          imageUrl: 'http://localhost/img.png',
+          isApproved: true,
+          genres: ['techno'],
+        );
+
+    testWidgets('shows a similar club', (tester) async {
+      final a = withGenres('a', 'Club Alpha');
+      controller.clubs.addAll([a, withGenres('s', 'Club Sigma', lat: 47)]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('similarClubs')), findsOneWidget);
+      expect(find.text('Club Sigma'), findsOneWidget);
+    });
+
+    testWidgets('hides the section without a similar club', (tester) async {
+      final a = withGenres('a', 'Club Alpha');
+      controller.clubs.add(a);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('similarClubs')), findsNothing);
+    });
+  });
+
+  group('ClubDetailsPage nearby clubs', () {
+    ClubModel atLat(String id, String name, double lat) => ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: lat,
+      longitude: 23.5,
+      imageUrl: 'http://localhost/img.png',
+      isApproved: true,
+    );
+
+    testWidgets('shows a club about 300 m away', (tester) async {
+      final a = atLat('a', 'Club Alpha', 46);
+      controller.clubs.addAll([a, atLat('n', 'Club Near', 46.0027)]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('nearbyClubs')), findsOneWidget);
+      expect(find.text('Club Near'), findsOneWidget);
+      expect(find.textContaining('m away'), findsOneWidget);
+    });
+
+    testWidgets('hides the section with no club within 1 km', (tester) async {
+      final a = atLat('a', 'Club Alpha', 46);
+      controller.clubs.addAll([a, atLat('f', 'Club Far', 46.02)]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('nearbyClubs')), findsNothing);
     });
   });
 
@@ -195,6 +314,35 @@ void main() {
       await tester.enterText(find.byKey(const Key('history_search')), 'zzz');
       await tester.pump();
       expect(find.textContaining('No nights match'), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    });
+
+    testWidgets('best nights chip keeps only check-ins rated 4 or more', (
+      tester,
+    ) async {
+      controller.myCheckIns.addAll([
+        fixtureCheckIn('1', fixtureClub('a', 'Club A')).withDiary(vibe: 5),
+        fixtureCheckIn('2', fixtureClub('b', 'Club B')).withDiary(vibe: 2),
+      ]);
+      await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
+
+      await tester.tap(find.byKey(const Key('history_best_nights')));
+      await tester.pump();
+      expect(find.text('Club A'), findsOneWidget);
+      expect(find.text('Club B'), findsNothing);
+    });
+
+    testWidgets('best nights chip shows the empty state without 4+ ratings', (
+      tester,
+    ) async {
+      controller.myCheckIns.add(
+        fixtureCheckIn('1', fixtureClub('b', 'Club B')).withDiary(vibe: 2),
+      );
+      await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
+
+      await tester.tap(find.byKey(const Key('history_best_nights')));
+      await tester.pump();
+      expect(find.byKey(const Key('history_best_empty')), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
     });
   });

@@ -26,11 +26,16 @@ export const authMiddleware = async (req, res, next) => {
     // Get user from database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, tokenVersion: true },
     });
 
     if (!user) {
       return res.status(401).json({ message: "User not found" });
+    }
+
+    // Tokens issued before 7.7 carry no tv and count as version 0.
+    if ((decoded.tv ?? 0) !== (user.tokenVersion ?? 0)) {
+      return res.status(401).json({ message: "Session expired" });
     }
 
     // Add user info to request

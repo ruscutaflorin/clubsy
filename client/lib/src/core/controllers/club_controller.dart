@@ -6,7 +6,9 @@ import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_outcome.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
+import 'package:clubsy/data/classes/vibe_prompt.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/club_service.dart';
@@ -38,6 +40,12 @@ class ClubController extends GetxController {
   final isLoading = false.obs;
   final visitedOnly = false.obs;
 
+  /// The "Want to go" map filter; takes precedence over [visitedOnly].
+  final wantToGoOnly = false.obs;
+
+  /// Ids of the caller's favourite clubs, kept in step with the server.
+  final favoriteIds = <String>{}.obs;
+
   /// Why the last [refresh] failed, or null when it succeeded.
   final loadError = RxnString();
 
@@ -68,6 +76,7 @@ class ClubController extends GetxController {
       // A network refresh that finished first wins over the cache.
       if (cached == null || dataSavedAt.value != null) return;
       clubs.value = cached.clubs;
+      _syncFavorites();
       myCheckIns.value = cached.checkIns;
       stats.value = cached.stats;
       dataSavedAt.value = cached.savedAt;
@@ -88,6 +97,7 @@ class ClubController extends GetxController {
         _loadCityProgress(),
       ]);
       clubs.value = results[0] as List<ClubModel>;
+      _syncFavorites();
       myCheckIns.value = results[1] as List<CheckInModel>;
       stats.value = results[2] as CheckInStatsModel;
       achievements.value =
@@ -121,8 +131,42 @@ class ClubController extends GetxController {
     }
   }
 
+  void _syncFavorites() {
+    favoriteIds.assignAll([
+      for (final club in clubs)
+        if (club.isFavorite) club.id,
+    ]);
+  }
+
+  /// Hearts or un-hearts a club. Optimistic: the set changes at once and is
+  /// restored (rethrowing) if the server call fails.
+  Future<void> toggleFavorite(String clubId) async {
+    final wasFavorite = favoriteIds.contains(clubId);
+    if (wasFavorite) {
+      favoriteIds.remove(clubId);
+    } else {
+      favoriteIds.add(clubId);
+    }
+    try {
+      await _clubService.setFavorite(clubId, !wasFavorite);
+    } catch (_) {
+      if (wasFavorite) {
+        favoriteIds.add(clubId);
+      } else {
+        favoriteIds.remove(clubId);
+      }
+      rethrow;
+    }
+  }
+
   Future<
-    ({CheckInModel record, CheckInOutcome outcome, List<BadgeModel> unlocked})
+    ({
+      CheckInModel record,
+      CheckInOutcome outcome,
+      List<BadgeModel> unlocked,
+      bool tickedOffList,
+      List<String> newGenres,
+    })
   >
   checkIn({
     required String clubId,
@@ -146,6 +190,14 @@ class ClubController extends GetxController {
       myCheckIns.toList(),
       city: checkInRecord.club.city,
     );
+    var genres = checkInRecord.club.genres;
+    if (genres.isEmpty) {
+      genres = clubs.firstWhereOrNull((c) => c.id == clubId)?.genres ?? [];
+    }
+    // A first-ever check-in isn't a "first" for every genre.
+    final firstGenres = myCheckIns.isEmpty
+        ? <String>[]
+        : newGenres(genres, myCheckIns.toList());
     myCheckIns.insert(0, checkInRecord);
     // Fire and forget: the success UI must not wait on (or fail with) stats.
     unawaited(_refreshStats());
@@ -156,7 +208,66 @@ class ClubController extends GetxController {
       record: checkInRecord,
       outcome: outcome,
       unlocked: newlyEarned(before, after),
+      tickedOffList: outcome.isFirstVisit && favoriteIds.contains(clubId),
+      newGenres: firstGenres,
     );
+  }
+
+  /// Check-ins whose morning "How was it?" card was skipped this session.
+  final dismissedVibeIds = <String>{}.obs;
+
+  CheckInModel? get vibePrompt => pendingVibePrompt(
+    myCheckIns,
+    DateTime.now(),
+    dismissedIds: dismissedVibeIds.toSet(),
+  );
+
+  /// Saves a note and/or vibe on a check-in. Optimistic: the list updates at
+  /// once and is restored (rethrowing) if the server call fails.
+  Future<void> updateDiary(String id, {String? note, int? vibe}) async {
+    final index = myCheckIns.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+    final before = myCheckIns[index];
+    myCheckIns[index] = before.withDiary(
+      note: note == null
+          ? before.note
+          : (note.trim().isEmpty ? null : note.trim()),
+      vibe: vibe ?? before.vibe,
+    );
+    try {
+      final saved = await _checkInService.updateCheckIn(
+        id,
+        note: note,
+        vibe: vibe,
+      );
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = saved;
+    } catch (_) {
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = before;
+      rethrow;
+    }
+  }
+
+  /// Hides or shows one check-in for friends. Optimistic, restored (rethrowing)
+  /// if the server call fails.
+  Future<void> setHiddenFromFriends(String id, bool hidden) async {
+    final index = myCheckIns.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+    final before = myCheckIns[index];
+    myCheckIns[index] = before.withHidden(hidden);
+    try {
+      final saved = await _checkInService.updateCheckIn(
+        id,
+        hiddenFromFriends: hidden,
+      );
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = saved;
+    } catch (_) {
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = before;
+      rethrow;
+    }
   }
 
   /// Removes a check-in from the map. Optimistic: the list updates at once and

@@ -10,6 +10,16 @@ class ClubFormValidation {
     'imageUrl',
   ];
 
+  /// Optional profile fields, kept apart from [fields] (which are the form's
+  /// required text controllers).
+  static const profileFields = [
+    'description',
+    'genres',
+    'openingHours',
+    'instagramUrl',
+    'websiteUrl',
+  ];
+
   static String? required(String? value, String label) =>
       (value == null || value.trim().isEmpty) ? '$label is required' : null;
 
@@ -27,6 +37,21 @@ class ClubFormValidation {
     }
     return null;
   }
+
+  /// Optional https link (Instagram, website).
+  static String? httpsUrl(String? value, String label) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return null;
+    final uri = Uri.tryParse(text);
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      return '$label must be an https URL';
+    }
+    return null;
+  }
+
+  static String? description(String? value) => (value?.trim().length ?? 0) > 500
+      ? 'Description must be at most 500 characters'
+      : null;
 
   static String? _range(String? value, String label, double limit) {
     final text = value?.trim() ?? '';
@@ -63,7 +88,10 @@ class ClubFormValidation {
       final lower = message.toLowerCase();
       final field = lower.contains('imageurl') || lower.contains('image')
           ? 'imageUrl'
-          : fields.firstWhere(lower.contains, orElse: () => '_form');
+          : [...fields, ...profileFields].firstWhere(
+              (f) => lower.contains(f.toLowerCase()),
+              orElse: () => '_form',
+            );
       result.putIfAbsent(field, () => message);
     }
     return result;

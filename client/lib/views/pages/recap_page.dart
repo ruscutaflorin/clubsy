@@ -89,6 +89,7 @@ class RecapCard extends StatelessWidget {
         'Busiest night: ${_weekdays[recap.busiestWeekday! - 1]}',
       if (latest != null) 'Latest night: ${_hhmm(latest)}',
       '${recap.newClubs} new clubs',
+      if (recap.topGenre != null) 'Your sound: ${recap.topGenre}',
     ];
     return AspectRatio(
       aspectRatio: 9 / 16,
@@ -143,7 +144,9 @@ class RecapCard extends StatelessWidget {
 }
 
 class RecapPage extends StatefulWidget {
-  const RecapPage({super.key});
+  final DateTime? now;
+
+  const RecapPage({super.key, this.now});
 
   @override
   State<RecapPage> createState() => _RecapPageState();
@@ -151,7 +154,7 @@ class RecapPage extends StatefulWidget {
 
 class _RecapPageState extends State<RecapPage> {
   final _boundaryKey = GlobalKey();
-  final _now = DateTime.now();
+  late final _now = widget.now ?? DateTime.now();
   int? _year;
   bool _hideNames = true;
   String? _error;
@@ -166,7 +169,9 @@ class _RecapPageState extends State<RecapPage> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/clubsy-recap.png');
       await file.writeAsBytes(data!.buffer.asUint8List());
-      await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')]);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path, mimeType: 'image/png')]),
+      );
     } catch (_) {
       if (mounted) setState(() => _error = "Couldn't share the recap");
     }

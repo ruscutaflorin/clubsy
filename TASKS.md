@@ -561,7 +561,7 @@ work; 5.5-5.7 are yours.
       account-deletion path (5.3) meet App Store and Play policy. Add the hosted policy URL to both
       store listings.
 
-- [ ] 5.8 Render deployment blueprint for the backend, so deploying (5.5) is only an account plus
+- [x] 5.8 Render deployment blueprint for the backend, so deploying (5.5) is only an account plus
       secrets.
       - Goal: the pilot API deploys to Render (decided 2026-10-03, `PLAN.md` decision 2) from one
         file, with no hand-configured settings.
@@ -722,7 +722,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
       `server/.env` (copied into every worktree) points at it, and `.nightshift/rules.md` explains
       how to migrate and reset it.
 
-- [ ] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
+- [x] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
       server-side consent records.
       - Schema: `User.username String? @unique` (3-20 characters, `[a-z0-9_]`, stored lowercase),
         `User.homeCity String?`, `User.acceptedTermsAt DateTime?`, `User.termsVersion String?`,
@@ -739,7 +739,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         400; a case-insensitive duplicate → 409), a Flutter widget test for the edit form
         validation, and `pnpm test` plus `flutter test`.
 
-- [ ] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
+- [x] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
       - Schema: `Club.description String?` (≤ 500), `Club.genres String[]` (from a fixed list in
         `server/src/utils/genres.js`: techno, house, hip-hop, commercial, rock, latin, drum-and-bass,
         live), `Club.openingHours Json?` (`{mon:[{open:"23:00",close:"05:00"}], …}`, close may be
@@ -758,7 +758,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         at Saturday 06:00; closed days; a malformed JSON shape is rejected at validation),
         Flutter tests for the chip text, `pnpm test` and `flutter test`.
 
-- [ ] 7.3 Favourites ("Want to go") list and map layer.
+- [x] 7.3 Favourites ("Want to go") list and map layer.
       - Schema: `Favorite {userId, clubId, createdAt, @@unique([userId, clubId])}`.
       - Server: `PUT /api/clubs/:id/favorite` and `DELETE /api/clubs/:id/favorite` (idempotent,
         404 for unapproved clubs), and `GET /api/clubs/favorites`. Club list responses include
@@ -771,7 +771,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         `isFavorite` only reflects the caller's favourites), Flutter controller tests for the
         optimistic toggle with rollback, `pnpm test` and `flutter test`.
 
-- [ ] 7.4 Private night notes and a venue "vibe" rating on each check-in.
+- [x] 7.4 Private night notes and a venue "vibe" rating on each check-in.
       - Goal: turn the history into a real diary ("great DJ, went with Ana") and collect the venue
         quality signal that powers 7.5. This rates **venues**, not people; person-to-person
         ratings (B2) stay gated behind Phase 8.
@@ -788,7 +788,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         (pure `pendingVibePrompt(checkIns, now)`), `pnpm test` and `flutter test`.
       - Depends on: 7.0, 3.5 and 5.4 (history tile layout).
 
-- [ ] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
+- [x] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
       - Server: club responses include `vibe: {average, count}` only when `count >= 5` (k-anonymity:
         individual ratings are never exposed, and below the threshold the field is `null`).
         Compute it over the last 90 days. Add a `sort=vibe` option on `GET /api/clubs`.
@@ -798,7 +798,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         no rater ids in the payload), `pnpm test` and `flutter test`.
       - Depends on: 7.4.
 
-- [ ] 7.6 Password reset by email.
+- [x] 7.6 Password reset by email.
       - Provider: **Resend** (decided 2026-10-03, `PLAN.md` decision 4). Call its HTTP API
         (`POST https://api.resend.com/emails`) with `fetch` instead of adding an SDK. Use the
         Resend sender when `RESEND_API_KEY` is set, otherwise the console sender, and send from
@@ -817,7 +817,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         code → 400; a reused code → 400; a successful reset → new password works and the old one
         doesn't), `pnpm test` and `flutter test`.
 
-- [ ] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
+- [x] 7.7 Session revocation: sign out everywhere, and invalidate tokens on password change or
       account deletion.
       - Schema: `User.tokenVersion Int @default(0)`.
       - Server: include `tv` in the JWT. `authMiddleware` rejects with 401 when `tv !==
@@ -848,7 +848,7 @@ follows the 8.0 decisions below.
         48 hours. A user with 3+ open reports is flagged for review.
       - **Navigation:** no new bottom tab. Friends and the feed are pages pushed from Profile.
 
-- [ ] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
+- [x] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
       - Schema: `Friendship {id, requesterId, addresseeId, status PENDING|ACCEPTED, createdAt,
         respondedAt, @@unique([requesterId, addresseeId])}`.
       - Server: send a request by `username` (7.1). Searching only matches an exact username,
@@ -860,7 +860,7 @@ follows the 8.0 decisions below.
         auto-accept, requesting yourself → 400, and an unknown username giving the same response
         as a known one, plus Flutter controller tests.
 
-- [ ] 8.2 Block and report, plus an admin moderation queue.
+- [x] 8.2 Block and report, plus an admin moderation queue.
       - Schema: `Block {blockerId, blockedId, createdAt, @@unique}` and `Report {id, reporterId,
         reportedUserId, reason enum, details ≤ 500, status OPEN|ACTIONED|DISMISSED, createdAt,
         handledById, handledAt}`.
@@ -874,7 +874,7 @@ follows the 8.0 decisions below.
         either direction; unblocking doesn't restore the friendship), `pnpm test` and
         `flutter test`.
 
-- [ ] 8.3 Privacy settings: control who sees my nights.
+- [x] 8.3 Privacy settings: control who sees my nights.
       - Schema: `User.shareNightsWithFriends Boolean @default(false)` and `CheckIn.hiddenFromFriends
         Boolean @default(false)`.
       - Client: a Privacy section in Profile with a clear explanation, and a per-check-in "Hide
@@ -882,7 +882,7 @@ follows the 8.0 decisions below.
       - Verified by: Jest for the defaults (a new user shares nothing) and the toggles,
         `pnpm test` and `flutter test`.
 
-- [ ] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
+- [x] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
       - Server: `GET /api/feed` returns friends' check-ins only when **both** users have
         `shareNightsWithFriends` on, the check-in isn't hidden, and its night has **ended** (now is
         at or after `nightEnd(checkedInAt)`). It shows the club and the night date, never the
@@ -892,3 +892,34 @@ follows the 8.0 decisions below.
       - Verified by: Jest (a check-in from tonight is not visible until 06:00; one-sided sharing is
         not visible; hidden check-ins and blocked users are excluded; no `checkedInAt` time is in
         the payload), `pnpm test` and `flutter test`.
+
+## Phase 9 — Test-audit follow-ups
+
+Goal: close the gaps the 2026-10-04 test audit found (PR #4). No schema changes. New tests must
+pass the testing policy in `.nightshift/rules.md`.
+
+- [x] 9.1 Server: cover the empty club update and remove the dead `signOut` controller.
+      - Scope: in `server/src/__tests__/routes.test.js`, add one supertest case:
+        `PATCH /api/clubs/:id` as ADMIN with a body that sets no editable field (e.g. `{}`)
+        returns 400 `{message: "No fields to update"}` and never calls `club.update`. Delete the
+        unrouted `signOut` export from `server/src/controllers/authController.js`. No route
+        uses it, and the client signs out by dropping its token.
+      - Out: adding a sign-out route or token revocation (that's 7.7).
+      - Verified by: the new case fails if the `Object.keys(data).length === 0` guard in
+        `updateClub` is removed, `grep -rn signOut server/src` finds nothing, and `pnpm test`
+        passes.
+
+- [x] 9.2 Client: make the date-dependent history and recap widget tests deterministic.
+      - Goal: `on_this_night_test.dart` ("history page shows the On this night card", "history
+        page has no card when nothing matches") and `recap_test.dart` ("page shows comparison",
+        "page hides comparison without previous check-ins") build their fixtures from
+        `DateTime.now()`, so their result depends on the day they run (month ends, 29 Feb, a run
+        that crosses midnight).
+      - Scope: give `CheckInHistoryPage` and `RecapPage` an optional `DateTime? now` constructor
+        parameter (default `DateTime.now()`, matching `BeenAWhileCard(now:)` and
+        `YearlyGoalCard(now:)`), use it where they call `DateTime.now()` today
+        (`check_in_history_page.dart` `onThisNight(...)`, `recap_page.dart` `_now`), and pin a
+        fixed `now` in those four tests. Keep their assertions otherwise unchanged.
+      - Out: changing the on-this-night or recap rules.
+      - Verified by: the four tests pass with `now` pinned to 2025-02-28, 2026-03-31 and
+        2026-10-02 (check locally, then keep one), and `flutter test` passes.

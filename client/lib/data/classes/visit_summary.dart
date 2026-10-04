@@ -45,6 +45,23 @@ List<DateTime> nightsAtClub(String clubId, List<CheckInModel> checkIns) {
   return nights;
 }
 
+/// Pure: the average of the user's own vibe ratings at one club, or null when
+/// they never rated a night there.
+({double average, int count})? myVibeAtClub(
+  String clubId,
+  List<CheckInModel> checkIns,
+) {
+  final vibes = [
+    for (final c in checkIns)
+      if (c.clubId == clubId && c.vibe != null) c.vibe!,
+  ];
+  if (vibes.isEmpty) return null;
+  return (
+    average: vibes.reduce((a, b) => a + b) / vibes.length,
+    count: vibes.length,
+  );
+}
+
 /// Pure: distinct nights per club id, for the map pins' count badges.
 Map<String, int> nightsPerClub(List<CheckInModel> checkIns) {
   final nights = <String, Set<DateTime>>{};
@@ -52,6 +69,35 @@ Map<String, int> nightsPerClub(List<CheckInModel> checkIns) {
     (nights[c.club.id] ??= {}).add(nightOf(c.checkedInAt.toLocal()));
   }
   return {for (final e in nights.entries) e.key: e.value.length};
+}
+
+class WantToGoEntry {
+  final ClubModel club;
+  final int nights;
+
+  WantToGoEntry({required this.club, required this.nights});
+}
+
+/// Pure: favourite clubs with their night counts, not-yet-visited first, then
+/// alphabetical (case-insensitive). Favourite ids with no matching club are
+/// skipped.
+List<WantToGoEntry> wantToGoList(
+  List<ClubModel> clubs,
+  Set<String> favoriteIds,
+  List<CheckInModel> checkIns,
+) {
+  final nights = nightsPerClub(checkIns);
+  final entries = [
+    for (final club in clubs)
+      if (favoriteIds.contains(club.id))
+        WantToGoEntry(club: club, nights: nights[club.id] ?? 0),
+  ];
+  entries.sort((a, b) {
+    final byVisited = (a.nights > 0 ? 1 : 0).compareTo(b.nights > 0 ? 1 : 0);
+    if (byVisited != 0) return byVisited;
+    return a.club.name.toLowerCase().compareTo(b.club.name.toLowerCase());
+  });
+  return entries;
 }
 
 class ClubPairing {

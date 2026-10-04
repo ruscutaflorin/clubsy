@@ -36,7 +36,30 @@ void main() {
     expect(find.text('Invalid coordinates'), findsNothing);
   });
 
-  testWidgets('shows an all-clear when there are no issues', (tester) async {
+  testWidgets('lists incomplete profiles with what is missing', (tester) async {
+    final model = ClubDataHealthModel.fromJson({
+      'incompleteProfiles': [
+        {
+          'id': 'c1',
+          'name': 'Half Club',
+          'city': 'Cluj',
+          'isApproved': true,
+          'missing': ['openingHours', 'genres'],
+        },
+      ],
+    });
+    await tester.pumpWidget(
+      MaterialApp(home: AdminClubDataHealthPage(service: _FakeService(model))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Incomplete profiles'), findsOneWidget);
+    expect(find.text('Half Club · Cluj'), findsOneWidget);
+    expect(find.text('Missing: opening hours, genres'), findsOneWidget);
+  });
+
+  testWidgets('shows an all-clear when the response has no issue lists', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: AdminClubDataHealthPage(

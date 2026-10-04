@@ -74,8 +74,9 @@ class ApiClient {
     required this.tokenProvider,
     this.onUnauthorized,
     this.timeout = const Duration(seconds: 15),
-    this.baseUrl = apiBaseUrl,
-  }) : _client = client ?? http.Client();
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? apiBaseUrl,
+       _client = client ?? http.Client();
 
   Future<dynamic> get(
     String path, {
@@ -95,6 +96,9 @@ class ApiClient {
     authenticated: authenticated,
     expireSession: expireSession,
   );
+
+  Future<dynamic> put(String path, {Object? body, bool authenticated = true}) =>
+      _send('PUT', path, body: body, authenticated: authenticated);
 
   Future<dynamic> patch(
     String path, {

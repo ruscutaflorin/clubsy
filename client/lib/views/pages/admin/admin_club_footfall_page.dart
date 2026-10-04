@@ -28,6 +28,7 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
   ClubFootfallModel? _footfall;
   String? _error;
   bool _loading = false;
+  int _weeks = 12;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
     });
     try {
       final service = widget.service ?? AdminService();
-      final data = await service.getClubFootfall(widget.club.id);
+      final data = await service.getClubFootfall(widget.club.id, weeks: _weeks);
       if (!mounted) return;
       setState(() => _footfall = data);
     } on ApiException catch (e) {
@@ -104,6 +105,49 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
     );
   }
 
+  Widget _frequencyCard(VisitFrequency f) => Card(
+    key: const Key('footfallFrequency'),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How often guests come',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text('1 night: ${f.once}'),
+          Text('2 nights: ${f.twice}'),
+          Text('3+ nights (regulars): ${f.threePlus}'),
+        ],
+      ),
+    ),
+  );
+
+  Widget _vibeCard(VibeSummary v) {
+    final dist = v.distribution;
+    final enough = v.average != null && dist != null && dist.length == 5;
+    return Card(
+      key: const Key('footfallVibe'),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Guest vibe', style: Theme.of(context).textTheme.titleMedium),
+            if (!enough)
+              Text('Not enough ratings yet (${v.count} of 5)')
+            else ...[
+              Text(vibeLabel(v)),
+              for (var star = 5; star >= 1; star--)
+                Text('$star★  ${dist[star - 1]}'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _footfall;
@@ -133,6 +177,21 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SegmentedButton<int>(
+            key: const Key('footfallWeeks'),
+            segments: const [
+              ButtonSegment(value: 4, label: Text('4 wk')),
+              ButtonSegment(value: 12, label: Text('12 wk')),
+              ButtonSegment(value: 26, label: Text('26 wk')),
+              ButtonSegment(value: 52, label: Text('52 wk')),
+            ],
+            selected: {_weeks},
+            onSelectionChanged: (s) {
+              setState(() => _weeks = s.first);
+              _load();
+            },
+          ),
+          const SizedBox(height: 16),
           if (_loading) const LinearProgressIndicator(),
           if (_error != null)
             Text(_error!, style: const TextStyle(color: Colors.redAccent)),
@@ -162,6 +221,8 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
               ],
             ),
             const SizedBox(height: 24),
+            _frequencyCard(data.visitFrequency),
+            const SizedBox(height: 24),
             Text(
               'Weekly check-ins',
               style: Theme.of(context).textTheme.titleMedium,
@@ -171,6 +232,10 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
             if (data.distance != null) ...[
               const SizedBox(height: 24),
               _distanceCard(data.distance!),
+            ],
+            if (data.vibe != null) ...[
+              const SizedBox(height: 24),
+              _vibeCard(data.vibe!),
             ],
           ],
         ],

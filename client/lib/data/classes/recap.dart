@@ -1,5 +1,6 @@
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 
 class Recap {
   final int nightsOut;
@@ -12,8 +13,10 @@ class Recap {
   final int? busiestWeekday;
   final DateTime? latestNight;
   final int newClubs;
+  final String? topGenre;
 
   const Recap({
+    this.topGenre,
     required this.nightsOut,
     required this.distinctClubs,
     required this.distinctCities,
@@ -124,6 +127,8 @@ Recap buildRecap(
     return !t.isBefore(from) && t.isBefore(to);
   }).length;
 
+  final genres = genreNights([for (final (c, _) in inPeriod) c]);
+
   return Recap(
     nightsOut: nights.length,
     distinctClubs: visits.length,
@@ -133,5 +138,6 @@ Recap buildRecap(
     busiestWeekday: weekday,
     latestNight: latest,
     newClubs: newClubs,
+    topGenre: genres.isEmpty ? null : genres.first.genre,
   );
 }

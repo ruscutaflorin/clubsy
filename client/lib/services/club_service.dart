@@ -22,6 +22,14 @@ class ClubService {
         .toList();
   }
 
+  Future<void> setFavorite(String id, bool favorite) async {
+    if (favorite) {
+      await _api.put('/clubs/$id/favorite');
+    } else {
+      await _api.delete('/clubs/$id/favorite');
+    }
+  }
+
   Future<ClubModel> getClubById(String id) async {
     final data = await _api.get('/clubs/$id');
     return ClubModel.fromMap(data);

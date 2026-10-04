@@ -87,7 +87,12 @@ class CheckInSuccessSheet extends StatelessWidget {
               Text(detail, textAlign: TextAlign.center),
             ],
             ...extras,
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            const Text(
+              'Rate tonight later - we\'ll ask tomorrow morning.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton(

@@ -7,6 +7,7 @@ import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/check_in_service.dart';
+import 'package:clubsy/services/club_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
 CheckInModel checkIn(String id, String clubId) => CheckInModel(
@@ -26,6 +27,15 @@ CheckInModel checkIn(String id, String clubId) => CheckInModel(
   }),
 );
 
+CheckInModel _withGenres(CheckInModel c, List<String> genres) => CheckInModel(
+  id: c.id,
+  clubId: c.clubId,
+  checkedInAt: c.checkedInAt,
+  verificationMethod: c.verificationMethod,
+  distanceMeters: c.distanceMeters,
+  club: ClubModel.fromMap({...c.club.toMap(), 'genres': genres}),
+);
+
 CheckInModel _record(String id, String clubId) => checkIn(id, clubId);
 
 void main() {
@@ -40,6 +50,35 @@ void main() {
         checkIn('3', 'b'),
       ]);
       expect(controller.visitedClubIds, {'a', 'b'});
+    });
+
+    test('checkIn reports genres new to the user', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.myCheckIns.add(_withGenres(checkIn('1', 'a'), ['techno']));
+      controller.clubs.add(
+        _withGenres(checkIn('x', 'b'), ['techno', 'house']).club,
+      );
+
+      final result = await controller.checkIn(
+        clubId: 'b',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.newGenres, ['house']);
+    });
+
+    test('first-ever checkIn reports no new genres', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.clubs.add(_withGenres(checkIn('x', 'b'), ['house']).club);
+
+      final result = await controller.checkIn(
+        clubId: 'b',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.newGenres, isEmpty);
     });
 
     test('checkIn re-fetches stats afterwards', () async {
@@ -104,6 +143,76 @@ void main() {
       expect(controller.myCheckIns.map((c) => c.id), ['1', '2']);
     });
 
+    test('toggleFavorite is optimistic and calls the server', () async {
+      final service = _FakeClubService();
+      final controller = ClubController(clubService: service);
+      final pending = controller.toggleFavorite('a');
+      expect(controller.favoriteIds, {'a'});
+      await pending;
+      await controller.toggleFavorite('a');
+      expect(controller.favoriteIds, isEmpty);
+      expect(service.calls, ['a:true', 'a:false']);
+    });
+
+    test('toggleFavorite rolls back when the server call fails', () async {
+      final controller = ClubController(
+        clubService: _FakeClubService(fail: true),
+      );
+      await expectLater(controller.toggleFavorite('a'), throwsException);
+      expect(controller.favoriteIds, isEmpty);
+
+      controller.favoriteIds.add('b');
+      await expectLater(controller.toggleFavorite('b'), throwsException);
+      expect(controller.favoriteIds, {'b'});
+    });
+
+    test('checking into a favourite for the first time ticks it off', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.favoriteIds.add('a');
+      final result = await controller.checkIn(
+        clubId: 'a',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.tickedOffList, isTrue);
+    });
+
+    test(
+      'updateDiary applies a vibe and rolls back when the save fails',
+      () async {
+        final ok = ClubController(checkInService: _FakeCheckInService());
+        ok.myCheckIns.add(_record('n1', 'a'));
+        await ok.updateDiary('n1', vibe: 4);
+        expect(ok.myCheckIns.single.vibe, 4);
+
+        final failing = ClubController(
+          checkInService: _FakeCheckInService(deleteFail: true),
+        );
+        failing.myCheckIns.add(_record('n1', 'a'));
+        await expectLater(failing.updateDiary('n1', vibe: 4), throwsException);
+        expect(failing.myCheckIns.single.vibe, isNull);
+      },
+    );
+
+    test('setHiddenFromFriends hides a check-in and rolls back when the save fails', () async {
+      final ok = ClubController(checkInService: _FakeCheckInService());
+      ok.myCheckIns.add(_record('n1', 'a'));
+      expect(ok.myCheckIns.single.hiddenFromFriends, isFalse);
+      await ok.setHiddenFromFriends('n1', true);
+      expect(ok.myCheckIns.single.hiddenFromFriends, isTrue);
+
+      final failing = ClubController(
+        checkInService: _FakeCheckInService(deleteFail: true),
+      );
+      failing.myCheckIns.add(_record('n1', 'a'));
+      await expectLater(
+        failing.setHiddenFromFriends('n1', true),
+        throwsException,
+      );
+      expect(failing.myCheckIns.single.hiddenFromFriends, isFalse);
+    });
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -113,6 +222,22 @@ void main() {
       expect(controller.myCheckIns, isEmpty);
     });
   });
+}
+
+class _FakeClubService implements ClubService {
+  final bool fail;
+  final calls = <String>[];
+
+  _FakeClubService({this.fail = false});
+
+  @override
+  Future<void> setFavorite(String id, bool favorite) async {
+    calls.add('$id:$favorite');
+    if (fail) throw Exception('boom');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeCheckInService implements CheckInService {
@@ -156,5 +281,19 @@ class _FakeCheckInService implements CheckInService {
   @override
   Future<void> deleteCheckIn(String id) async {
     if (deleteFail) throw Exception('boom');
+  }
+
+  @override
+  Future<CheckInModel> updateCheckIn(
+    String id, {
+    String? note,
+    int? vibe,
+    bool? hiddenFromFriends,
+  }) async {
+    if (deleteFail) throw Exception('boom');
+    return _record(
+      id,
+      'a',
+    ).withDiary(note: note, vibe: vibe).withHidden(hiddenFromFriends ?? false);
   }
 }

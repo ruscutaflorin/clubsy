@@ -73,21 +73,49 @@ class FarFromCityEntry {
       );
 }
 
+class IncompleteProfileEntry {
+  final String id;
+  final String name;
+  final String city;
+  final bool isApproved;
+  final List<String> missing;
+
+  const IncompleteProfileEntry({
+    required this.id,
+    required this.name,
+    required this.city,
+    required this.isApproved,
+    required this.missing,
+  });
+
+  factory IncompleteProfileEntry.fromMap(Map<String, dynamic> map) =>
+      IncompleteProfileEntry(
+        id: (map['id'] as String?) ?? '',
+        name: (map['name'] as String?) ?? '',
+        city: (map['city'] as String?) ?? '',
+        isApproved: (map['isApproved'] as bool?) ?? false,
+        missing: List<String>.from((map['missing'] as List?) ?? const []),
+      );
+}
+
 class ClubDataHealthModel {
   final List<InvalidCoordinatesEntry> invalidCoordinates;
   final List<NearDuplicateEntry> nearDuplicates;
   final List<FarFromCityEntry> farFromCity;
+  final List<IncompleteProfileEntry> incompleteProfiles;
 
   const ClubDataHealthModel({
     required this.invalidCoordinates,
     required this.nearDuplicates,
     required this.farFromCity,
+    this.incompleteProfiles = const [],
   });
 
   bool get isEmpty =>
       invalidCoordinates.isEmpty &&
       nearDuplicates.isEmpty &&
-      farFromCity.isEmpty;
+      farFromCity.isEmpty &&
+      incompleteProfiles.isEmpty;
 
   factory ClubDataHealthModel.fromJson(Map<String, dynamic> json) {
     List<T> parse<T>(String key, T Function(Map<String, dynamic>) f) =>
@@ -101,6 +129,10 @@ class ClubDataHealthModel {
       ),
       nearDuplicates: parse('nearDuplicates', NearDuplicateEntry.fromJson),
       farFromCity: parse('farFromCity', FarFromCityEntry.fromJson),
+      incompleteProfiles: parse(
+        'incompleteProfiles',
+        IncompleteProfileEntry.fromMap,
+      ),
     );
   }
 }

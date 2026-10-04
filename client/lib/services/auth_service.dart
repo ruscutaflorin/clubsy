@@ -34,7 +34,14 @@ class AuthService {
   ) async {
     final data = await _api.post(
       '/auth/signup',
-      body: {'email': email, 'password': password, 'name': name},
+      body: {
+        'email': email,
+        'password': password,
+        'name': name,
+        // The register page only enables Sign Up once both boxes are ticked.
+        'acceptTerms': true,
+        'ageConfirmed': true,
+      },
       authenticated: false,
     ) as Map<String, dynamic>;
     await _saveAuthData(data['token'], data['user']);
@@ -68,9 +75,41 @@ class AuthService {
   /// Changes the password (`POST /auth/me/password`). A wrong current
   /// password is a 401 that must not end the session.
   Future<void> changePassword(String current, String next) async {
-    await _api.post(
+    final data = await _api.post(
       '/auth/me/password',
       body: {'currentPassword': current, 'newPassword': next},
+      expireSession: false,
+    );
+    // Other devices are signed out; keep this one with the fresh token.
+    final token = data is Map ? data['token'] : null;
+    if (token is String) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(tokenKey, token);
+    }
+  }
+
+  /// Revokes every session of this account (`POST /auth/signout-all`).
+  Future<void> signOutAll() async {
+    await _api.post('/auth/signout-all', expireSession: false);
+  }
+
+  /// Asks for a reset code by email (`POST /auth/password/forgot`). The
+  /// server answers 202 whether or not the account exists.
+  Future<void> requestPasswordReset(String email) async {
+    await _api.post(
+      '/auth/password/forgot',
+      body: {'email': email},
+      authenticated: false,
+      expireSession: false,
+    );
+  }
+
+  /// Sets a new password with the emailed code (`POST /auth/password/reset`).
+  Future<void> resetPassword(String email, String code, String next) async {
+    await _api.post(
+      '/auth/password/reset',
+      body: {'email': email, 'code': code, 'newPassword': next},
+      authenticated: false,
       expireSession: false,
     );
   }
@@ -86,6 +125,40 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(userKey, json.encode(user));
     return user;
+  }
+
+  /// Updates the sent profile fields (`PATCH /auth/me`) and refreshes the
+  /// cached user. A 409 means the username is taken.
+  Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? username,
+    String? homeCity,
+    bool? shareNightsWithFriends,
+  }) async {
+    final data = await _api.patch(
+      '/auth/me',
+      body: {
+        'name': ?name,
+        'username': ?username,
+        'homeCity': ?homeCity,
+        'shareNightsWithFriends': ?shareNightsWithFriends,
+      },
+      expireSession: false,
+    ) as Map<String, dynamic>;
+    final user = data['user'] as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode({...?await getUser(), ...user}));
+    return user;
+  }
+
+  /// Whether [username] is free for the signed-in user
+  /// (`GET /auth/username-available`).
+  Future<bool> isUsernameAvailable(String username) async {
+    final data = await _api.get(
+      '/auth/username-available',
+      query: {'u': username},
+    ) as Map<String, dynamic>;
+    return data['available'] == true;
   }
 
   Future<void> signOut() async {

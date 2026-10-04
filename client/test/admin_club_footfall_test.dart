@@ -1,9 +1,23 @@
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/admin_service.dart';
 import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _FakeAdminService extends AdminService {
+  final Map<String, dynamic> body;
+  final List<int> requested = [];
+
+  _FakeAdminService(this.body);
+
+  @override
+  Future<ClubFootfallModel> getClubFootfall(String id, {int weeks = 12}) async {
+    requested.add(weeks);
+    return ClubFootfallModel.fromMap(body);
+  }
+}
 
 void main() {
   final club = ClubModel(
@@ -40,6 +54,31 @@ void main() {
     expect(find.text('75%'), findsOneWidget);
   });
 
+  testWidgets('shows visit frequency, and parses a payload without it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Future<void> pump(Map<String, dynamic> extra) => tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(
+          club: club,
+          footfall: ClubFootfallModel.fromMap({'weekly': [], ...extra}),
+        ),
+      ),
+    );
+    await pump({
+      'visitFrequency': {'once': 5, 'twice': 2, 'threePlus': 7},
+    });
+    expect(find.byKey(const Key('footfallFrequency')), findsOneWidget);
+    expect(find.text('3+ nights (regulars): 7'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await pump({});
+    expect(find.text('3+ nights (regulars): 0'), findsOneWidget);
+  });
+
   testWidgets('copy summary puts the text on the clipboard', (tester) async {
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
@@ -68,19 +107,35 @@ void main() {
     expect(copied, contains('Unique visitors'));
   });
 
-  test('parses distance and defaults to null without it', () {
-    expect(fixture.distance, isNull);
-    final m = ClubFootfallModel.fromMap({
-      'distance': {
-        'count': 10,
-        'medianMeters': 42,
-        'p90Meters': 118,
-        'nearLimitShare': 0.3,
-        'status': 'marginal',
-      },
+  testWidgets('picking 52 wk reloads with 52 and renders without overflow', (
+    tester,
+  ) async {
+    final svc = _FakeAdminService({
+      'weekly': [
+        for (var i = 0; i < 52; i++)
+          {'weekStart': '2026-01-01', 'checkIns': i, 'uniqueVisitors': i},
+      ],
     });
-    expect(m.distance!.medianMeters, 42);
-    expect(m.distance!.status, 'marginal');
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(club: club, service: svc),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('footfallWeeks')), findsOneWidget);
+    expect(svc.requested, [12]);
+    await tester.tap(find.text('52 wk'));
+    await tester.pumpAndSettle();
+    expect(svc.requested.last, 52);
+    expect(tester.takeException(), isNull);
+  });
+
+  // A full distance block is parsed and rendered in the marginal-warning test below.
+  test('distance defaults to null, and to null figures when insufficient', () {
+    expect(fixture.distance, isNull);
     final empty = DistanceHealth.fromMap({
       'count': 0,
       'status': 'insufficient',
@@ -112,5 +167,42 @@ void main() {
       find.textContaining('close to the 150 m limit: check'),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('footfallVibe')), findsNothing);
+  });
+
+  Future<void> pumpVibe(WidgetTester tester, Map<String, dynamic> extra) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(
+          club: club,
+          footfall: ClubFootfallModel.fromMap({'weekly': [], ...extra}),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('shows the guest vibe average and star rows', (tester) async {
+    await pumpVibe(tester, {
+      'vibe': {
+        'count': 27,
+        'average': 4.3,
+        'distribution': [0, 1, 4, 9, 13],
+      },
+    });
+    expect(find.text('★4.3 from 27 ratings'), findsOneWidget);
+    expect(find.text('5★  13'), findsOneWidget);
+    expect(find.text('1★  0'), findsOneWidget);
+  });
+
+  testWidgets('guest vibe below the floor says not enough ratings', (
+    tester,
+  ) async {
+    await pumpVibe(tester, {
+      'vibe': {'count': 3, 'average': null, 'distribution': null},
+    });
+    expect(find.text('Not enough ratings yet (3 of 5)'), findsOneWidget);
   });
 }
