@@ -42,6 +42,7 @@
             "Bash(pnpm test:*)",
             "Bash(pnpm exec:*)",
             "Bash(npx prisma:*)",
+            "Bash(docker exec clubsy-db psql -U clubsy -d clubsy -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public;\")",
             "Bash(npx jest:*)",
             "Bash(node -e:*)",
             "Bash(node --check:*)",
