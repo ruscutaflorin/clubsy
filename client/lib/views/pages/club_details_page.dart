@@ -63,7 +63,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
   }
 
   List<Widget> _profileSection(BuildContext context) {
-    final status = openingChipText(club.openingHours, DateTime.now());
+    final status = openingChipText(club.openingHours, club.localNow);
     final description = club.description;
     return [
       if (status != null) ...[

@@ -54,6 +54,23 @@ const localParts = (date, timezone) => {
   };
 };
 
+// The wall-clock time at `date` in `timezone` as "YYYY-MM-DDTHH:mm:ss" (no
+// offset), so clients can show "Open now" without knowing the zone database.
+export const localNowString = (timezone, date = new Date()) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type) => parts.find((p) => p.type === type).value;
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}`;
+};
+
 // True when the venue is open at `date` in its own timezone. A slot belongs to
 // the day it opens on, so Friday 23:00-05:00 is still open on Saturday 02:00.
 export const isOpenAt = (openingHours, timezone, date = new Date()) => {

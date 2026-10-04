@@ -2,12 +2,18 @@ import prisma from "../prisma/client.js";
 import { Prisma } from "@prisma/client";
 import { validationResult } from "express-validator";
 import { GENRES } from "../utils/genres.js";
+import { localNowString } from "../utils/openingHours.js";
 import { displayKey, generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
 // qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
 const forRole = (club, role) => {
-  if (role === "ADMIN") return club;
-  const { qrSecret, ...rest } = club;
+  // `localNow` is the club's own wall-clock time, for the client's "Open now".
+  const withNow = {
+    ...club,
+    ...(club.timezone && { localNow: localNowString(club.timezone) }),
+  };
+  if (role === "ADMIN") return withNow;
+  const { qrSecret, ...rest } = withNow;
   return rest;
 };
 

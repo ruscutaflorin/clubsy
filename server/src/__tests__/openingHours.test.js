@@ -1,4 +1,4 @@
-import { isOpenAt, openingHoursError } from "../utils/openingHours.js";
+import { isOpenAt, localNowString, openingHoursError } from "../utils/openingHours.js";
 
 const TZ = "Europe/Bucharest";
 // Bucharest is UTC+3 in October (EEST until 2026-10-25), so local = UTC + 3h.
@@ -54,5 +54,13 @@ describe("openingHoursError", () => {
     ["an equal open and close", { mon: [{ open: "22:00", close: "22:00" }] }],
   ])("rejects %s", (_label, value) => {
     expect(openingHoursError(value)).toEqual(expect.any(String));
+  });
+});
+
+describe("localNowString", () => {
+  it("renders the club's wall-clock time, not the caller's", () => {
+    const instant = new Date("2026-10-03T21:30:00Z");
+    expect(localNowString("Europe/Bucharest", instant)).toBe("2026-10-04T00:30:00");
+    expect(localNowString("America/New_York", instant)).toBe("2026-10-03T17:30:00");
   });
 });
