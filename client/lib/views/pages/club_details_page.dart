@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:clubsy/data/classes/club_directions.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/club_profile.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/services/location_lookup.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -205,6 +206,8 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
             ? pairedClubs(club.id, clubController.myCheckIns)
             : <ClubPairing>[];
 
+        final similar = similarClubs(club, clubController.clubs);
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -306,6 +309,27 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                     ],
                   ),
               ],
+              if (similar.isNotEmpty)
+                Column(
+                  key: const Key('similarClubs'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'More like this',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    for (final s in similar)
+                      ListTile(
+                        key: Key('similar_${s.club.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(s.club.name),
+                        subtitle: Text(s.shared.join(' · ')),
+                        onTap: () =>
+                            Get.to(() => ClubDetailsPage(club: s.club)),
+                      ),
+                  ],
+                ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
