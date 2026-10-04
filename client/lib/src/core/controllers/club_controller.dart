@@ -6,6 +6,7 @@ import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_outcome.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/data/classes/vibe_prompt.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
@@ -164,6 +165,7 @@ class ClubController extends GetxController {
       CheckInOutcome outcome,
       List<BadgeModel> unlocked,
       bool tickedOffList,
+      List<String> newGenres,
     })
   >
   checkIn({
@@ -188,6 +190,14 @@ class ClubController extends GetxController {
       myCheckIns.toList(),
       city: checkInRecord.club.city,
     );
+    var genres = checkInRecord.club.genres;
+    if (genres.isEmpty) {
+      genres = clubs.firstWhereOrNull((c) => c.id == clubId)?.genres ?? [];
+    }
+    // A first-ever check-in isn't a "first" for every genre.
+    final firstGenres = myCheckIns.isEmpty
+        ? <String>[]
+        : newGenres(genres, myCheckIns.toList());
     myCheckIns.insert(0, checkInRecord);
     // Fire and forget: the success UI must not wait on (or fail with) stats.
     unawaited(_refreshStats());
@@ -199,6 +209,7 @@ class ClubController extends GetxController {
       outcome: outcome,
       unlocked: newlyEarned(before, after),
       tickedOffList: outcome.isFirstVisit && favoriteIds.contains(clubId),
+      newGenres: firstGenres,
     );
   }
 
