@@ -56,6 +56,47 @@ export const getFeed = async (req, res) => {
   }
 };
 
+export const getFriendNights = async (req, res) => {
+  try {
+    const base = await visibleCheckInsWhere(req.user.id);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    if (!base) {
+      return res.json({ nights: [], page, hasMore: false, sharedClubCount: 0 });
+    }
+    // Narrowing to one id inside the friend list: non-friends just get an empty list.
+    const where = { ...base, AND: [{ userId: req.params.userId }] };
+    const rows = await prisma.checkIn.findMany({
+      where,
+      orderBy: { checkedInAt: "desc" },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE + 1,
+      include: { club: { select: { id: true, name: true, city: true } } },
+    });
+    const nights = rows.slice(0, PAGE_SIZE).map((c) => ({
+      id: c.id,
+      nightDate: nightStart(c.checkedInAt).toISOString().slice(0, 10),
+      club: c.club,
+    }));
+    const body = { nights, page, hasMore: rows.length > PAGE_SIZE };
+    if (page === 1) {
+      const [theirs, mine] = await Promise.all([
+        prisma.checkIn.findMany({ where, distinct: ["clubId"], select: { clubId: true } }),
+        prisma.checkIn.findMany({
+          where: { userId: req.user.id },
+          distinct: ["clubId"],
+          select: { clubId: true },
+        }),
+      ]);
+      const mineIds = new Set(mine.map((c) => c.clubId));
+      body.sharedClubCount = theirs.filter((c) => mineIds.has(c.clubId)).length;
+    }
+    res.json(body);
+  } catch (error) {
+    console.error("getFriendNights error:", error);
+    res.status(500).json({ message: "Failed to load friend's nights" });
+  }
+};
+
 export const getClubFriendCount = async (req, res) => {
   try {
     const where = await visibleCheckInsWhere(req.user.id);

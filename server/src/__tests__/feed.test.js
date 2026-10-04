@@ -77,6 +77,58 @@ describe("GET /api/feed", () => {
   });
 });
 
+describe("GET /api/feed/friends/:userId", () => {
+  const row = (id, clubId) => ({
+    id,
+    checkedInAt: new Date("2026-10-02T01:30:00Z"),
+    clubId,
+    club: { id: clubId, name: `Club ${clubId}`, city: "X" },
+  });
+
+  it("narrows the visible check-ins to the requested friend", async () => {
+    ciFindMany.mockResolvedValue([]);
+    await request(app).get("/api/feed/friends/u2").set(auth);
+    const { where } = ciFindMany.mock.calls[0][0];
+    expect(where.userId).toEqual({ in: ["u2", "u3"] });
+    expect(where.AND).toEqual([{ userId: "u2" }]);
+    expect(where.hiddenFromFriends).toBe(false);
+    expect(where.checkedInAt.lt.getTime()).toBe(nightStart(new Date()).getTime());
+  });
+
+  it("returns an empty list without querying when the viewer doesn't share", async () => {
+    userFindUnique.mockImplementation(async ({ where }) => ({
+      id: where.id,
+      role: "USER",
+      shareNightsWithFriends: false,
+    }));
+    const res = await request(app).get("/api/feed/friends/u2").set(auth);
+    expect(res.body.nights).toEqual([]);
+    expect(res.body.sharedClubCount).toBe(0);
+    expect(ciFindMany).not.toHaveBeenCalled();
+  });
+
+  it("counts clubs both have been to and never exposes the check-in time", async () => {
+    ciFindMany.mockImplementation(async ({ where, distinct }) => {
+      if (where.userId === "u1") return [{ clubId: "B" }, { clubId: "C" }];
+      if (distinct) return [{ clubId: "A" }, { clubId: "B" }];
+      return [row("c1", "A"), row("c2", "B")];
+    });
+    const res = await request(app).get("/api/feed/friends/u2").set(auth);
+    expect(res.body.sharedClubCount).toBe(1);
+    expect(res.body.nights[0]).toEqual({
+      id: "c1",
+      nightDate: "2026-10-01",
+      club: { id: "A", name: "Club A", city: "X" },
+    });
+    expect(JSON.stringify(res.body)).not.toMatch(/checkedInAt|01:30/);
+  });
+
+  it("requires a token", async () => {
+    const res = await request(app).get("/api/feed/friends/u2");
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("GET /api/feed/clubs/:clubId/friends-count", () => {
   it("counts distinct qualifying friends only", async () => {
     ciFindMany.mockResolvedValue([{ userId: "u2" }, { userId: "u3" }]);
