@@ -983,7 +983,7 @@ Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genr
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: approved
+- [x] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: done
   - Why: a club with no hours or genres drops out of "Open now" (B78), the Want to go opening status (B81) and the genre features (B86, B87), so a half-filled pilot club becomes invisible to them. Admins onboarding ~10 partner clubs need to see what's missing at a glance. This extends the B72 data health check they already use.
   - Scope: server and client, no schema change.
     - Server: in `server/src/services/clubDataService.js`, make `findClubDataIssues` also return `incompleteProfiles: [{id, name, city, isApproved, missing}]`.

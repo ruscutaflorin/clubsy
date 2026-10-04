@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:clubsy/data/classes/club_data_health_model.dart';
 import 'package:clubsy/services/admin_service.dart';
 import 'package:clubsy/services/api_client.dart';
+import 'package:clubsy/services/club_service.dart';
+import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 
 class AdminClubDataHealthPage extends StatefulWidget {
   final AdminService? service;
@@ -54,6 +57,45 @@ class _AdminClubDataHealthPageState extends State<AdminClubDataHealthPage> {
     ];
   }
 
+  Future<void> _openClub(String id) async {
+    try {
+      final club = await ClubService().getClubById(id);
+      Get.to(() => AdminClubFormPage(club: club));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Could not open club')));
+    }
+  }
+
+  static const _missingLabels = {
+    'openingHours': 'opening hours',
+    'genres': 'genres',
+    'description': 'description',
+  };
+
+  List<Widget> _incompleteSection(List<IncompleteProfileEntry> entries) {
+    if (entries.isEmpty) return [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(
+          'Incomplete profiles',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+      ),
+      for (final e in entries)
+        ListTile(
+          dense: true,
+          title: Text('${e.name} · ${e.city}'),
+          subtitle: Text(
+            'Missing: ${e.missing.map((m) => _missingLabels[m] ?? m).join(', ')}',
+          ),
+          onTap: () => _openClub(e.id),
+        ),
+    ];
+  }
+
   Widget _body() {
     final data = _data;
     if (data == null) {
@@ -85,6 +127,7 @@ class _AdminClubDataHealthPageState extends State<AdminClubDataHealthPage> {
           for (final f in data.farFromCity)
             '${f.name} · ${f.city} · ${f.km} km away',
         ]),
+        ..._incompleteSection(data.incompleteProfiles),
       ],
     );
   }
