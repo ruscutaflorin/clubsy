@@ -71,6 +71,35 @@ Map<String, int> nightsPerClub(List<CheckInModel> checkIns) {
   return {for (final e in nights.entries) e.key: e.value.length};
 }
 
+class WantToGoEntry {
+  final ClubModel club;
+  final int nights;
+
+  WantToGoEntry({required this.club, required this.nights});
+}
+
+/// Pure: favourite clubs with their night counts, not-yet-visited first, then
+/// alphabetical (case-insensitive). Favourite ids with no matching club are
+/// skipped.
+List<WantToGoEntry> wantToGoList(
+  List<ClubModel> clubs,
+  Set<String> favoriteIds,
+  List<CheckInModel> checkIns,
+) {
+  final nights = nightsPerClub(checkIns);
+  final entries = [
+    for (final club in clubs)
+      if (favoriteIds.contains(club.id))
+        WantToGoEntry(club: club, nights: nights[club.id] ?? 0),
+  ];
+  entries.sort((a, b) {
+    final byVisited = (a.nights > 0 ? 1 : 0).compareTo(b.nights > 0 ? 1 : 0);
+    if (byVisited != 0) return byVisited;
+    return a.club.name.toLowerCase().compareTo(b.club.name.toLowerCase());
+  });
+  return entries;
+}
+
 class ClubPairing {
   final ClubModel club;
   final int nights;

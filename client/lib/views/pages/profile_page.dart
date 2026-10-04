@@ -17,6 +17,7 @@ import 'package:clubsy/src/core/controllers/friend_controller.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
+import 'package:clubsy/views/pages/want_to_go_page.dart';
 import 'package:clubsy/widgets/been_a_while_card.dart';
 import 'package:clubsy/widgets/error_banner_widget.dart';
 import 'package:clubsy/widgets/map_milestones_card.dart';
@@ -443,6 +444,15 @@ class ProfilePage extends StatelessWidget {
                   )
                 : _friendsTrailing(0),
             onTap: () => Get.to(() => const FriendsPage()),
+          ),
+          ListTile(
+            key: const Key('openWantToGo'),
+            leading: const Icon(Icons.favorite),
+            title: const Text('Want to go'),
+            trailing: Obx(
+              () => Text('${Get.find<ClubController>().favoriteIds.length}'),
+            ),
+            onTap: () => Get.to(() => const WantToGoPage()),
           ),
           ListTile(
             key: const Key('friendsFeedTile'),

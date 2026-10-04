@@ -848,7 +848,7 @@ Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These
 
 Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe ratings into the data model, but favourites only show up as a heart and a map layer, and ratings only as a crowd average. These items make both part of the "where next?" and "look back" steps of the core loop.
 
-- [ ] B81 "Want to go" list: my favourited clubs on one page, not-yet-visited first, with today's opening status — status: approved
+- [x] B81 "Want to go" list: my favourited clubs on one page, not-yet-visited first, with today's opening status — status: done
   - Why: 7.3 lets a user heart clubs ("Want to go"), but the only way to see the list is the map layer. "Which of my saved places haven't I been to, and which is open tonight?" has no answer in the app. A list page turns favourites into step 4 of the core loop (find the next place to go). It also makes `tickedOffList` on the success sheet a goal the user can see. It uses only the user's own data (principle 2).
   - Scope: client only, no server or schema change. `ClubController.favoriteIds` and `ClubController.clubs` already hold everything.
     - Pure logic: add `List<WantToGoEntry> wantToGoList(List<ClubModel> clubs, Set<String> favoriteIds, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, with a small `WantToGoEntry {ClubModel club; int nights}` class. `nights` comes from `nightsPerClub(checkIns)` in the same file. Clubs with 0 nights come first, then visited ones, alphabetical by name (case-insensitive) within each group. Favourite ids with no matching club are skipped.

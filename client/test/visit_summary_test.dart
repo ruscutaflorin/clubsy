@@ -212,4 +212,37 @@ void main() {
       expect(pairedClubs('a', []), isEmpty);
     });
   });
+
+  group('wantToGoList', () {
+    ClubModel named(String id, String name) => ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: 46,
+      longitude: 23.5,
+      imageUrl: 'http://img',
+      isApproved: true,
+    );
+
+    final clubs = [named('z', 'Zeta'), named('a', 'alpha'), named('b', 'Beta')];
+
+    test('unvisited first, then visited, alphabetical ignoring case', () {
+      final result = wantToGoList(
+        clubs,
+        <String>{'z', 'a', 'b'},
+        [
+          fixtureCheckIn('a', DateTime(2026, 9, 12, 23)),
+          fixtureCheckIn('a', DateTime(2026, 9, 19, 23)),
+        ],
+      );
+      expect(result.map((e) => e.club.name), ['Beta', 'Zeta', 'alpha']);
+      expect(result.map((e) => e.nights), [0, 0, 2]);
+    });
+
+    test('skips unknown ids; empty favourites give an empty list', () {
+      expect(wantToGoList(clubs, <String>{'gone'}, []), isEmpty);
+      expect(wantToGoList(clubs, <String>{}, []), isEmpty);
+    });
+  });
 }
