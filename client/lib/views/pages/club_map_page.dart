@@ -193,7 +193,7 @@ class _ClubMapPageState extends State<ClubMapPage> {
                   child: Padding(
                     padding: EdgeInsets.all(24),
                     child: Text(
-                      'Nothing on your list yet — tap the heart on a club to '
+                      'Nothing on your list yet - tap the heart on a club to '
                       'save it',
                       style: TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
