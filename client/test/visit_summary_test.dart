@@ -23,7 +23,27 @@ CheckInModel fixtureCheckIn(String clubId, DateTime at) => CheckInModel(
   club: fixtureClub(clubId),
 );
 
+CheckInModel rated(String clubId, int day, int? vibe) =>
+    fixtureCheckIn(clubId, DateTime(2026, 9, day, 23)).withDiary(vibe: vibe);
+
 void main() {
+  group('myVibeAtClub', () {
+    test('averages non-null ratings at that club only', () {
+      final result = myVibeAtClub('a', [
+        rated('a', 1, 4),
+        rated('a', 2, 5),
+        rated('a', 3, null),
+        rated('b', 4, 1),
+      ]);
+      expect(result, (average: 4.5, count: 2));
+    });
+
+    test('null when nothing was rated or there are no check-ins', () {
+      expect(myVibeAtClub('a', [rated('a', 1, null)]), isNull);
+      expect(myVibeAtClub('a', []), isNull);
+    });
+  });
+
   group('nightsPerClub', () {
     test('counts distinct nights per club', () {
       final result = nightsPerClub([

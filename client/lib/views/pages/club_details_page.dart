@@ -78,6 +78,14 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
     return [
       const SizedBox(height: 8),
       Text(vibeText(club.vibe), key: const Key('vibeText')),
+      Obx(() {
+        final mine = myVibeAtClub(
+          club.id,
+          Get.find<ClubController>().myCheckIns,
+        );
+        if (mine == null) return const SizedBox.shrink();
+        return Text(myVibeText(mine), key: const Key('myVibeText'));
+      }),
       if (_friendCount > 0) ...[
         const SizedBox(height: 8),
         Text(

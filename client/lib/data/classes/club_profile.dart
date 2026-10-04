@@ -124,6 +124,11 @@ String vibeText(({double average, int count})? vibe) => vibe == null
     ? 'Not enough ratings yet'
     : '★ ${vibe.average.toStringAsFixed(1)} · ${vibe.count} ratings';
 
+/// "You rated it ★4.3 over 5 nights" (or "1 night").
+String myVibeText(({double average, int count}) v) =>
+    'You rated it ★${v.average.toStringAsFixed(1)} over '
+    '${v.count} ${v.count == 1 ? 'night' : 'nights'}';
+
 /// Clubs matching [genre] (all of them when it is null).
 List<ClubModel> clubsWithGenre(List<ClubModel> clubs, String? genre) =>
     genre == null
