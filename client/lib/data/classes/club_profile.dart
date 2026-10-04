@@ -129,3 +129,8 @@ List<ClubModel> clubsWithGenre(List<ClubModel> clubs, String? genre) =>
     genre == null
     ? clubs
     : clubs.where((c) => c.genres.contains(genre)).toList();
+
+/// Clubs whose schedule says "Open now" at [now]; clubs without one are dropped.
+List<ClubModel> clubsOpenAt(List<ClubModel> clubs, DateTime now) => clubs
+    .where((c) => openingChipText(c.openingHours, now) == 'Open now')
+    .toList();

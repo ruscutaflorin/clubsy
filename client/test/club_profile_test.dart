@@ -93,6 +93,27 @@ void main() {
   });
 
   test(
+    'clubsOpenAt keeps open clubs and drops closed or schedule-less ones',
+    () {
+      final open = ClubModel.fromMap({
+        ...club([]).toMap(),
+        'openingHours': {
+          'fri': [
+            {'open': '23:00', 'close': '05:00'},
+          ],
+        },
+      });
+      final noHours = club([]);
+      final saturday2am = DateTime(2026, 10, 3, 2);
+      final saturday6am = DateTime(2026, 10, 3, 6);
+
+      expect(clubsOpenAt([open, noHours], saturday2am), [open]);
+      expect(clubsOpenAt([open, noHours], saturday6am), isEmpty);
+      expect(clubsOpenAt([], saturday2am), isEmpty);
+    },
+  );
+
+  test(
     'ClubModel round-trips the profile fields and defaults old payloads',
     () {
       final parsed = ClubModel.fromMap({
