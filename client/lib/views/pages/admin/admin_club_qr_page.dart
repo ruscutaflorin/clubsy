@@ -54,9 +54,12 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/clubsy-qr-${widget.club.id}.png');
       await file.writeAsBytes(decodeQrDataUrl(qr));
-      await Share.shareXFiles([
-        XFile(file.path, mimeType: 'image/png'),
-      ], subject: widget.club.name);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path, mimeType: 'image/png')],
+          subject: widget.club.name,
+        ),
+      );
     } catch (_) {
       if (mounted) setState(() => error = "Couldn't share the QR code");
     }
@@ -96,8 +99,9 @@ class _AdminClubQrPageState extends State<AdminClubQrPage> {
                   ),
                   OutlinedButton.icon(
                     key: const Key('displayLinkShare'),
-                    onPressed: () =>
-                        Share.share(url, subject: widget.club.name),
+                    onPressed: () => SharePlus.instance.share(
+                      ShareParams(text: url, subject: widget.club.name),
+                    ),
                     icon: const Icon(Icons.share),
                     label: const Text('Share'),
                   ),
