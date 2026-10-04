@@ -758,7 +758,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         at Saturday 06:00; closed days; a malformed JSON shape is rejected at validation),
         Flutter tests for the chip text, `pnpm test` and `flutter test`.
 
-- [ ] 7.3 Favourites ("Want to go") list and map layer.
+- [x] 7.3 Favourites ("Want to go") list and map layer.
       - Schema: `Favorite {userId, clubId, createdAt, @@unique([userId, clubId])}`.
       - Server: `PUT /api/clubs/:id/favorite` and `DELETE /api/clubs/:id/favorite` (idempotent,
         404 for unapproved clubs), and `GET /api/clubs/favorites`. Club list responses include
