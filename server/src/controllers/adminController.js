@@ -55,9 +55,13 @@ export const getScorecard = async (req, res) => {
   }
 };
 
-const FOOTFALL_WEEKS = 12;
+const ALLOWED_FOOTFALL_WEEKS = [4, 12, 26, 52];
 
 export const getClubFootfall = async (req, res) => {
+  const weeks = Number(req.query.weeks ?? "12");
+  if (!ALLOWED_FOOTFALL_WEEKS.includes(weeks)) {
+    return res.status(400).json({ message: "weeks must be 4, 12, 26 or 52" });
+  }
   try {
     const club = await prisma.club.findUnique({
       where: { id: req.params.id },
@@ -67,7 +71,7 @@ export const getClubFootfall = async (req, res) => {
 
     const now = new Date();
     // One extra week of slack so the oldest Monday-aligned bucket is fully covered.
-    const since = new Date(now.getTime() - (FOOTFALL_WEEKS + 1) * 7 * DAY_MS);
+    const since = new Date(now.getTime() - (weeks + 1) * 7 * DAY_MS);
     const checkIns = await prisma.checkIn.findMany({
       where: { clubId: club.id, checkedInAt: { gte: since } },
       select: { userId: true, checkedInAt: true, distanceMeters: true },
@@ -86,7 +90,7 @@ export const getClubFootfall = async (req, res) => {
     }));
     const distances = checkIns.map((c) => c.distanceMeters).filter((d) => typeof d === "number");
     res.json({
-      ...computeClubFootfall({ checkIns, firstVisits, now, weeks: FOOTFALL_WEEKS }),
+      ...computeClubFootfall({ checkIns, firstVisits, now, weeks }),
       distance: computeDistanceHealth(distances),
     });
   } catch (error) {

@@ -1,9 +1,23 @@
 import 'package:clubsy/data/classes/club_footfall_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/services/admin_service.dart';
 import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+class _FakeAdminService extends AdminService {
+  final Map<String, dynamic> body;
+  final List<int> requested = [];
+
+  _FakeAdminService(this.body);
+
+  @override
+  Future<ClubFootfallModel> getClubFootfall(String id, {int weeks = 12}) async {
+    requested.add(weeks);
+    return ClubFootfallModel.fromMap(body);
+  }
+}
 
 void main() {
   final club = ClubModel(

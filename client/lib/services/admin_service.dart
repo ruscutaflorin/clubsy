@@ -75,8 +75,8 @@ class AdminService {
     return ClubDataHealthModel.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<ClubFootfallModel> getClubFootfall(String id) async {
-    final data = await _api.get('/admin/clubs/$id/footfall');
+  Future<ClubFootfallModel> getClubFootfall(String id, {int weeks = 12}) async {
+    final data = await _api.get('/admin/clubs/$id/footfall?weeks=$weeks');
     return ClubFootfallModel.fromMap(Map<String, dynamic>.from(data));
   }
 
