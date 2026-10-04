@@ -15,6 +15,17 @@ ClubModel club(List<String> genres) => ClubModel(
 );
 
 void main() {
+  test('myVibeText rounds to one decimal and singularises one night', () {
+    expect(
+      myVibeText((average: 4.25, count: 5)),
+      'You rated it ★4.3 over 5 nights',
+    );
+    expect(
+      myVibeText((average: 4.0, count: 1)),
+      'You rated it ★4.0 over 1 night',
+    );
+  });
+
   test('vibeText shows the aggregate or the not-enough hint', () {
     expect(vibeText((average: 4.26, count: 27)), '★ 4.3 · 27 ratings');
     expect(vibeText(null), 'Not enough ratings yet');

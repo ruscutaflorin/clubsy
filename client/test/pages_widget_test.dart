@@ -108,6 +108,29 @@ void main() {
     });
   });
 
+  group('ClubDetailsPage my vibe', () {
+    final club = fixtureClub('a', 'Club Alpha');
+
+    testWidgets('shows my own rating when I rated a night here', (
+      tester,
+    ) async {
+      controller.myCheckIns.add(fixtureCheckIn('1', club).withDiary(vibe: 4));
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      final line = tester.widget<Text>(find.byKey(const Key('myVibeText')));
+      expect(line.data, contains('You rated it'));
+    });
+
+    testWidgets('hides the line when I never rated this club', (tester) async {
+      controller.myCheckIns.add(fixtureCheckIn('1', club));
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('myVibeText')), findsNothing);
+    });
+  });
+
   group('ClubDetailsPage pairings', () {
     final a = fixtureClub('a', 'Club Alpha');
     final b = fixtureClub('b', 'Club Beta');
