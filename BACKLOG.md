@@ -755,3 +755,91 @@ Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data qualit
   - Scope: client only, no server or schema change. In `client/lib/widgets/check_in_success_sheet.dart`, read the stored `yearly_goal_<year>` preference the way `YearlyGoalCard` does. Show a line only when a goal is set and the check-in is the first one of its night, built with `yearlyGoalProgress` and `goalPaceLine` from `client/lib/data/classes/yearly_goal.dart`. Show nothing without a goal or for a second club on the same night. Check the success sheet's existing tests before changing its constructor. Out: notifications, server goals.
   - Acceptance: widget tests pump the success sheet with `SharedPreferences.setMockInitialValues({'yearly_goal_2026': 30})` and fixture check-ins. A first check-in of the night finds "of 30 for 2026"; a second club on the same night finds nothing; no stored goal finds nothing. `node .nightshift/test-all.mjs` passes.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These close the privacy gap they left in the data export, add the first per-friend page, and make the new opening-hours data useful when choosing where to go.
+
+- [ ] B76 "Download my data" covers everything Phases 7 and 8 added: profile, notes, favourites, friends, blocks and reports — status: approved
+  - Why: principle 2 promises that users can export their data, but `exportMyData` still returns only the Phase 5 fields. It leaves out username, home city, consent records, privacy settings, night notes and vibe ratings, favourites, friendships, blocks and the reports a user filed. An export that skips the private diary and the social graph doesn't keep that promise, and the pilot's legal review (5.7) will check it.
+  - Scope: server only, no schema change, no client change. The client already saves whatever JSON the endpoint returns, and the CSV (B64) stays check-ins only.
+    - In `exportMyData` in `server/src/controllers/authController.js` (`GET /api/auth/me/export`), add `username`, `homeCity`, `acceptedTermsAt`, `termsVersion`, `ageConfirmedAt` and `shareNightsWithFriends` to the `user` `select`. Never select `password` or `tokenVersion`.
+    - Add `note`, `vibe`, `vibeAt` and `hiddenFromFriends` to each check-in's `select`.
+    - Add these top-level keys, each loaded with an explicit `select`:
+      - `favorites: [{createdAt, club: {id, name, city}}]` from `prisma.favorite.findMany({ where: { userId } })`.
+      - `friendships: [{status, direction: "sent"|"received", createdAt, respondedAt, other: {username, name}}]`, one entry per `Friendship` row where the user is the requester or the addressee. `direction` is "sent" when the user is the requester. Leave out the other user's id and email.
+      - `blocks: [{createdAt, blocked: {username, name}}]` for blocks the user made. Leave out blocks *against* the user, because they would reveal who blocked them.
+      - `reportsFiled: [{reason, details, status, createdAt}]` for reports the user filed. Leave out the reported user's identity, and leave out reports *against* the user, because they would reveal the reporters.
+    - Keep the `Content-Disposition` header and the existing keys (`exportedAt`, `user`, `checkIns`) unchanged.
+    - Out: other users' data, the admin `handledBy` field, password reset tokens.
+  - Acceptance:
+    - Extend `server/src/__tests__/exportMyData.test.js` (mocked Prisma, supertest):
+      - A user with one favourite, one accepted friendship they received, one block they made and one report they filed gets `favorites`, `friendships` (with `direction: "received"`), `blocks` and `reportsFiled`, each with exactly one entry.
+      - A check-in fixture with `note: "great DJ"` and `vibe: 4` comes back with both fields.
+      - The serialised body contains no `password`, no `tokenVersion`, no email of the other user and no `reportedUserId`.
+      - `prisma.block.findMany` is filtered by `blockerId` (the caller) and `prisma.report.findMany` by `reporterId` (the caller), never by `blockedId` or `reportedUserId`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B77 A friend's nights: tap a friend to see the nights they share with you and the clubs you've both been to — status: approved
+  - Why: the 8.4 feed mixes all friends together, and the friend list leads nowhere. "Where has Ana been?" and "we've both been to 4 of the same clubs" are the natural next steps for the regular and the explorer. The page shows only what 8.0 already lets a friend see (clubs and night dates of ended, unhidden nights, with sharing on both sides), so it exposes nothing new (principles 2 and 3).
+  - Scope: no schema change.
+    - Server, in `server/src/controllers/feedController.js`: add `getFriendNights` for a new `GET /api/feed/friends/:userId` route (authMiddleware) in `server/src/routes/feedRoutes.js`.
+      - Reuse `visibleCheckInsWhere(req.user.id)` unchanged. Narrow it to the one friend with `AND: [{ userId: req.params.userId }]` and keep the existing `userId: { in: friendIds }`. That way a non-friend, a blocked user and a user who doesn't share all get the same empty list, never an error that tells them apart.
+      - Page it exactly like `getFeed` (`PAGE_SIZE`, `page`, `hasMore`) and map rows to `{id, nightDate, club: {id, name, city}}`, never `checkedInAt`.
+      - On page 1 only, add `sharedClubCount`: the number of distinct clubs in the friend's visible check-ins that are also in the caller's own check-ins (`prisma.checkIn.findMany({ where: { userId: req.user.id }, distinct: ["clubId"], select: { clubId: true } })`). It is 0 when the viewer doesn't share.
+    - Client service: add `getFriendNights(String userId, {int page = 1})` to `client/lib/services/feed_service.dart`. It returns the existing `FeedPage` model plus `sharedClubCount` (extend the model, or add a small wrapper next to `FeedPage`, with `fromJson` defaulting the count to 0).
+    - Client page: add `client/lib/views/pages/friend_nights_page.dart`.
+      - The app bar shows the friend's label.
+      - When N > 0, a header (`Key('sharedClubCount')`) shows "You've both been to N clubs".
+      - Below it, the nights list ("Sat 12 Sep · Club X, Cluj") reuses `formatNightLabel` from `client/lib/data/classes/check_in_grouping.dart`, with a "Load more" button while `hasMore` is true.
+      - An empty list shows "No shared nights yet. They appear here when you both share your nights."
+      - The page takes the service as an optional constructor parameter so tests can pass a fake.
+    - In `client/lib/views/pages/friends_page.dart`, give the `ListTile`s of accepted friends (not pending requests) an `onTap` that pushes the page with `Get.to`.
+    - Out: friends' badges, stats or maps, any check-in time, anything about tonight.
+  - Acceptance:
+    - Jest tests in `server/src/__tests__/feed.test.js` (mocked Prisma, supertest):
+      - The Prisma `where` contains the friend-id `in` filter, the requested `userId`, and the not-hidden and night-ended conditions.
+      - A viewer with sharing off gets `{nights: [], sharedClubCount: 0}` and no check-in query runs.
+      - When the friend's visible clubs are A and B and the viewer's clubs are B and C, `sharedClubCount` is 1.
+      - The body contains no `checkedInAt`.
+      - No token gives 401.
+    - A Flutter widget test in a new `client/test/friend_nights_test.dart` pumps `FriendNightsPage` with a fake service (no HTTP). It finds "You've both been to 3 clubs" and a club name. With an empty fixture it finds "No shared nights yet" and no `Key('sharedClubCount')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B78 "Open now" filter in club search — status: approved
+  - Why: 7.2 added opening hours, but they only show on a club's own page. On a night out, "where can I go right now?" is step 4 of the core loop, and the search screen can't answer it. One chip next to the genre chips turns the schedule into a decision.
+  - Scope: client only, no server change.
+    - Pure function: in `client/lib/data/classes/club_profile.dart`, add `List<ClubModel> clubsOpenAt(List<ClubModel> clubs, DateTime now)` next to `clubsWithGenre`. It keeps the clubs where `openingChipText(<the club's opening hours>, now) == 'Open now'`, and drops clubs with no schedule. Take the opening-hours field from `ClubModel`, and derive `now` the same way `ClubDetailsPage` does when it calls `openingChipText`.
+    - Controller: in `client/lib/src/core/controllers/club_search_controller.dart`, add `final openNow = false.obs` and a toggle method, and apply `clubsOpenAt` after `clubsWithGenre` in `filteredResults`. Give the controller an optional `DateTime Function()` clock (default `DateTime.now`) so tests can pin the time.
+    - Page: in `client/lib/views/pages/club_search_page.dart`, add an "Open now" `FilterChip` (`Key('openNowFilter')`) before the genre chips. When the filter leaves no results, show "No clubs open right now".
+    - Out: server-side filtering, "opens soon", filtering the map.
+  - Acceptance:
+    - Flutter unit tests in `client/test/club_profile_test.dart`:
+      - With a Friday 23:00-05:00 schedule, `clubsOpenAt` keeps the club at Saturday 02:00 and drops it at Saturday 06:00.
+      - A club with null hours is dropped.
+      - An empty list gives an empty list.
+    - A Flutter test in `client/test/club_search_controller_test.dart` with a pinned clock: turning on both `openNow` and a genre keeps only clubs that match both, and turning `openNow` off restores the genre-only result.
+    - A widget test in `client/test/club_search_page_test.dart` taps `Key('openNowFilter')` and finds "No clubs open right now" when no fixture club is open.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B79 Find a night by what I wrote: history search matches my night notes — status: proposed
+  - Why: 7.4 turned the history into a diary ("great DJ, went with Ana"), but the B50 search only matches club name and city, so "the night with Ana" can't be found. Notes are the user's own data and the search runs on the device, so this exposes nothing (principle 2).
+  - Scope: client only. Make `filterNightGroups` in `client/lib/data/classes/check_in_grouping.dart` also match `checkIn.note` (case-insensitive, null-safe), and update its doc comment. Change the search field hint in `client/lib/views/pages/check_in_history_page.dart` to "Search clubs, cities or notes". Out: server-side search, searching friends' data.
+  - Acceptance: extend the existing `filterNightGroups` cases in `client/test/check_in_grouping_test.dart` with two checks: "ana" finds a check-in whose note is "went with Ana", and a check-in with a null note doesn't match or crash. `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B80 Moderation that has teeth: an admin can suspend an account from the reports queue — status: proposed
+  - Why: 8.2 lets admins mark a report ACTIONED, but nothing happens to the reported account, so a harasser keeps full access. Principle 3 requires a real moderation path before the social layer grows, and B2, B3 and B5 all depend on one.
+  - Scope: needs a human policy decision first: what a suspension does (sign-in refused, or hidden from social features only), whether it is timed or permanent, what the user is told, and how appeals work. Once that's decided, the likely build is:
+    - Schema: `User.suspendedAt DateTime?` and `suspendedReason`, with a migration.
+    - Routes: `POST /api/admin/users/:id/suspend` and `/unsuspend` (admin only, never the last admin). Suspending increments `tokenVersion`, reusing 7.7.
+    - Enforcement: `authMiddleware` and `signIn` reject suspended users with 403 `{message}`, and suspended users are filtered out of friend and feed queries next to the block helper in `server/src/utils/blocks.js`.
+    - Client: a "Suspend" action in the admin reports queue.
+  - Acceptance (once decided):
+    - Jest tests: a suspended user's old token gets 403 or 401, their sign-in is refused, they disappear from a friend's feed, and a non-admin gets 403 on the suspend route.
+    - A Flutter widget test for the admin action.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
