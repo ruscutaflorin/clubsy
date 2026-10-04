@@ -739,7 +739,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         400; a case-insensitive duplicate → 409), a Flutter widget test for the edit form
         validation, and `pnpm test` plus `flutter test`.
 
-- [ ] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
+- [x] 7.2 Richer club profiles: description, music genres, opening hours, links, and "Open now".
       - Schema: `Club.description String?` (≤ 500), `Club.genres String[]` (from a fixed list in
         `server/src/utils/genres.js`: techno, house, hip-hop, commercial, rock, latin, drum-and-bass,
         live), `Club.openingHours Json?` (`{mon:[{open:"23:00",close:"05:00"}], …}`, close may be
