@@ -18,7 +18,7 @@ class FeedNight {
 
   factory FeedNight.fromMap(Map<String, dynamic> map) {
     final club = map['club'] as Map<String, dynamic>;
-    final user = map['user'] as Map<String, dynamic>;
+    final user = (map['user'] as Map<String, dynamic>?) ?? const {};
     final username = user['username'] as String?;
     return FeedNight(
       id: map['id'] as String,
@@ -37,12 +37,20 @@ class FeedPage {
   final List<FeedNight> nights;
   final bool hasMore;
 
-  const FeedPage({this.nights = const [], this.hasMore = false});
+  /// Clubs both viewer and friend have been to; only sent for a friend's page 1.
+  final int sharedClubCount;
+
+  const FeedPage({
+    this.nights = const [],
+    this.hasMore = false,
+    this.sharedClubCount = 0,
+  });
 
   factory FeedPage.fromMap(Map<String, dynamic> map) => FeedPage(
     nights: ((map['nights'] as List?) ?? [])
         .map((e) => FeedNight.fromMap(e as Map<String, dynamic>))
         .toList(),
     hasMore: map['hasMore'] == true,
+    sharedClubCount: (map['sharedClubCount'] as num?)?.toInt() ?? 0,
   );
 }

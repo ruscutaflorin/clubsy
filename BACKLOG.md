@@ -781,7 +781,7 @@ Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These
     - `node .nightshift/test-all.mjs` passes.
   - Size: M
 
-- [ ] B77 A friend's nights: tap a friend to see the nights they share with you and the clubs you've both been to — status: approved
+- [x] B77 A friend's nights: tap a friend to see the nights they share with you and the clubs you've both been to — status: done
   - Why: the 8.4 feed mixes all friends together, and the friend list leads nowhere. "Where has Ana been?" and "we've both been to 4 of the same clubs" are the natural next steps for the regular and the explorer. The page shows only what 8.0 already lets a friend see (clubs and night dates of ended, unhidden nights, with sharing on both sides), so it exposes nothing new (principles 2 and 3).
   - Scope: no schema change.
     - Server, in `server/src/controllers/feedController.js`: add `getFriendNights` for a new `GET /api/feed/friends/:userId` route (authMiddleware) in `server/src/routes/feedRoutes.js`.

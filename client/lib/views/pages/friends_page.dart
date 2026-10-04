@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/friend_model.dart';
 import 'package:clubsy/src/core/controllers/friend_controller.dart';
+import 'package:clubsy/views/pages/friend_nights_page.dart';
 import 'package:clubsy/widgets/user_actions_menu.dart';
 
 class FriendsPage extends StatefulWidget {
@@ -37,8 +38,9 @@ class _FriendsPageState extends State<FriendsPage> {
   Widget _section(
     String title,
     List<FriendEntry> entries,
-    Widget Function(FriendEntry) actions,
-  ) {
+    Widget Function(FriendEntry) actions, {
+    bool tappable = false,
+  }) {
     if (entries.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,6 +54,11 @@ class _FriendsPageState extends State<FriendsPage> {
             leading: const Icon(Icons.person),
             title: Text(e.label),
             subtitle: e.username != null ? Text(e.name) : null,
+            onTap: tappable
+                ? () => Get.to(
+                    () => FriendNightsPage(userId: e.userId, label: e.label),
+                  )
+                : null,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -148,6 +155,7 @@ class _FriendsPageState extends State<FriendsPage> {
                   tooltip: 'Unfriend',
                   onPressed: () => controller.unfriend(e),
                 ),
+                tappable: true,
               ),
               if (!controller.isLoading.value &&
                   controller.friends.isEmpty &&
