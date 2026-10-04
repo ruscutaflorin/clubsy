@@ -19,6 +19,8 @@ model User {
   checkIns            CheckIn[]
   favorites           Favorite[]
   passwordResetTokens PasswordResetToken[]
+  friendshipsSent     Friendship[]         @relation("FriendshipRequester")
+  friendshipsReceived Friendship[]         @relation("FriendshipAddressee")
 
   username        String?   @unique
   homeCity        String?
@@ -90,6 +92,25 @@ model Favorite {
 
   @@unique([userId, clubId])
   @@index([clubId])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  requester   User             @relation("FriendshipRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addresseeId String
+  addressee   User             @relation("FriendshipAddressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId])
 }
 
 enum Role {

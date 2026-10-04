@@ -51,7 +51,10 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ProfilePage()));
     await tester.pump();
 
-    await tester.ensureVisible(find.byKey(const Key('exportCsvTile')));
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('exportCsvTile')),
+      300,
+    );
     await tester.tap(find.text('Download as spreadsheet (CSV)'));
     await tester.pump();
 

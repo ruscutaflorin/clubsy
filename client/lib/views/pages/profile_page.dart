@@ -10,6 +10,8 @@ import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/change_password_page.dart';
 import 'package:clubsy/views/pages/edit_profile_page.dart';
+import 'package:clubsy/views/pages/friends_page.dart';
+import 'package:clubsy/src/core/controllers/friend_controller.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
@@ -274,6 +276,14 @@ class _EditNameDialogState extends State<EditNameDialog> {
   }
 }
 
+Widget _friendsTrailing(int pending) => Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    if (pending > 0) Badge(label: Text('$pending')),
+    const Icon(Icons.chevron_right),
+  ],
+);
+
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 
@@ -417,6 +427,19 @@ class ProfilePage extends StatelessWidget {
             title: Text('Your ${lastMonthName(DateTime.now())}'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Get.to(() => const RecapPage()),
+          ),
+          ListTile(
+            key: const Key('friendsTile'),
+            leading: const Icon(Icons.people),
+            title: const Text('Friends'),
+            trailing: Get.isRegistered<FriendController>()
+                ? Obx(
+                    () => _friendsTrailing(
+                      Get.find<FriendController>().pendingCount,
+                    ),
+                  )
+                : _friendsTrailing(0),
+            onTap: () => Get.to(() => const FriendsPage()),
           ),
           const SizedBox(height: 24),
           Obx(

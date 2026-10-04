@@ -39,6 +39,7 @@ export function loadConfig(env = process.env) {
     RATE_LIMIT_AUTH_PER_MIN: toInt(env.RATE_LIMIT_AUTH_PER_MIN, 10),
     RATE_LIMIT_CHECKIN_PER_MIN: toInt(env.RATE_LIMIT_CHECKIN_PER_MIN, 6),
     RATE_LIMIT_USERNAME_CHECK_PER_MIN: 30,
+    RATE_LIMIT_FRIEND_REQUESTS_PER_DAY: 20,
     // Bump when the Terms or Privacy Policy change materially.
     TERMS_VERSION: "2026-10-draft",
     PRISMA_LOG_QUERIES: env.PRISMA_LOG_QUERIES === "1",
