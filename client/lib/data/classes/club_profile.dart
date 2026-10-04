@@ -119,6 +119,11 @@ String hoursText(Map<String, dynamic>? hours, String day) {
   return slots.map((s) => '${s.open}-${s.close}').join(', ');
 }
 
+/// "★ 4.3 · 27 ratings", or a hint while the server withholds the aggregate.
+String vibeText(({double average, int count})? vibe) => vibe == null
+    ? 'Not enough ratings yet'
+    : '★ ${vibe.average.toStringAsFixed(1)} · ${vibe.count} ratings';
+
 /// Clubs matching [genre] (all of them when it is null).
 List<ClubModel> clubsWithGenre(List<ClubModel> clubs, String? genre) =>
     genre == null

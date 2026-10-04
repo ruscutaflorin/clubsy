@@ -16,6 +16,9 @@ class ClubModel {
   final String timezone;
   final bool isFavorite;
 
+  /// Aggregate venue rating; null until the server has enough ratings.
+  final ({double average, int count})? vibe;
+
   /// The club's own wall-clock time when the response was built (server-side,
   /// in [timezone]), advanced by the time elapsed since it was received.
   final DateTime? _localNowAtFetch;
@@ -45,6 +48,7 @@ class ClubModel {
     this.websiteUrl,
     this.timezone = 'Europe/Bucharest',
     this.isFavorite = false,
+    this.vibe,
     DateTime? localNow,
   }) : _localNowAtFetch = localNow;
 
@@ -68,6 +72,12 @@ class ClubModel {
       websiteUrl: map['websiteUrl'],
       timezone: map['timezone'] ?? 'Europe/Bucharest',
       isFavorite: map['isFavorite'] ?? false,
+      vibe: map['vibe'] is Map
+          ? (
+              average: (map['vibe']['average'] as num).toDouble(),
+              count: (map['vibe']['count'] as num).toInt(),
+            )
+          : null,
       localNow: map['localNow'] is String
           ? DateTime.tryParse(map['localNow'])
           : null,

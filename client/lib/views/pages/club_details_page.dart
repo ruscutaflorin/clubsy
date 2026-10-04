@@ -66,6 +66,8 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
     final status = openingChipText(club.openingHours, club.localNow);
     final description = club.description;
     return [
+      const SizedBox(height: 8),
+      Text(vibeText(club.vibe), key: const Key('vibeText')),
       if (status != null) ...[
         const SizedBox(height: 8),
         Chip(

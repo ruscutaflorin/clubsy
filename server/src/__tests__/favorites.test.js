@@ -15,6 +15,7 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
     user: { findUnique: userFindUnique },
     club: { findUnique: clubFindUnique, findMany: clubFindMany, count: clubCount },
     favorite: { upsert: favUpsert, deleteMany: favDeleteMany, findMany: favFindMany },
+    checkIn: { groupBy: jest.fn().mockResolvedValue([]) },
   },
 }));
 
