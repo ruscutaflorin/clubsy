@@ -1233,7 +1233,7 @@ Product-owner proposals, 2026-10-04 (night, latest). Club pages can now suggest 
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B100 "Best nights" filter in the history diary: only the nights I rated ★4 or more — status: approved
+- [x] B100 "Best nights" filter in the history diary: only the nights I rated ★4 or more — status: done
   - Why: 7.4 asks for a vibe rating after every night (the morning prompt in `vibe_prompt.dart` keeps people rating), but the diary can only be searched by club or city. "Show me my best nights" is the look-back step (core loop step 3) at its most rewarding, and it is also the quickest way to answer "where should we go again?". It uses only the user's own data, on the device (principle 2).
   - Scope: client only, no server or schema change.
     - Pure logic: in `client/lib/data/classes/check_in_grouping.dart`, next to `filterNightGroups`, add `List<NightGroup> filterBestNights(List<NightGroup> groups, {int minVibe = 4})`. It keeps the check-ins whose `vibe` is non-null and `>= minVibe`, and drops nights left empty, the same way `filterNightGroups` does.

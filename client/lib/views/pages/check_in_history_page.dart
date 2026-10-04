@@ -19,6 +19,7 @@ class CheckInHistoryPage extends StatefulWidget {
 class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
   final _searchController = TextEditingController();
   String _query = '';
+  bool _bestOnly = false;
 
   @override
   void dispose() {
@@ -103,9 +104,11 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
           }
 
           final searching = _query.trim().isNotEmpty;
-          final groups = filterNightGroups(groupByNight(checkIns), _query);
-          final summary = searching ? null : monthSummary(checkIns);
-          final memories = searching
+          final filtering = searching || _bestOnly;
+          var groups = filterNightGroups(groupByNight(checkIns), _query);
+          if (_bestOnly) groups = filterBestNights(groups);
+          final summary = filtering ? null : monthSummary(checkIns);
+          final memories = filtering
               ? <NightMemory>[]
               : onThisNight(checkIns, (widget.now ?? DateTime.now()).toLocal());
           return ListView(
@@ -134,7 +137,27 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
                   onChanged: (value) => setState(() => _query = value),
                 ),
               ),
-              if (searching)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilterChip(
+                    key: const Key('history_best_nights'),
+                    label: const Text('★4+ nights'),
+                    selected: _bestOnly,
+                    onSelected: (value) => setState(() => _bestOnly = value),
+                  ),
+                ),
+              ),
+              if (_bestOnly && groups.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  child: Text(
+                    'No nights rated ★4 or more yet. Rate a night from its diary entry.',
+                    key: Key('history_best_empty'),
+                  ),
+                )
+              else if (searching)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Text(
