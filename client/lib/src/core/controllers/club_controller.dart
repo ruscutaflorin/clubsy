@@ -238,6 +238,27 @@ class ClubController extends GetxController {
     }
   }
 
+  /// Hides or shows one check-in for friends. Optimistic, restored (rethrowing)
+  /// if the server call fails.
+  Future<void> setHiddenFromFriends(String id, bool hidden) async {
+    final index = myCheckIns.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+    final before = myCheckIns[index];
+    myCheckIns[index] = before.withHidden(hidden);
+    try {
+      final saved = await _checkInService.updateCheckIn(
+        id,
+        hiddenFromFriends: hidden,
+      );
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = saved;
+    } catch (_) {
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = before;
+      rethrow;
+    }
+  }
+
   /// Removes a check-in from the map. Optimistic: the list updates at once and
   /// is restored (rethrowing) if the server call fails.
   Future<void> removeCheckIn(String id) async {

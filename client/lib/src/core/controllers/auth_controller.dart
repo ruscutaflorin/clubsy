@@ -143,11 +143,13 @@ class AuthController extends GetxController {
     String? name,
     String? username,
     String? homeCity,
+    bool? shareNightsWithFriends,
   }) async {
     final user = await _authService.updateProfile(
       name: name,
       username: username,
       homeCity: homeCity,
+      shareNightsWithFriends: shareNightsWithFriends,
     );
     _user.value = {...?_user.value, ...user};
   }

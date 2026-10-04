@@ -75,4 +75,18 @@ describe("PATCH /api/check-ins/:id", () => {
     expect(res.status).toBe(200);
     expect(checkInUpdate.mock.calls[0][0].data).toEqual({ note: "with Ana" });
   });
+
+  it("hides and unhides a check-in from friends, even after the vibe window", async () => {
+    findUnique.mockResolvedValue({ id: "c1", userId: "u1", checkedInAt: daysAgo(30) });
+    expect((await patch("c1", { hiddenFromFriends: true })).status).toBe(200);
+    expect(checkInUpdate.mock.calls[0][0].data).toEqual({ hiddenFromFriends: true });
+    await patch("c1", { hiddenFromFriends: false });
+    expect(checkInUpdate.mock.calls[1][0].data).toEqual({ hiddenFromFriends: false });
+  });
+
+  it("400 for a non-boolean hiddenFromFriends", async () => {
+    findUnique.mockResolvedValue({ id: "c1", userId: "u1", checkedInAt: recent() });
+    expect((await patch("c1", { hiddenFromFriends: "yes" })).status).toBe(400);
+    expect(checkInUpdate).not.toHaveBeenCalled();
+  });
 });

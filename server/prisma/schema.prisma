@@ -32,6 +32,8 @@ model User {
   acceptedTermsAt DateTime?
   termsVersion    String?
   ageConfirmedAt  DateTime?
+
+  shareNightsWithFriends Boolean @default(false)
 }
 
 model PasswordResetToken {
@@ -79,6 +81,7 @@ model CheckIn {
   note               String?
   vibe               Int?
   vibeAt             DateTime?
+  hiddenFromFriends  Boolean            @default(false)
   createdAt          DateTime           @default(now())
   user               User               @relation(fields: [userId], references: [id])
   club               Club               @relation(fields: [clubId], references: [id])

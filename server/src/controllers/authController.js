@@ -19,6 +19,7 @@ const profileSelect = {
   acceptedTermsAt: true,
   termsVersion: true,
   ageConfirmedAt: true,
+  shareNightsWithFriends: true,
 };
 
 export const signUp = async (req, res) => {
@@ -276,6 +277,9 @@ export const updateMyProfile = async (req, res) => {
     const data = {};
     if (req.body.name !== undefined) data.name = req.body.name;
     if (req.body.homeCity !== undefined) data.homeCity = req.body.homeCity || null;
+    if (req.body.shareNightsWithFriends !== undefined) {
+      data.shareNightsWithFriends = req.body.shareNightsWithFriends;
+    }
     if (req.body.username !== undefined) {
       data.username = req.body.username;
       const taken = await prisma.user.findFirst({

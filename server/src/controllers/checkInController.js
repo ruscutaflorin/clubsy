@@ -149,8 +149,9 @@ export const updateCheckIn = async (req, res) => {
       return res.status(404).json({ message: "Check-in not found" });
     }
 
-    const { note, vibe } = req.body;
+    const { note, vibe, hiddenFromFriends } = req.body;
     const data = {};
+    if (hiddenFromFriends !== undefined) data.hiddenFromFriends = hiddenFromFriends;
     if (note !== undefined) data.note = note === null || note.trim() === "" ? null : note.trim();
     if (vibe !== undefined) {
       if (Date.now() - new Date(checkInRecord.checkedInAt).getTime() > VIBE_EDIT_WINDOW_MS) {

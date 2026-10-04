@@ -76,6 +76,10 @@ router.patch(
     .trim()
     .isLength({ max: 80 })
     .withMessage('Home city must be at most 80 characters'),
+  body('shareNightsWithFriends')
+    .optional()
+    .isBoolean({ strict: true })
+    .withMessage('shareNightsWithFriends must be a boolean'),
   updateMyProfile
 );
 

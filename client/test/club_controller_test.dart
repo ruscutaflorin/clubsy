@@ -157,6 +157,24 @@ void main() {
       },
     );
 
+    test('setHiddenFromFriends hides a check-in and rolls back when the save fails', () async {
+      final ok = ClubController(checkInService: _FakeCheckInService());
+      ok.myCheckIns.add(_record('n1', 'a'));
+      expect(ok.myCheckIns.single.hiddenFromFriends, isFalse);
+      await ok.setHiddenFromFriends('n1', true);
+      expect(ok.myCheckIns.single.hiddenFromFriends, isTrue);
+
+      final failing = ClubController(
+        checkInService: _FakeCheckInService(deleteFail: true),
+      );
+      failing.myCheckIns.add(_record('n1', 'a'));
+      await expectLater(
+        failing.setHiddenFromFriends('n1', true),
+        throwsException,
+      );
+      expect(failing.myCheckIns.single.hiddenFromFriends, isFalse);
+    });
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -232,8 +250,12 @@ class _FakeCheckInService implements CheckInService {
     String id, {
     String? note,
     int? vibe,
+    bool? hiddenFromFriends,
   }) async {
     if (deleteFail) throw Exception('boom');
-    return _record(id, 'a').withDiary(note: note, vibe: vibe);
+    return _record(
+      id,
+      'a',
+    ).withDiary(note: note, vibe: vibe).withHidden(hiddenFromFriends ?? false);
   }
 }

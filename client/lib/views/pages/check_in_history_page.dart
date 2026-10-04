@@ -54,6 +54,18 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
     }
   }
 
+  Future<void> _toggleHidden(
+    ClubController controller,
+    String id,
+    bool hidden,
+  ) async {
+    try {
+      await controller.setHiddenFromFriends(id, hidden);
+    } catch (_) {
+      Get.snackbar('Error', "Couldn't update this visit. Try again.");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final clubController = Get.find<ClubController>();
@@ -205,11 +217,32 @@ class _CheckInHistoryPageState extends State<CheckInHistoryPage> {
                         ].join('\n'),
                       ),
                       isThreeLine: checkIn.vibe != null || checkIn.note != null,
-                      trailing: IconButton(
-                        key: Key('edit_diary_${checkIn.id}'),
-                        tooltip: 'Note and rating',
-                        icon: const Icon(Icons.edit_note),
-                        onPressed: () => showDiaryEditor(context, checkIn),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            key: Key('hide_from_friends_${checkIn.id}'),
+                            tooltip: checkIn.hiddenFromFriends
+                                ? 'Hidden from friends (tap to show)'
+                                : 'Hide from friends',
+                            icon: Icon(
+                              checkIn.hiddenFromFriends
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () => _toggleHidden(
+                              clubController,
+                              checkIn.id,
+                              !checkIn.hiddenFromFriends,
+                            ),
+                          ),
+                          IconButton(
+                            key: Key('edit_diary_${checkIn.id}'),
+                            tooltip: 'Note and rating',
+                            icon: const Icon(Icons.edit_note),
+                            onPressed: () => showDiaryEditor(context, checkIn),
+                          ),
+                        ],
                       ),
                       onTap: () =>
                           Get.to(() => ClubDetailsPage(club: checkIn.club)),
