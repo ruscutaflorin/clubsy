@@ -15,6 +15,18 @@ ClubModel club(List<String> genres) => ClubModel(
 );
 
 void main() {
+  test('vibeText shows the aggregate or the not-enough hint', () {
+    expect(vibeText((average: 4.26, count: 27)), '★ 4.3 · 27 ratings');
+    expect(vibeText(null), 'Not enough ratings yet');
+    expect(
+      ClubModel.fromMap({
+        ...club([]).toMap(),
+        'vibe': {'average': 4, 'count': 5},
+      }).vibe,
+      (average: 4.0, count: 5),
+    );
+  });
+
   final hours = {
     'fri': [
       {'open': '23:00', 'close': '05:00'},

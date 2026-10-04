@@ -85,7 +85,11 @@ class ClubSearchPage extends StatelessWidget {
               color: isVisited ? Colors.green : null,
             ),
             title: Text(club.name),
-            subtitle: Text(club.city),
+            subtitle: Text(
+              club.vibe == null
+                  ? club.city
+                  : '${club.city} · ${vibeText(club.vibe)}',
+            ),
             onTap: () => Get.to(() => ClubDetailsPage(club: club)),
           );
         },

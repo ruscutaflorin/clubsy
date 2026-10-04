@@ -39,6 +39,7 @@ const club = { id: "c1", name: "Club", city: "X", qrSecret: "s3cret", isApproved
 
 beforeEach(() => {
   jest.clearAllMocks();
+  checkInGroupBy.mockResolvedValue([]);
   userFindUnique.mockImplementation(async ({ where }) => {
     if (where.id === "u1") return { id: "u1", email: "u@x.com", role: "USER" };
     if (where.id === "a1") return { id: "a1", email: "a@x.com", role: "ADMIN" };

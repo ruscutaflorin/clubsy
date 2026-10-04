@@ -20,6 +20,35 @@ const forRole = (club, role) => {
   return rest;
 };
 
+// Aggregate venue "vibe" over recent check-ins. Below VIBE_MIN_RATINGS the field is
+// null (k-anonymity) and only the average and count ever leave the server.
+const VIBE_MIN_RATINGS = 5;
+const VIBE_WINDOW_DAYS = 90;
+
+const vibeByClub = async (clubIds) => {
+  if (clubIds.length === 0) return new Map();
+  const since = new Date(Date.now() - VIBE_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const rows = await prisma.checkIn.groupBy({
+    by: ["clubId"],
+    where: { clubId: { in: clubIds }, vibe: { not: null }, vibeAt: { gte: since } },
+    _avg: { vibe: true },
+    _count: { vibe: true },
+  });
+  return new Map(
+    rows
+      .filter((row) => row._count.vibe >= VIBE_MIN_RATINGS)
+      .map((row) => [
+        row.clubId,
+        { average: Math.round(row._avg.vibe * 10) / 10, count: row._count.vibe },
+      ]),
+  );
+};
+
+const withVibe = async (clubs) => {
+  const vibes = await vibeByClub(clubs.map((club) => club.id));
+  return clubs.map((club) => ({ ...club, vibe: vibes.get(club.id) ?? null }));
+};
+
 // Joins only the caller's favourite rows, so `isFavorite` never reflects anyone else.
 const favoriteInclude = (userId) =>
   userId ? { include: { favorites: { where: { userId }, select: { id: true } } } } : {};
@@ -99,7 +128,7 @@ const parsePositiveInt = (value, fallback) => {
 
 export const getClubs = async (req, res) => {
   try {
-    const { search, city, genre } = req.query;
+    const { search, city, genre, sort } = req.query;
     const page = parsePositiveInt(req.query.page, 1);
     const limit = Math.min(parsePositiveInt(req.query.limit, 20), 50);
     const skip = (page - 1) * limit;
@@ -117,16 +146,38 @@ export const getClubs = async (req, res) => {
       }),
     };
 
-    const [clubs, total] = await Promise.all([
-      prisma.club.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { name: "asc" },
-        ...favoriteInclude(req.user?.id),
-      }),
-      prisma.club.count({ where }),
-    ]);
+    let clubs;
+    let total;
+    if (sort === "vibe") {
+      // Ratings live on check-ins, so rank in memory: best average first, unrated last.
+      const all = await withVibe(
+        await prisma.club.findMany({
+          where,
+          orderBy: { name: "asc" },
+          ...favoriteInclude(req.user?.id),
+        }),
+      );
+      all.sort(
+        (a, b) =>
+          (b.vibe?.average ?? -1) - (a.vibe?.average ?? -1) ||
+          (b.vibe?.count ?? 0) - (a.vibe?.count ?? 0),
+      );
+      total = all.length;
+      clubs = all.slice(skip, skip + limit);
+    } else {
+      const [rows, count] = await Promise.all([
+        prisma.club.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { name: "asc" },
+          ...favoriteInclude(req.user?.id),
+        }),
+        prisma.club.count({ where }),
+      ]);
+      clubs = await withVibe(rows);
+      total = count;
+    }
 
     res.json({
       clubs: clubs.map((club) => forRole(club, req.user?.role)),
@@ -152,7 +203,8 @@ export const getClubById = async (req, res) => {
       return res.status(404).json({ message: "Club not found" });
     }
 
-    res.json(forRole(club, req.user?.role));
+    const [withRating] = await withVibe([club]);
+    res.json(forRole(withRating, req.user?.role));
   } catch (error) {
     console.error("Get club error:", error);
     res.status(500).json({ message: "Error fetching club" });
