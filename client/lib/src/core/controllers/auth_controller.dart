@@ -133,6 +133,22 @@ class AuthController extends GetxController {
     _user.value = await _authService.updateName(name);
   }
 
+  Future<void> updateProfile({
+    String? name,
+    String? username,
+    String? homeCity,
+  }) async {
+    final user = await _authService.updateProfile(
+      name: name,
+      username: username,
+      homeCity: homeCity,
+    );
+    _user.value = {...?_user.value, ...user};
+  }
+
+  Future<bool> isUsernameAvailable(String username) =>
+      _authService.isUsernameAvailable(username);
+
   Future<void> signOut() async {
     debugPrint('AuthController: Signing out user...');
     await _authService.signOut();

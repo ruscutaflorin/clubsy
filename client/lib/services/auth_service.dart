@@ -34,7 +34,14 @@ class AuthService {
   ) async {
     final data = await _api.post(
       '/auth/signup',
-      body: {'email': email, 'password': password, 'name': name},
+      body: {
+        'email': email,
+        'password': password,
+        'name': name,
+        // The register page only enables Sign Up once both boxes are ticked.
+        'acceptTerms': true,
+        'ageConfirmed': true,
+      },
       authenticated: false,
     ) as Map<String, dynamic>;
     await _saveAuthData(data['token'], data['user']);
@@ -86,6 +93,34 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(userKey, json.encode(user));
     return user;
+  }
+
+  /// Updates the sent profile fields (`PATCH /auth/me`) and refreshes the
+  /// cached user. A 409 means the username is taken.
+  Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? username,
+    String? homeCity,
+  }) async {
+    final data = await _api.patch(
+      '/auth/me',
+      body: {'name': ?name, 'username': ?username, 'homeCity': ?homeCity},
+      expireSession: false,
+    ) as Map<String, dynamic>;
+    final user = data['user'] as Map<String, dynamic>;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(userKey, json.encode({...?await getUser(), ...user}));
+    return user;
+  }
+
+  /// Whether [username] is free for the signed-in user
+  /// (`GET /auth/username-available`).
+  Future<bool> isUsernameAvailable(String username) async {
+    final data = await _api.get(
+      '/auth/username-available',
+      query: {'u': username},
+    ) as Map<String, dynamic>;
+    return data['available'] == true;
   }
 
   Future<void> signOut() async {

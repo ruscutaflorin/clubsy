@@ -9,6 +9,7 @@ import 'package:clubsy/services/data_export_service.dart';
 import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/change_password_page.dart';
+import 'package:clubsy/views/pages/edit_profile_page.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
 import 'package:clubsy/views/pages/my_cities_page.dart';
 import 'package:clubsy/views/pages/recap_page.dart';
@@ -355,6 +356,12 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ],
                 ),
+                Obx(() {
+                  final username = authController.user?['username'];
+                  return username == null
+                      ? const SizedBox.shrink()
+                      : Text('@$username', key: const Key('profileHandle'));
+                }),
                 Obx(() => Text(authController.user?['email'] ?? '')),
               ],
             ),
@@ -450,6 +457,13 @@ class ProfilePage extends StatelessWidget {
             title: const Text('Download as spreadsheet (CSV)'),
             trailing: const Icon(Icons.chevron_right),
             onTap: _exportMyCheckInsCsv,
+          ),
+          ListTile(
+            key: const Key('editProfileTile'),
+            leading: const Icon(Icons.person_outline),
+            title: const Text('Edit profile'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const EditProfilePage()),
           ),
           ListTile(
             key: const Key('changePasswordTile'),

@@ -16,6 +16,12 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   checkIns  CheckIn[]
+
+  username        String?   @unique
+  homeCity        String?
+  acceptedTermsAt DateTime?
+  termsVersion    String?
+  ageConfirmedAt  DateTime?
 }
 
 model Club {

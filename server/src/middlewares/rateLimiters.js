@@ -13,6 +13,16 @@ export const authLimiter = rateLimit({
 });
 
 // Mount after authMiddleware: keyed by the signed-in user.
+export const usernameCheckLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: config.RATE_LIMIT_USERNAME_CHECK_PER_MIN,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.id,
+  message: tooMany("Too many username checks, try again in a minute"),
+});
+
+// Mount after authMiddleware: keyed by the signed-in user.
 export const checkInLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: config.RATE_LIMIT_CHECKIN_PER_MIN,
