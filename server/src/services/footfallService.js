@@ -37,6 +37,17 @@ export const computeDistanceHealth = (distances, { limit = MAX_CHECK_IN_DISTANCE
   return { count, medianMeters, p90Meters, nearLimitShare, status };
 };
 
+// Aggregate 1-5 vibe ratings; below `min` ratings the average and distribution are withheld.
+export const computeVibeSummary = (ratings, { min = 5 } = {}) => {
+  const valid = ratings.filter((r) => Number.isInteger(r) && r >= 1 && r <= 5);
+  const count = valid.length;
+  if (count < min) return { count, average: null, distribution: null };
+  const distribution = [0, 0, 0, 0, 0];
+  for (const r of valid) distribution[r - 1] += 1;
+  const average = Math.round((valid.reduce((a, b) => a + b, 0) / count) * 10) / 10;
+  return { count, average, distribution };
+};
+
 // Pure aggregation over one club's check-in rows (no database); returns aggregates only, never ids.
 // `firstVisits` is [{ userId, firstCheckInAt }]: each visitor's earliest check-in at this club ever.
 // `byWeekday` is indexed like Date#getUTCDay (0 = Sunday), by the night a check-in belongs to.

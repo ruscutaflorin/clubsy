@@ -372,13 +372,14 @@ describe("admin club footfall route", () => {
   it("defaults to 12 weekly buckets, with distance health and no user ids", async () => {
     clubFindUnique.mockResolvedValue({ id: "c1" });
     checkInFindMany.mockResolvedValue([
-      { userId: "u1", checkedInAt: new Date(), distanceMeters: 42 },
+      { userId: "u1", checkedInAt: new Date(), distanceMeters: 42, vibe: 4 },
     ]);
     checkInGroupBy.mockResolvedValue([{ userId: "u1", _min: { checkedInAt: new Date() } }]);
     const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
     expect(res.status).toBe(200);
     expect(res.body.weekly).toHaveLength(12);
     expect(res.body.distance.count).toBe(1);
+    expect(res.body.vibe.count).toBe(1);
     expect(JSON.stringify(res.body)).not.toMatch(/userId|u1/);
   });
 
