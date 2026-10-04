@@ -97,6 +97,9 @@ class ApiClient {
     expireSession: expireSession,
   );
 
+  Future<dynamic> put(String path, {Object? body, bool authenticated = true}) =>
+      _send('PUT', path, body: body, authenticated: authenticated);
+
   Future<dynamic> patch(
     String path, {
     Object? body,

@@ -67,9 +67,18 @@ class _ClubMapPageState extends State<ClubMapPage> {
           final visited = clubController.visitedClubIds;
           final nights = nightsPerClub(clubController.myCheckIns);
           final visitedOnly = clubController.visitedOnly.value;
-          final clubs = clubsForMap(clubController.clubs, visited, visitedOnly);
+          final wantToGoOnly = clubController.wantToGoOnly.value;
+          final favorites = clubController.favoriteIds.toSet();
+          final clubs = clubsForMap(
+            clubController.clubs,
+            visited,
+            visitedOnly,
+            favoriteIds: favorites,
+            wantToGoOnly: wantToGoOnly,
+          );
           final bounds = boundsFor(clubs);
-          final showEmptyHint = visitedOnly && clubs.isEmpty;
+          final showEmptyHint = visitedOnly && !wantToGoOnly && clubs.isEmpty;
+          final showEmptyWantToGo = wantToGoOnly && clubs.isEmpty;
 
           return Stack(
             children: [
@@ -104,6 +113,7 @@ class _ClubMapPageState extends State<ClubMapPage> {
                         child: ClubPin(
                           club: club,
                           isVisited: visited.contains(club.id),
+                          isFavorite: favorites.contains(club.id),
                           nights: nights[club.id] ?? 0,
                           onTap: () =>
                               Get.to(() => ClubDetailsPage(club: club)),
@@ -123,18 +133,31 @@ class _ClubMapPageState extends State<ClubMapPage> {
                     children: [
                       Expanded(
                         child: Center(
-                          child: SegmentedButton<bool>(
+                          child: SegmentedButton<String>(
                             segments: const [
-                              ButtonSegment(value: false, label: Text('All')),
+                              ButtonSegment(value: 'all', label: Text('All')),
                               ButtonSegment(
-                                value: true,
+                                value: 'visited',
                                 label: Text('Visited'),
                               ),
+                              ButtonSegment(
+                                value: 'want',
+                                label: Text('Want to go'),
+                              ),
                             ],
-                            selected: {visitedOnly},
-                            onSelectionChanged: (selection) =>
-                                clubController.visitedOnly.value =
-                                    selection.first,
+                            selected: {
+                              wantToGoOnly
+                                  ? 'want'
+                                  : visitedOnly
+                                  ? 'visited'
+                                  : 'all',
+                            },
+                            onSelectionChanged: (selection) {
+                              clubController.visitedOnly.value =
+                                  selection.first == 'visited';
+                              clubController.wantToGoOnly.value =
+                                  selection.first == 'want';
+                            },
                           ),
                         ),
                       ),
@@ -160,6 +183,18 @@ class _ClubMapPageState extends State<ClubMapPage> {
                     padding: EdgeInsets.all(24),
                     child: Text(
                       "No check-ins yet — scan a club's QR to add your first pin",
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              if (showEmptyWantToGo)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Nothing on your list yet — tap the heart on a club to '
+                      'save it',
                       style: TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),

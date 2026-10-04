@@ -38,6 +38,12 @@ class ClubController extends GetxController {
   final isLoading = false.obs;
   final visitedOnly = false.obs;
 
+  /// The "Want to go" map filter; takes precedence over [visitedOnly].
+  final wantToGoOnly = false.obs;
+
+  /// Ids of the caller's favourite clubs, kept in step with the server.
+  final favoriteIds = <String>{}.obs;
+
   /// Why the last [refresh] failed, or null when it succeeded.
   final loadError = RxnString();
 
@@ -68,6 +74,7 @@ class ClubController extends GetxController {
       // A network refresh that finished first wins over the cache.
       if (cached == null || dataSavedAt.value != null) return;
       clubs.value = cached.clubs;
+      _syncFavorites();
       myCheckIns.value = cached.checkIns;
       stats.value = cached.stats;
       dataSavedAt.value = cached.savedAt;
@@ -88,6 +95,7 @@ class ClubController extends GetxController {
         _loadCityProgress(),
       ]);
       clubs.value = results[0] as List<ClubModel>;
+      _syncFavorites();
       myCheckIns.value = results[1] as List<CheckInModel>;
       stats.value = results[2] as CheckInStatsModel;
       achievements.value =
@@ -121,8 +129,41 @@ class ClubController extends GetxController {
     }
   }
 
+  void _syncFavorites() {
+    favoriteIds.assignAll([
+      for (final club in clubs)
+        if (club.isFavorite) club.id,
+    ]);
+  }
+
+  /// Hearts or un-hearts a club. Optimistic: the set changes at once and is
+  /// restored (rethrowing) if the server call fails.
+  Future<void> toggleFavorite(String clubId) async {
+    final wasFavorite = favoriteIds.contains(clubId);
+    if (wasFavorite) {
+      favoriteIds.remove(clubId);
+    } else {
+      favoriteIds.add(clubId);
+    }
+    try {
+      await _clubService.setFavorite(clubId, !wasFavorite);
+    } catch (_) {
+      if (wasFavorite) {
+        favoriteIds.add(clubId);
+      } else {
+        favoriteIds.remove(clubId);
+      }
+      rethrow;
+    }
+  }
+
   Future<
-    ({CheckInModel record, CheckInOutcome outcome, List<BadgeModel> unlocked})
+    ({
+      CheckInModel record,
+      CheckInOutcome outcome,
+      List<BadgeModel> unlocked,
+      bool tickedOffList,
+    })
   >
   checkIn({
     required String clubId,
@@ -156,6 +197,7 @@ class ClubController extends GetxController {
       record: checkInRecord,
       outcome: outcome,
       unlocked: newlyEarned(before, after),
+      tickedOffList: outcome.isFirstVisit && favoriteIds.contains(clubId),
     );
   }
 

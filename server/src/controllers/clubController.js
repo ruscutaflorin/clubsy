@@ -7,15 +7,22 @@ import { displayKey, generateClubQr, generateQrSecret } from "../services/venueQ
 
 // qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
 const forRole = (club, role) => {
+  // `favorites` holds the caller's own rows only (see favoriteInclude).
+  const { favorites, ...plain } = club;
   // `localNow` is the club's own wall-clock time, for the client's "Open now".
   const withNow = {
-    ...club,
+    ...plain,
+    ...(favorites && { isFavorite: favorites.length > 0 }),
     ...(club.timezone && { localNow: localNowString(club.timezone) }),
   };
   if (role === "ADMIN") return withNow;
   const { qrSecret, ...rest } = withNow;
   return rest;
 };
+
+// Joins only the caller's favourite rows, so `isFavorite` never reflects anyone else.
+const favoriteInclude = (userId) =>
+  userId ? { include: { favorites: { where: { userId }, select: { id: true } } } } : {};
 
 // Shared error mapping: Prisma P2025 (record not found) is a 404, not a 500.
 const handleClubError = (res, error, label, message) => {
@@ -116,6 +123,7 @@ export const getClubs = async (req, res) => {
         skip,
         take: limit,
         orderBy: { name: "asc" },
+        ...favoriteInclude(req.user?.id),
       }),
       prisma.club.count({ where }),
     ]);
@@ -135,7 +143,10 @@ export const getClubById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const club = await prisma.club.findUnique({ where: { id } });
+    const club = await prisma.club.findUnique({
+      where: { id },
+      ...favoriteInclude(req.user?.id),
+    });
 
     if (!club || (!club.isApproved && req.user?.role !== "ADMIN")) {
       return res.status(404).json({ message: "Club not found" });
@@ -250,6 +261,53 @@ export const rotateClubQr = async (req, res) => {
   } catch (error) {
     console.error("Rotate club QR error:", error);
     res.status(500).json({ message: "Error rotating club QR" });
+  }
+};
+
+export const getFavorites = async (req, res) => {
+  try {
+    const rows = await prisma.favorite.findMany({
+      where: { userId: req.user.id, club: { isApproved: true } },
+      include: { club: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({
+      clubs: rows.map((row) => forRole({ ...row.club, favorites: [row] }, req.user.role)),
+    });
+  } catch (error) {
+    console.error("Get favorites error:", error);
+    res.status(500).json({ message: "Error fetching favorites" });
+  }
+};
+
+export const addFavorite = async (req, res) => {
+  try {
+    const club = await prisma.club.findUnique({ where: { id: req.params.id } });
+    if (!club || !club.isApproved) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+    const userId = req.user.id;
+    await prisma.favorite.upsert({
+      where: { userId_clubId: { userId, clubId: club.id } },
+      create: { userId, clubId: club.id },
+      update: {},
+    });
+    res.json({ isFavorite: true });
+  } catch (error) {
+    console.error("Add favorite error:", error);
+    res.status(500).json({ message: "Error saving favorite" });
+  }
+};
+
+export const removeFavorite = async (req, res) => {
+  try {
+    await prisma.favorite.deleteMany({
+      where: { userId: req.user.id, clubId: req.params.id },
+    });
+    res.status(204).end();
+  } catch (error) {
+    console.error("Remove favorite error:", error);
+    res.status(500).json({ message: "Error removing favorite" });
   }
 };
 

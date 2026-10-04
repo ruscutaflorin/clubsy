@@ -337,6 +337,7 @@ export const deleteMyAccount = async (req, res) => {
     // When 7.7 lands, bump tokenVersion first.
     await prisma.$transaction([
       prisma.checkIn.deleteMany({ where: { userId } }),
+      prisma.favorite.deleteMany({ where: { userId } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);
 
