@@ -13,6 +13,11 @@ class FeedService {
     return FeedPage.fromMap(data as Map<String, dynamic>);
   }
 
+  Future<FeedPage> getFriendNights(String userId, {int page = 1}) async {
+    final data = await _api.get('/feed/friends/$userId?page=$page');
+    return FeedPage.fromMap(data as Map<String, dynamic>);
+  }
+
   Future<int> friendCountForClub(String clubId) async {
     final data = await _api.get('/feed/clubs/$clubId/friends-count');
     return (data['count'] as num?)?.toInt() ?? 0;
