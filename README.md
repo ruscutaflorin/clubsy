@@ -23,8 +23,12 @@ pnpm dev                        # API on http://localhost:3000
 
 ```sh
 cd client
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
+flutter run
 ```
+
+On Android the app defaults to `http://10.0.2.2:3000/api` (the emulator's alias for your machine),
+so a plain run or an Android Studio build reaches the local server. On a physical phone, pass your
+PC's LAN address: `flutter run --dart-define=API_BASE_URL=http://<LAN-IP>:3000/api`.
 
 ## Testing a check-in
 

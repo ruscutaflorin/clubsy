@@ -74,8 +74,9 @@ class ApiClient {
     required this.tokenProvider,
     this.onUnauthorized,
     this.timeout = const Duration(seconds: 15),
-    this.baseUrl = apiBaseUrl,
-  }) : _client = client ?? http.Client();
+    String? baseUrl,
+  }) : baseUrl = baseUrl ?? apiBaseUrl,
+       _client = client ?? http.Client();
 
   Future<dynamic> get(
     String path, {
