@@ -75,6 +75,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
 
   List<Widget> _profileSection(BuildContext context) {
     final status = openingChipText(club.openingHours, club.localNow);
+    final detail = openingDetailText(club.openingHours, club.localNow);
     final description = club.description;
     return [
       const SizedBox(height: 8),
@@ -109,6 +110,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
               ? const TextStyle(color: Colors.white)
               : null,
         ),
+        if (detail != null) Text(detail, key: const Key('openingDetailText')),
       ],
       if (club.genres.isNotEmpty) ...[
         const SizedBox(height: 8),

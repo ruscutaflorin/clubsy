@@ -72,6 +72,43 @@ String? openingChipText(Map<String, dynamic>? hours, DateTime now) {
   return later.isEmpty ? 'Closed' : 'Opens ${later.first.open}';
 }
 
+/// "Until 05:00" while open, "Next: Fri 23:00" when closed with no later slot
+/// today, or null when the chip already says "Opens HH:MM" or there is no
+/// schedule.
+String? openingDetailText(Map<String, dynamic>? hours, DateTime now) {
+  final chip = openingChipText(hours, now);
+  if (hours == null || chip == null || chip.startsWith('Opens')) return null;
+  final minutes = now.hour * 60 + now.minute;
+
+  if (chip == 'Open now') {
+    final yesterday = weekdayKeys[(now.weekday + 5) % 7];
+    for (final s in _slots(hours, yesterday)) {
+      if (_minutes(s.close) < _minutes(s.open) && minutes < _minutes(s.close)) {
+        return 'Until ${s.close}';
+      }
+    }
+    for (final s in _slots(hours, weekdayKeys[now.weekday - 1])) {
+      final start = _minutes(s.open);
+      final end = _minutes(s.close);
+      if (end > start ? minutes >= start && minutes < end : minutes >= start) {
+        return 'Until ${s.close}';
+      }
+    }
+    return null;
+  }
+
+  for (var offset = 1; offset <= 7; offset++) {
+    final key = weekdayKeys[(now.weekday - 1 + offset) % 7];
+    final slots = _slots(hours, key).toList()
+      ..sort((a, b) => _minutes(a.open).compareTo(_minutes(b.open)));
+    if (slots.isNotEmpty) {
+      final label = weekdayLabels[key]!.substring(0, 3);
+      return 'Next: $label ${slots.first.open}';
+    }
+  }
+  return null;
+}
+
 /// One display row per weekday, e.g. Friday / `23:00-05:00`, or `Closed`.
 List<({String day, String hours})> openingHoursRows(
   Map<String, dynamic>? hours,
