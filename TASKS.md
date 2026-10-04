@@ -722,7 +722,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
       `server/.env` (copied into every worktree) points at it, and `.nightshift/rules.md` explains
       how to migrate and reset it.
 
-- [ ] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
+- [x] 7.1 Public-safe user profile: a unique username, an editable display name, a home city, and
       server-side consent records.
       - Schema: `User.username String? @unique` (3-20 characters, `[a-z0-9_]`, stored lowercase),
         `User.homeCity String?`, `User.acceptedTermsAt DateTime?`, `User.termsVersion String?`,
