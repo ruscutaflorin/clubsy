@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 import 'package:clubsy/src/core/controllers/theme_controller.dart';
@@ -407,6 +408,20 @@ class ProfilePage extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
               ],
+            );
+          }),
+          Obx(() {
+            final text = yourSoundText(
+              genreNights(clubController.myCheckIns.toList()),
+            );
+            if (text == null) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                text,
+                key: const Key('yourSoundText'),
+                textAlign: TextAlign.center,
+              ),
             );
           }),
           Obx(() {
