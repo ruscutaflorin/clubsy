@@ -27,6 +27,9 @@ export function loadConfig(env = process.env) {
     CORS_ORIGINS: corsList.length > 0 ? corsList : NODE_ENV === "production" ? [] : null,
     RATE_LIMIT_AUTH_PER_MIN: toInt(env.RATE_LIMIT_AUTH_PER_MIN, 10),
     RATE_LIMIT_CHECKIN_PER_MIN: toInt(env.RATE_LIMIT_CHECKIN_PER_MIN, 6),
+    RATE_LIMIT_USERNAME_CHECK_PER_MIN: 30,
+    // Bump when the Terms or Privacy Policy change materially.
+    TERMS_VERSION: "2026-10-draft",
     PRISMA_LOG_QUERIES: env.PRISMA_LOG_QUERIES === "1",
   };
 }

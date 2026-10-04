@@ -56,6 +56,7 @@ const call = (method, path) => request(app)[method](path);
 describe("auth wiring", () => {
   it.each([
     ["get", "/api/auth/me"],
+    ["get", "/api/auth/username-available"],
     ["patch", "/api/auth/me"],
     ["delete", "/api/auth/me"],
     ["get", "/api/auth/me/export"],

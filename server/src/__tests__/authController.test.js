@@ -10,6 +10,7 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
 const bcrypt = (await import("bcryptjs")).default;
 const jwt = (await import("jsonwebtoken")).default;
 const { signUp, signIn, getCurrentUser } = await import("../controllers/authController.js");
+const { default: config } = await import("../config.js");
 const { default: app } = await import("../app.js");
 
 const makeRes = () => {
@@ -21,7 +22,14 @@ const makeRes = () => {
 
 // Validation goes through the real routes; the sign-in/up limiter allows 10 requests per
 // minute per IP in this file, and these tests send 6.
-const signUpRequest = (body) => request(app).post("/api/auth/signup").send(body);
+const validSignUp = {
+  email: "a@b.com",
+  password: "password1",
+  name: "A",
+  acceptTerms: true,
+  ageConfirmed: true,
+};
+const signUpRequest =(body) => request(app).post("/api/auth/signup").send(body);
 const signInRequest = (body) => request(app).post("/api/auth/signin").send(body);
 
 beforeEach(() => {
@@ -63,9 +71,24 @@ describe("signUp", () => {
   it("POST /signup accepts valid input and returns 201 with a token", async () => {
     findUnique.mockResolvedValue(null);
     create.mockImplementation(async ({ data }) => ({ id: "u1", ...data }));
-    const res = await signUpRequest({ email: "a@b.com", password: "password1", name: "A" });
+    const res = await signUpRequest(validSignUp);
     expect(res.status).toBe(201);
     expect(typeof res.body.token).toBe("string");
+    const stored = create.mock.calls[0][0].data;
+    expect(stored.termsVersion).toBe(config.TERMS_VERSION);
+    expect(stored.acceptedTermsAt).toBeInstanceOf(Date);
+    expect(stored.ageConfirmedAt).toBeInstanceOf(Date);
+  });
+
+  it.each([
+    ["terms not accepted", { acceptTerms: false }],
+    ["terms missing", { acceptTerms: undefined }],
+    ["age not confirmed", { ageConfirmed: false }],
+    ["age missing", { ageConfirmed: undefined }],
+  ])("POST /signup rejects %s with 400 and creates no user", async (_label, override) => {
+    const res = await signUpRequest({ ...validSignUp, ...override });
+    expect(res.status).toBe(400);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("stores a hashed password and never returns it", async () => {

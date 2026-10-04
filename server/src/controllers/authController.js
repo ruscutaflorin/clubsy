@@ -4,6 +4,14 @@ import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
 import config from "../config.js";
 
+const profileSelect = {
+  username: true,
+  homeCity: true,
+  acceptedTermsAt: true,
+  termsVersion: true,
+  ageConfirmedAt: true,
+};
+
 export const signUp = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -29,13 +37,17 @@ export const signUp = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user in database
+    // Create user in database; consent is validated by the route and stamped here
+    const now = new Date();
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
         role: "USER",
+        acceptedTermsAt: now,
+        termsVersion: config.TERMS_VERSION,
+        ageConfirmedAt: now,
       },
     });
 
@@ -128,6 +140,7 @@ export const getCurrentUser = async (req, res) => {
         name: true,
         role: true,
         createdAt: true,
+        ...profileSelect,
       },
     });
 
@@ -225,7 +238,7 @@ export const changePassword = async (req, res) => {
   }
 };
 
-// Changes the display name of the signed-in user. Only `name` is ever written.
+// Updates name, username and homeCity of the signed-in user. Only the fields sent are written.
 export const updateMyProfile = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -238,16 +251,58 @@ export const updateMyProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const data = {};
+    if (req.body.name !== undefined) data.name = req.body.name;
+    if (req.body.homeCity !== undefined) data.homeCity = req.body.homeCity || null;
+    if (req.body.username !== undefined) {
+      data.username = req.body.username;
+      const taken = await prisma.user.findFirst({
+        where: {
+          username: { equals: data.username, mode: "insensitive" },
+          NOT: { id: req.user.id },
+        },
+        select: { id: true },
+      });
+      if (taken) {
+        return res.status(409).json({ message: "Username is already taken" });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { name: req.body.name },
-      select: { id: true, email: true, name: true, role: true },
+      data,
+      select: { id: true, email: true, name: true, role: true, ...profileSelect },
     });
 
     res.json({ user });
   } catch (error) {
+    if (error?.code === "P2002") {
+      return res.status(409).json({ message: "Username is already taken" });
+    }
     console.error("Update profile error:", error);
     res.status(500).json({ message: "Error updating profile" });
+  }
+};
+
+// Live availability check for the edit-profile form. The caller's own username counts as free.
+export const checkUsernameAvailable = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const taken = await prisma.user.findFirst({
+      where: {
+        username: { equals: req.query.u, mode: "insensitive" },
+        NOT: { id: req.user.id },
+      },
+      select: { id: true },
+    });
+    res.json({ available: !taken });
+  } catch (error) {
+    console.error("Username check error:", error);
+    res.status(500).json({ message: "Error checking username" });
   }
 };
 
