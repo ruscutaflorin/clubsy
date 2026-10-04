@@ -50,7 +50,7 @@ describe("POST /api/friends/requests", () => {
     const res = await send("Bob_99");
     expect(res.status).toBe(202);
     expect(userFindFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { username: "bob_99" } }),
+      expect.objectContaining({ where: expect.objectContaining({ username: "bob_99" }) }),
     );
     expect(fCreate).toHaveBeenCalledWith({ data: { requesterId: "u1", addresseeId: "u2" } });
   });

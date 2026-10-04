@@ -35,7 +35,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: ProfilePage()));
     await tester.pump();
 
-    await tester.ensureVisible(find.byKey(const Key('exportTile')));
+    await tester.scrollUntilVisible(find.byKey(const Key('exportTile')), 300);
     await tester.tap(find.byKey(const Key('exportTile')));
     await tester.pump();
 

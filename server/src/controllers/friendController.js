@@ -1,5 +1,6 @@
 import prisma from "../prisma/client.js";
 import { validationResult } from "express-validator";
+import { visibleToUser } from "../utils/blocks.js";
 
 const userSelect = { id: true, username: true, name: true };
 
@@ -16,7 +17,7 @@ export const sendFriendRequest = async (req, res) => {
 
     const me = req.user.id;
     const target = await prisma.user.findFirst({
-      where: { username: req.body.username },
+      where: { username: req.body.username, ...visibleToUser(me) },
       select: { id: true },
     });
 
@@ -56,7 +57,11 @@ export const listFriends = async (req, res) => {
   try {
     const me = req.user.id;
     const rows = await prisma.friendship.findMany({
-      where: { OR: [{ requesterId: me }, { addresseeId: me }] },
+      where: {
+        OR: [{ requesterId: me }, { addresseeId: me }],
+        requester: visibleToUser(me),
+        addressee: visibleToUser(me),
+      },
       orderBy: { createdAt: "desc" },
       include: { requester: { select: userSelect }, addressee: { select: userSelect } },
     });

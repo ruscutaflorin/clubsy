@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:clubsy/data/classes/admin_report_model.dart';
 import 'package:clubsy/data/classes/friend_model.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/friend_service.dart';
@@ -35,6 +36,21 @@ class FakeFriendService implements FriendService {
 
   @override
   Future<void> unfriend(String id) => _record('unfriend:$id');
+
+  List<FriendEntry> blocked = [];
+
+  @override
+  Future<List<FriendEntry>> getBlocked() async => blocked;
+
+  @override
+  Future<void> block(String userId) => _record('block:$userId');
+
+  @override
+  Future<void> unblock(String userId) => _record('unblock:$userId');
+
+  @override
+  Future<void> report(String userId, String reason, {String? details}) =>
+      _record('report:$userId:$reason:$details');
 }
 
 void main() {
@@ -105,6 +121,52 @@ void main() {
     await controller.accept(entry('z', 'zed'));
     expect(controller.error.value, 'Friend request not found');
     expect(controller.incoming, hasLength(1));
+  });
+
+  test('block goes by user id then refreshes the blocked list', () async {
+    service.blocked = [entry('x', 'xan')];
+    await controller.block(entry('x', 'xan'));
+    expect(service.calls, ['block:u-x']);
+    expect(controller.blocked.single.label, '@xan');
+  });
+
+  test('unblock calls the endpoint and refreshes the blocked list', () async {
+    service.blocked = [entry('x', 'xan')];
+    await controller.loadBlocked();
+    expect(controller.blocked, hasLength(1));
+    service.blocked = [];
+    await controller.unblock(entry('x', 'xan'));
+    expect(service.calls, ['unblock:u-x']);
+    expect(controller.blocked, isEmpty);
+  });
+
+  test('report sends trimmed details and reports a failure', () async {
+    expect(
+      await controller.report(entry('x', 'xan'), 'SPAM', details: ' junk '),
+      isTrue,
+    );
+    expect(service.calls, ['report:u-x:SPAM:junk']);
+    service.failWith = ApiException(404, 'User not found');
+    expect(await controller.report(entry('x', 'xan'), 'SPAM'), isFalse);
+    expect(controller.error.value, 'User not found');
+  });
+
+  test('AdminReport carries the flag and open count from the server', () {
+    final r = AdminReport.fromMap({
+      'id': 'r1',
+      'reason': 'HARASSMENT',
+      'details': null,
+      'status': 'OPEN',
+      'openReports': 3,
+      'flagged': true,
+      'reporter': {'id': 'a', 'username': 'amy', 'name': 'Amy'},
+      'reportedUser': {'id': 'b', 'username': null, 'name': 'Bo'},
+    });
+    expect(r.flagged, isTrue);
+    expect(r.openReports, 3);
+    expect(r.reasonLabel, 'Harassment');
+    expect(r.reportedLabel, 'Bo');
+    expect(r.reporterLabel, '@amy');
   });
 
   test('FriendEntry falls back to the name when there is no username', () {
