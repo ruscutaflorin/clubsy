@@ -204,21 +204,22 @@ void main() {
   });
 
   group('ClubDetailsPage similar clubs', () {
-    ClubModel withGenres(String id, String name) => ClubModel(
-      id: id,
-      name: name,
-      address: '1 Main St',
-      city: 'Cluj',
-      latitude: 46,
-      longitude: 23.5,
-      imageUrl: 'http://localhost/img.png',
-      isApproved: true,
-      genres: ['techno'],
-    );
+    ClubModel withGenres(String id, String name, {double lat = 46}) =>
+        ClubModel(
+          id: id,
+          name: name,
+          address: '1 Main St',
+          city: 'Cluj',
+          latitude: lat,
+          longitude: 23.5,
+          imageUrl: 'http://localhost/img.png',
+          isApproved: true,
+          genres: ['techno'],
+        );
 
     testWidgets('shows a similar club', (tester) async {
       final a = withGenres('a', 'Club Alpha');
-      controller.clubs.addAll([a, withGenres('s', 'Club Sigma')]);
+      controller.clubs.addAll([a, withGenres('s', 'Club Sigma', lat: 47)]);
       await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
       tester.takeException();
 
@@ -233,6 +234,39 @@ void main() {
       tester.takeException();
 
       expect(find.byKey(const Key('similarClubs')), findsNothing);
+    });
+  });
+
+  group('ClubDetailsPage nearby clubs', () {
+    ClubModel atLat(String id, String name, double lat) => ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: lat,
+      longitude: 23.5,
+      imageUrl: 'http://localhost/img.png',
+      isApproved: true,
+    );
+
+    testWidgets('shows a club about 300 m away', (tester) async {
+      final a = atLat('a', 'Club Alpha', 46);
+      controller.clubs.addAll([a, atLat('n', 'Club Near', 46.0027)]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('nearbyClubs')), findsOneWidget);
+      expect(find.text('Club Near'), findsOneWidget);
+      expect(find.textContaining('m away'), findsOneWidget);
+    });
+
+    testWidgets('hides the section with no club within 1 km', (tester) async {
+      final a = atLat('a', 'Club Alpha', 46);
+      controller.clubs.addAll([a, atLat('f', 'Club Far', 46.02)]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('nearbyClubs')), findsNothing);
     });
   });
 

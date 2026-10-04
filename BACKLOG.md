@@ -1212,7 +1212,7 @@ Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now descri
 
 Product-owner proposals, 2026-10-04 (night, latest). Club pages can now suggest places with a similar sound, but not the ones a short walk away, which is how a night with several clubs actually gets planned. And the diary holds months of vibe ratings, but the user has no way to find just their best nights.
 
-- [ ] B99 "Round the corner": approved clubs within walking distance of this one, on its page — status: approved
+- [x] B99 "Round the corner": approved clubs within walking distance of this one, on its page — status: done
   - Why: B69 shows that people combine clubs on the same night, and core loop step 4 ("find the next place to go") often happens mid-night, on a club page. "Club Y · 350 m away" answers "where do we go after this?". It uses only public club coordinates, not the user's location or anyone else's data (principle 2), and it works for unvisited clubs and new users.
   - Scope: client only, no server or schema change. `ClubController.clubs` already holds approved clubs with `latitude`/`longitude`.
     - Pure logic, in `client/lib/data/classes/club_directions.dart` next to `formatDistance`:

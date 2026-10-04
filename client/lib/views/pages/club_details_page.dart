@@ -207,6 +207,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
             : <ClubPairing>[];
 
         final similar = similarClubs(club, clubController.clubs);
+        final nearby = nearbyClubs(club, clubController.clubs);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -327,6 +328,27 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                         subtitle: Text(s.shared.join(' · ')),
                         onTap: () =>
                             Get.to(() => ClubDetailsPage(club: s.club)),
+                      ),
+                  ],
+                ),
+              if (nearby.isNotEmpty)
+                Column(
+                  key: const Key('nearbyClubs'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      'Round the corner',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    for (final n in nearby)
+                      ListTile(
+                        key: Key('nearby_${n.club.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(n.club.name),
+                        subtitle: Text('${formatDistance(n.meters)} away'),
+                        onTap: () =>
+                            Get.to(() => ClubDetailsPage(club: n.club)),
                       ),
                   ],
                 ),
