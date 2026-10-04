@@ -931,3 +931,105 @@ Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe rat
     - A widget test for the toggle, with a fake `AdminService`.
     - `node .nightshift/test-all.mjs` passes.
   - Size: M
+
+---
+
+Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genres, but genres only show as chips on a club page and as a search filter. These items turn them into a taste profile ("your sound") that feeds the "where next?" step of the core loop. They also add an admin check so pilot clubs actually have the genres and hours these features need.
+
+- [ ] B86 "Your sound": my top music genres from my nights, on Profile and on the recap card — status: approved
+  - Why: the regular wants to know what their nights say about them, and the recap card is the part people share. "Your sound: techno · house" is a fun piece of identity that comes only from verified check-ins (principle 5) and uses only the user's own data (principle 2). It is also the base for genre-based suggestions (B87).
+  - Scope: client only, no server or schema change. `CheckInModel.club.genres` is already loaded into `ClubController.myCheckIns`.
+    - Pure logic: add a new `client/lib/data/classes/genre_taste.dart` with `List<({String genre, int nights})> genreNights(List<CheckInModel> checkIns)`.
+      - For each genre, count the distinct nights (use `nightOf(checkIn.checkedInAt.toLocal())` from `client/lib/data/classes/check_in_grouping.dart`) with at least one check-in at a club tagged with that genre.
+      - Sort by nights descending, then by genre name. Clubs with no genres add nothing.
+    - In the same file, add `String? yourSoundText(List<({String genre, int nights})> g)`. It returns "Your sound: techno · house · latin" (top 3 at most), or null when the list is empty.
+    - Profile: in `client/lib/views/pages/profile_page.dart`, directly below the stats card, show `Text(..., key: const Key('yourSoundText'))` inside an `Obx` over `ClubController.myCheckIns`. Show it only when `yourSoundText` is non-null.
+    - Recap: add a nullable `String? topGenre` field to `Recap` in `client/lib/data/classes/recap.dart`, and in `buildRecap` set it to the first entry of `genreNights` over the period's check-ins. In `RecapCard` (`client/lib/views/pages/recap_page.dart`), add the line "Your sound: techno" to `lines` when `topGenre` is non-null. Genres aren't identifying, so the line also shows when `hideClubNames` is on.
+    - Out: friends' genres, editing a taste profile by hand, server changes.
+  - Acceptance:
+    - Unit tests in a new `client/test/genre_taste_test.dart`:
+      - Two check-ins on the same night at two techno clubs count techno once.
+      - A night at a techno+house club and a night at a house-only club give house 2 then techno 1.
+      - A club with no genres adds nothing. An empty list gives an empty list, and `yourSoundText` of it is null.
+      - `yourSoundText` caps at 3 genres.
+    - A case added to `client/test/recap_test.dart`: `buildRecap` sets `topGenre` only from check-ins inside the period.
+    - Widget tests:
+      - In `client/test/edit_name_test.dart` (which already pumps `ProfilePage` with a fixture `ClubController`), find `Key('yourSoundText')` with "Your sound: techno" for a fixture with techno nights, and none when no visited club has genres.
+      - A `RecapCard` test in `client/test/recap_test.dart` finds "Your sound: techno" with `hideClubNames: true`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B87 "You might like": unvisited clubs that match my sound, on the Want to go page — status: approved
+  - Why: core loop step 4 ("find the next place to go") has a list of places the user saved (B81), but nothing suggests new ones. This ranks the clubs I haven't been to by how well their genres match my own nights. It is a personal "where next?" that needs no other user's data (principle 2) and no server change.
+  - Scope: client only. It is built after B86 and reuses `genreNights` from `client/lib/data/classes/genre_taste.dart`.
+    - Pure logic: add `List<ClubModel> soundMatches(List<ClubModel> clubs, List<CheckInModel> checkIns, Set<String> favoriteIds, {int limit = 5})` to `client/lib/data/classes/genre_taste.dart`.
+      - Skip clubs that aren't `isApproved`, clubs I've checked in at, clubs already in `favoriteIds`, and clubs with no genres.
+      - Score each club as the sum of my `genreNights` counts over its genres, and drop clubs that score 0.
+      - Sort by score descending, then by name (case-insensitive), and respect `limit`.
+    - Page: in `client/lib/views/pages/want_to_go_page.dart`, add a "You might like" section (`Key('youMightLike')`). Put it below the favourites list, or below the empty-state text when there are no favourites, and show it only when `soundMatches` is non-empty. It reads `ClubController.clubs`, `myCheckIns` and `favoriteIds` inside the existing `Obx`.
+      - Each row has `Key('suggest_<clubId>')` and shows the club name, with the subtitle "<city> · <genres joined by ' · '>".
+      - Each row has a heart `IconButton` (`Key('suggestFavorite_<clubId>')`) that calls `ClubController.toggleFavorite`, which moves the club up into the list.
+      - Tapping a row pushes `ClubDetailsPage` with `Get.to`.
+    - Out: distance ranking (that's B39), friends' tastes, server-side recommendations.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - With 3 techno nights and 1 house night, an unvisited techno+house club ranks above an unvisited techno-only club, which ranks above a house-only club.
+      - Visited, favourited and unapproved clubs, and clubs with no matching genre, are excluded.
+      - `limit` is respected, and having no check-ins gives an empty list.
+    - Widget tests in `client/test/want_to_go_test.dart`, with the existing fixture `ClubController`:
+      - A matching unvisited club shows under `Key('youMightLike')`.
+      - Tapping `Key('suggestFavorite_<id>')` moves it into the favourites list (a `Key('wantToGo_<id>')` row appears).
+      - With no genre data in my nights, `Key('youMightLike')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B88 Admin club data health: flag clubs with incomplete profiles (no opening hours, genres or description) — status: approved
+  - Why: a club with no hours or genres drops out of "Open now" (B78), the Want to go opening status (B81) and the genre features (B86, B87), so a half-filled pilot club becomes invisible to them. Admins onboarding ~10 partner clubs need to see what's missing at a glance. This extends the B72 data health check they already use.
+  - Scope: server and client, no schema change.
+    - Server: in `server/src/services/clubDataService.js`, make `findClubDataIssues` also return `incompleteProfiles: [{id, name, city, isApproved, missing}]`.
+      - `missing` lists these keys in this order: `"openingHours"` when it is null or an object with no days, `"genres"` when the array is empty or missing, and `"description"` when it is null or blank.
+      - Clubs missing nothing are left out.
+      - Sort approved clubs first, then by the length of `missing` descending, then by name.
+    - In `getClubDataHealth` in `server/src/controllers/adminController.js`, add `description`, `genres` and `openingHours` to the `select`.
+    - Client model: in `client/lib/data/classes/club_data_health_model.dart`, add an `IncompleteProfileEntry` with `fromMap`, plus an `incompleteProfiles` list on `ClubDataHealthModel` that defaults to empty when the key is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_data_health_page.dart`, add an "Incomplete profiles" section that follows the existing sections' pattern, including their empty state.
+      - Each row shows the club name, the city and "Missing: opening hours, genres".
+      - Tapping a row opens `AdminClubFormPage` for that club, the same way the admin clubs list does.
+    - Out: auto-filling data, nagging venues, blocking approval of incomplete clubs.
+  - Acceptance:
+    - Unit tests added to `server/src/__tests__/clubDataService.test.js`:
+      - A club with hours, genres and a description isn't listed.
+      - A club with `openingHours: null`, `genres: []` and a blank description lists all three, in that order.
+      - An approved club sorts before an unapproved one that misses more.
+    - Extend the existing `GET /api/admin/clubs/data-health` case in `server/src/__tests__/routes.test.js`: the response has an `incompleteProfiles` entry for a mocked club without genres.
+    - Widget tests in `client/test/admin_club_data_health_test.dart`:
+      - A fixture with one incomplete club shows "Missing: opening hours, genres".
+      - A payload without `incompleteProfiles` still parses and renders.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B89 "Genre hopper" badge: nights out at clubs covering 4 music genres — status: proposed
+  - Why: the explorer persona responds to collections, and the badges reward the number of clubs and cities but not variety of sound. A genre badge nudges people to try a new kind of night, and it can only be earned through verified check-ins (principle 5).
+  - Scope: mostly server.
+    - Add `{id: "genre_hopper_4", title: "Genre hopper", description: "Go out at clubs covering 4 music genres.", kind: "genres", target: 4}` to `server/src/services/badgeCatalogue.js`.
+    - Add a `kind === "genres"` branch to `evaluate` in `server/src/services/gamificationService.js`, shaped like the `clubs`/`cities` branch but adding every entry of `c.club.genres`. `getMyAchievements` already includes `club`.
+    - Add an icon for `genre_hopper_4` in `client/lib/views/pages/achievements_page.dart`.
+    - Product question first: a club tagged with 4 genres would award the badge in a single night. Decide whether a multi-genre club should count only its first genre.
+    - Out: per-genre badges.
+  - Acceptance:
+    - Cases added to `server/src/__tests__/gamificationService.test.js`: the badge is earned on the night the fourth genre appears, progress caps at 4, and clubs with no genres add no progress.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B90 "2 of your Want to go clubs are open now" on the map — status: proposed
+  - Why: on a night out the map is the first screen, but the open status of saved clubs only shows on the Want to go page. A one-line chip turns the saved list into a plan for tonight (core loop step 4), using only the user's own favourites.
+  - Scope: client only.
+    - Add a pure `int openFavoritesCount(List<ClubModel> clubs, Set<String> favoriteIds)` next to `clubsOpenAt` in `client/lib/data/classes/club_profile.dart`. It uses each club's `localNow`, the way `openingChipText` callers do.
+    - Add a dismissible chip on `ClubMapPage` (`Key('openFavoritesChip')`). Show it only when the count is above 0. Tapping it pushes `WantToGoPage`.
+    - Product question first: the map already has the near-me button, the error banner, the visited toggle and the streak nudge. Decide whether this chip belongs there or only on the Want to go page.
+    - Out: push notifications.
+  - Acceptance:
+    - Unit tests for the count: closed clubs and clubs with null hours are excluded, and a non-favourite open club isn't counted.
+    - A widget test on `ClubMapPage` that the chip shows when the count is above 0 and is hidden at 0.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
