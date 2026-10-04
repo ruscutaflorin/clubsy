@@ -1062,7 +1062,7 @@ Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' n
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: approved
+- [x] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: done
   - Why: core loop step 4 ("find the next place to go") gets its best ideas from friends, and B77 already counts the clubs we've both been to. The clubs a friend has been to and I've never tried are the natural next suggestion. They come only from that friend's already-visible nights (the same `visibleCheckInsWhere` rule: ended, unhidden, both sharing, not blocked), so nothing new is revealed (principles 2 and 3).
   - Scope: server and client, no schema change.
     - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, change the `theirs` query to also select `club: { select: { id: true, name: true, city: true } }`. Add `newToYou` to the body: the friend's distinct clubs whose id isn't in `mineIds`, sorted by name, each `{id, name, city}`. The `base` null branch returns `newToYou: []`. Keep `sharedClubCount` unchanged. No dates or counts per club.
@@ -1110,5 +1110,100 @@ Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' n
   - Acceptance:
     - Jest: a club below the floor has `vibe.average` null, and no ids leave the endpoint.
     - A widget test for the star label.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now describe the user's taste, but they don't show up when it matters: at the door, and on a club page while deciding where to go. The footfall report also can't yet tell a venue how many real regulars it has, which is the basis for "reward your regulars" (B24, PLAN decision 6).
+
+- [ ] B95 "More like this": clubs in the same city with a similar sound, on a club's page — status: approved
+  - Why: core loop step 4 ("find the next place to go") often starts from a club page, and "if you like this place, try these" is the natural next question. It uses only public club data (city and genres from 7.2), so it reveals nothing about any user (principle 2). It also works for unvisited clubs and for new users with no history.
+  - Scope: client only, no server or schema change. `ClubController.clubs` already holds the approved clubs with `city` and `genres`.
+    - Pure logic: add `List<({ClubModel club, List<String> shared})> similarClubs(ClubModel club, List<ClubModel> clubs, {int limit = 3})` to `client/lib/data/classes/genre_taste.dart`.
+      - Candidates are `isApproved` clubs other than `club` (compared by id), in the same city (trimmed, case-insensitive), that share at least one genre with `club` (trimmed, case-insensitive).
+      - `shared` lists the shared genres in `club.genres` order.
+      - Sort by `shared.length` descending, then by name (case-insensitive), and respect `limit`.
+      - A club with no genres gives an empty list.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add a "More like this" section (`Key('similarClubs')`) after the existing `Key('pairedClubs')` section.
+      - Place it outside any visited-only block, so it also shows for clubs I haven't been to.
+      - Read `clubController.clubs` inside an `Obx`, and show the section only when `similarClubs` is non-empty.
+      - Each row is a `ListTile` with `Key('similar_<clubId>')`, the club name as the title, and the shared genres joined by " · " as the subtitle.
+      - Tapping a row pushes `ClubDetailsPage(club: ...)` with `Get.to`, the same way the paired-club rows do.
+    - Out: ranking by distance, personal taste (B87), other users' data, server-side recommendations.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - For a Cluj techno+house club, a Cluj techno+house club ranks above a Cluj techno-only club.
+      - A Bucharest techno club, an unapproved Cluj techno club, a Cluj latin club and the club itself are all excluded.
+      - Matching ignores case and surrounding spaces ("Techno " matches "techno"), and `limit` is respected.
+      - A club with no genres gives an empty list.
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests:
+      - With a fixture similar club, `Key('similarClubs')` and that club's name are shown.
+      - With no similar club, `Key('similarClubs')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B96 "Your first techno night!": a new-genre line on the check-in success sheet — status: approved
+  - Why: the success sheet is the reward moment of the core loop (step 2). It celebrates a new club and a new city, but not a new kind of night, even though B86 now builds "Your sound" from genres. Marking the first night in a genre rewards exploring (the explorer persona), and it comes only from verified check-ins and the user's own history (principles 2 and 5).
+  - Scope: client only, no server or schema change.
+    - Pure logic: add `List<String> newGenres(List<String> clubGenres, List<CheckInModel> previousCheckIns)` to `client/lib/data/classes/genre_taste.dart`.
+      - It returns the genres in `clubGenres`, in order and without duplicates, that don't appear in any previous check-in's `club.genres`.
+      - The comparison is trimmed and case-insensitive, and returned values keep `clubGenres`' spelling.
+    - Text: in the same file, add `String? newGenreText(List<String> genres)`:
+      - One genre gives "Your first techno night!", and two give "Your first techno and house night!".
+      - Three or more give "Your first techno, house and latin night!", using only the first three.
+      - An empty list gives null.
+    - Controller: in `ClubController.checkIn` (`client/lib/src/core/controllers/club_controller.dart`), add `List<String> newGenres` to the returned record.
+      - Compute it before the new record joins `myCheckIns`, next to `checkInOutcome`.
+      - Use `checkInRecord.club.genres`. When that is empty, fall back to the genres of the matching club in `clubs` (by id).
+      - A user's very first check-in gives an empty list, so a first night doesn't say "first" for every genre. The sheet already says "New place on your map!".
+    - UI: in `client/lib/views/pages/check_in_page.dart`, when `newGenreText` is non-null, add a bold, centred `Text(..., key: const Key('newGenreText'))` to the success sheet `extras`. It goes after `tickedOffList` and before the unlocked badges.
+    - Out: genre badges (B89), recap changes, server changes.
+  - Acceptance:
+    - Unit tests added to `client/test/genre_taste_test.dart`:
+      - A techno+house club after nights at techno clubs gives `["house"]`.
+      - "Techno" after "techno " gives an empty list.
+      - `newGenreText` covers one, two and four genres (four uses only the first three), and an empty list gives null.
+    - Cases added to `client/test/club_controller_test.dart`, using the existing fake check-in service:
+      - After an earlier check-in at a techno club, checking in at a house club returns `newGenres == ["house"]`.
+      - A first-ever check-in returns an empty `newGenres`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B97 Admin footfall "How often guests come": visit-frequency buckets and a regulars count — status: approved
+  - Why: the decided business model is venue-side B2B (PLAN decision 6), and "reward your regulars" (B24) is the pitch. The footfall report has a returning-visitor rate, but it can't tell real regulars apart from people who came twice. A breakdown of guests by nights in the window answers "who would we be rewarding?", aggregate only (principle 2).
+  - Scope: server and client, no schema change.
+    - Server pure logic: in `computeClubFootfall` in `server/src/services/footfallService.js`, add `visitFrequency: {once, twice, threePlus}` to the result.
+      - It counts unique visitors by their distinct nights at the club inside the window, reusing the existing `nightsByUser` map.
+      - Also add `regulars`, equal to `threePlus`. No ids are returned.
+    - Controller: `getClubFootfall` in `server/src/controllers/adminController.js` should already pass the computed result through. Check this, and wire the new fields in only if it doesn't.
+    - Client model: in `client/lib/data/classes/club_footfall_model.dart`, add `once`, `twice` and `threePlus` ints to `ClubFootfallModel`, or a small `VisitFrequency` class with `fromMap`. Each defaults to 0 when `visitFrequency` is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_footfall_page.dart`, add a "How often guests come" section (`Key('footfallFrequency')`) after the returning/first-time figures. It has three rows, "1 night", "2 nights" and "3+ nights (regulars)", each with its count.
+    - Copy summary: in `footfallSummaryText` in `client/lib/data/classes/footfall_summary.dart`, add the line "Regulars (3+ nights): N" after the "First-time visitors" line.
+    - Out: naming or listing the regulars, perks or rewards (B24), changes to the club ranking.
+  - Acceptance:
+    - A unit test added to `server/src/__tests__/footfallService.test.js`:
+      - Four users give `{once: 2, twice: 1, threePlus: 1}` and `regulars` 1: one on 1 night, one with two check-ins on the same night, one on 2 nights and one on 4 nights.
+      - Check-ins outside the window don't count.
+    - Extend the existing footfall route case in `server/src/__tests__/routes.test.js`: the body has `visitFrequency`, and the existing no-`userId` assertion still holds.
+    - Flutter tests:
+      - In `client/test/admin_club_footfall_test.dart`, a fixture with `visitFrequency` shows `Key('footfallFrequency')` with "3+ nights (regulars)" and its count.
+      - A payload without `visitFrequency` still parses and renders.
+      - In `client/test/footfall_summary_test.dart`, a fixture with `threePlus: 4` gives a summary containing "Regulars (3+ nights): 4".
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B98 "Their sound": a friend's top genres on their nights page — status: proposed
+  - Why: B92 shows the clubs a friend has been to that I haven't, but not what kind of nights they like, and "we both love techno" is how a plan starts. The genres would come only from the friend's already-visible nights (`visibleCheckInsWhere`: ended, unhidden, both sharing, not blocked).
+  - Scope: needs a quick product/safety confirmation first. A taste summary is a new kind of data derived about another user, so someone should confirm it fits 8.0's rules and decide whether the friend's privacy setting should cover it. If confirmed:
+    - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, add `theirSound: [genre, ...]`, at most the top 3 genres by distinct visible nights. Add `genres` to the club select that `newToYou` already uses. The `base` null branch returns `[]`.
+    - Client: in `client/lib/data/classes/feed_model.dart` and `client/lib/views/pages/friend_nights_page.dart`, show "Their sound: techno · house" (`Key('theirSound')`) under the header. Add "You both like techno" when it overlaps with the user's own `genreNights`.
+    - Out: per-night genre detail, genres from hidden or ongoing nights.
+  - Acceptance:
+    - Supertest tests in `server/src/__tests__/feed.test.js`:
+      - A viewer with sharing off gets `theirSound: []`.
+      - Page 2 has no `theirSound`.
+      - The existing visibility `where` is unchanged.
+    - Widget tests in `client/test/friend_nights_test.dart`: `Key('theirSound')` shows for a non-empty list and is absent for an empty one.
     - `node .nightshift/test-all.mjs` passes.
   - Size: S

@@ -104,13 +104,14 @@ describe("GET /api/feed/friends/:userId", () => {
     const res = await request(app).get("/api/feed/friends/u2").set(auth);
     expect(res.body.nights).toEqual([]);
     expect(res.body.sharedClubCount).toBe(0);
+    expect(res.body.newToYou).toEqual([]);
     expect(ciFindMany).not.toHaveBeenCalled();
   });
 
   it("counts clubs both have been to and never exposes the check-in time", async () => {
     ciFindMany.mockImplementation(async ({ where, distinct }) => {
       if (where.userId === "u1") return [{ clubId: "B" }, { clubId: "C" }];
-      if (distinct) return [{ clubId: "A" }, { clubId: "B" }];
+      if (distinct) return [row("x", "A"), row("y", "B")];
       return [row("c1", "A"), row("c2", "B")];
     });
     const res = await request(app).get("/api/feed/friends/u2").set(auth);
@@ -121,6 +122,24 @@ describe("GET /api/feed/friends/:userId", () => {
       club: { id: "A", name: "Club A", city: "X" },
     });
     expect(JSON.stringify(res.body)).not.toMatch(/checkedInAt|01:30/);
+  });
+
+  it("lists the friend's clubs I haven't been to on page 1 only", async () => {
+    ciFindMany.mockImplementation(async ({ where, distinct }) => {
+      if (where.userId === "u1") return [{ clubId: "c1" }];
+      if (distinct) {
+        return [
+          { clubId: "c1", club: { id: "c1", name: "Club c1", city: "X" } },
+          { clubId: "c2", club: { id: "c2", name: "Club c2", city: "Y" } },
+        ];
+      }
+      return [row("n1", "c1")];
+    });
+    const res = await request(app).get("/api/feed/friends/u2").set(auth);
+    expect(res.body.newToYou).toEqual([{ id: "c2", name: "Club c2", city: "Y" }]);
+    expect(JSON.stringify(res.body)).not.toMatch(/checkedInAt/);
+    const page2 = await request(app).get("/api/feed/friends/u2?page=2").set(auth);
+    expect(page2.body).not.toHaveProperty("newToYou");
   });
 
   it("requires a token", async () => {

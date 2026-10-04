@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:clubsy/data/classes/check_in_grouping.dart';
 import 'package:clubsy/data/classes/feed_model.dart';
 import 'package:clubsy/services/feed_service.dart';
+import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/views/pages/club_details_page.dart';
 
 class FriendNightsPage extends StatefulWidget {
   final String userId;
@@ -24,6 +27,7 @@ class _FriendNightsPageState extends State<FriendNightsPage> {
   final List<FeedNight> _nights = [];
   int _page = 0;
   int _sharedClubCount = 0;
+  List<({String id, String name, String? city})> _newToYou = const [];
   bool _hasMore = false;
   bool _loading = true;
   String? _error;
@@ -46,7 +50,10 @@ class _FriendNightsPageState extends State<FriendNightsPage> {
         _page++;
         _nights.addAll(result.nights);
         _hasMore = result.hasMore;
-        if (_page == 1) _sharedClubCount = result.sharedClubCount;
+        if (_page == 1) {
+          _sharedClubCount = result.sharedClubCount;
+          _newToYou = result.newToYou;
+        }
         _error = null;
         _loading = false;
       });
@@ -67,6 +74,15 @@ class _FriendNightsPageState extends State<FriendNightsPage> {
         : '$date · ${n.clubName}, $city';
   }
 
+  VoidCallback? _openClub(String id) {
+    if (!Get.isRegistered<ClubController>()) return null;
+    final club = Get.find<ClubController>().clubs.firstWhereOrNull(
+      (c) => c.id == id,
+    );
+    if (club == null) return null;
+    return () => Get.to(() => ClubDetailsPage(club: club));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,6 +98,27 @@ class _FriendNightsPageState extends State<FriendNightsPage> {
                 "${_sharedClubCount == 1 ? 'club' : 'clubs'}",
                 style: Theme.of(context).textTheme.titleMedium,
               ),
+            ),
+          if (_newToYou.isNotEmpty)
+            Column(
+              key: const Key('newToYou'),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: Text(
+                    "Been there, you haven't",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                for (final c in _newToYou)
+                  ListTile(
+                    key: Key('newToYou_${c.id}'),
+                    title: Text(c.name),
+                    subtitle: (c.city ?? '').isEmpty ? null : Text(c.city!),
+                    onTap: _openClub(c.id),
+                  ),
+              ],
             ),
           for (final n in _nights) ListTile(title: Text(_title(n))),
           if (_error != null)

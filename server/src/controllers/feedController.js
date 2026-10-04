@@ -61,7 +61,7 @@ export const getFriendNights = async (req, res) => {
     const base = await visibleCheckInsWhere(req.user.id);
     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
     if (!base) {
-      return res.json({ nights: [], page, hasMore: false, sharedClubCount: 0 });
+      return res.json({ nights: [], page, hasMore: false, sharedClubCount: 0, newToYou: [] });
     }
     // Narrowing to one id inside the friend list: non-friends just get an empty list.
     const where = { ...base, AND: [{ userId: req.params.userId }] };
@@ -80,7 +80,11 @@ export const getFriendNights = async (req, res) => {
     const body = { nights, page, hasMore: rows.length > PAGE_SIZE };
     if (page === 1) {
       const [theirs, mine] = await Promise.all([
-        prisma.checkIn.findMany({ where, distinct: ["clubId"], select: { clubId: true } }),
+        prisma.checkIn.findMany({
+          where,
+          distinct: ["clubId"],
+          select: { clubId: true, club: { select: { id: true, name: true, city: true } } },
+        }),
         prisma.checkIn.findMany({
           where: { userId: req.user.id },
           distinct: ["clubId"],
@@ -89,6 +93,10 @@ export const getFriendNights = async (req, res) => {
       ]);
       const mineIds = new Set(mine.map((c) => c.clubId));
       body.sharedClubCount = theirs.filter((c) => mineIds.has(c.clubId)).length;
+      body.newToYou = theirs
+        .filter((c) => !mineIds.has(c.clubId))
+        .map((c) => ({ id: c.club.id, name: c.club.name, city: c.club.city }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
     res.json(body);
   } catch (error) {
