@@ -55,6 +55,9 @@ model CheckIn {
   checkedInAt        DateTime           @default(now())
   verificationMethod VerificationMethod
   distanceMeters     Float
+  note               String?
+  vibe               Int?
+  vibeAt             DateTime?
   createdAt          DateTime           @default(now())
   user               User               @relation(fields: [userId], references: [id])
   club               Club               @relation(fields: [clubId], references: [id])

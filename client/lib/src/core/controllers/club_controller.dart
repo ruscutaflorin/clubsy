@@ -7,6 +7,7 @@ import 'package:clubsy/data/classes/check_in_model.dart';
 import 'package:clubsy/data/classes/check_in_outcome.dart';
 import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
+import 'package:clubsy/data/classes/vibe_prompt.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/services/api_client.dart';
 import 'package:clubsy/services/club_service.dart';
@@ -199,6 +200,42 @@ class ClubController extends GetxController {
       unlocked: newlyEarned(before, after),
       tickedOffList: outcome.isFirstVisit && favoriteIds.contains(clubId),
     );
+  }
+
+  /// Check-ins whose morning "How was it?" card was skipped this session.
+  final dismissedVibeIds = <String>{}.obs;
+
+  CheckInModel? get vibePrompt => pendingVibePrompt(
+    myCheckIns,
+    DateTime.now(),
+    dismissedIds: dismissedVibeIds.toSet(),
+  );
+
+  /// Saves a note and/or vibe on a check-in. Optimistic: the list updates at
+  /// once and is restored (rethrowing) if the server call fails.
+  Future<void> updateDiary(String id, {String? note, int? vibe}) async {
+    final index = myCheckIns.indexWhere((c) => c.id == id);
+    if (index < 0) return;
+    final before = myCheckIns[index];
+    myCheckIns[index] = before.withDiary(
+      note: note == null
+          ? before.note
+          : (note.trim().isEmpty ? null : note.trim()),
+      vibe: vibe ?? before.vibe,
+    );
+    try {
+      final saved = await _checkInService.updateCheckIn(
+        id,
+        note: note,
+        vibe: vibe,
+      );
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = saved;
+    } catch (_) {
+      final i = myCheckIns.indexWhere((c) => c.id == id);
+      if (i >= 0) myCheckIns[i] = before;
+      rethrow;
+    }
   }
 
   /// Removes a check-in from the map. Optimistic: the list updates at once and

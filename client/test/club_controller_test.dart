@@ -140,6 +140,23 @@ void main() {
       expect(result.tickedOffList, isTrue);
     });
 
+    test(
+      'updateDiary applies a vibe and rolls back when the save fails',
+      () async {
+        final ok = ClubController(checkInService: _FakeCheckInService());
+        ok.myCheckIns.add(_record('n1', 'a'));
+        await ok.updateDiary('n1', vibe: 4);
+        expect(ok.myCheckIns.single.vibe, 4);
+
+        final failing = ClubController(
+          checkInService: _FakeCheckInService(deleteFail: true),
+        );
+        failing.myCheckIns.add(_record('n1', 'a'));
+        await expectLater(failing.updateDiary('n1', vibe: 4), throwsException);
+        expect(failing.myCheckIns.single.vibe, isNull);
+      },
+    );
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -208,5 +225,15 @@ class _FakeCheckInService implements CheckInService {
   @override
   Future<void> deleteCheckIn(String id) async {
     if (deleteFail) throw Exception('boom');
+  }
+
+  @override
+  Future<CheckInModel> updateCheckIn(
+    String id, {
+    String? note,
+    int? vibe,
+  }) async {
+    if (deleteFail) throw Exception('boom');
+    return _record(id, 'a').withDiary(note: note, vibe: vibe);
   }
 }
