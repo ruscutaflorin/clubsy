@@ -54,6 +54,31 @@ void main() {
     expect(find.text('75%'), findsOneWidget);
   });
 
+  testWidgets('shows visit frequency, and parses a payload without it', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Future<void> pump(Map<String, dynamic> extra) => tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(
+          club: club,
+          footfall: ClubFootfallModel.fromMap({'weekly': [], ...extra}),
+        ),
+      ),
+    );
+    await pump({
+      'visitFrequency': {'once': 5, 'twice': 2, 'threePlus': 7},
+    });
+    expect(find.byKey(const Key('footfallFrequency')), findsOneWidget);
+    expect(find.text('3+ nights (regulars): 7'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await pump({});
+    expect(find.text('3+ nights (regulars): 0'), findsOneWidget);
+  });
+
   testWidgets('copy summary puts the text on the clipboard', (tester) async {
     String? copied;
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
