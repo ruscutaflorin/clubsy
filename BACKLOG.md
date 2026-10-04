@@ -1033,3 +1033,82 @@ Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genr
     - A widget test on `ClubMapPage` that the chip shows when the count is above 0 and is hidden at 0.
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' nights (8.4, B77) now hold data that only partly reaches the people who would act on it. These items give venues the rating feedback that supports the B2B direction, turn a friend's history into "where next?" ideas, and make opening hours useful for planning tonight.
+
+- [ ] B91 Admin footfall "Guest vibe": the rating summary for a club over the report window, aggregate only — status: approved
+  - Why: the decided monetization is venue-side B2B (PLAN decision 6), and the footfall report is what admins show partner venues. It says how many people came but not how they felt about the night, even though 7.4 collects a 1-5 vibe rating on check-ins. An aggregate rating with the same 5-rating floor as the public club score adds venue value without exposing any single guest (principle 2).
+  - Scope: server and client, no schema change.
+    - Server pure logic: in `server/src/services/footfallService.js`, add `export const computeVibeSummary = (ratings, { min = 5 } = {})`. `ratings` is an array of ints 1-5 (nulls are ignored).
+      - It returns `{count, average, distribution}`. `count` is the number of ratings.
+      - When `count < min`, `average` and `distribution` are `null`, so a handful of ratings can't be tied to people.
+      - Otherwise `average` is rounded to one decimal, and `distribution` is a 5-element array of counts for ratings 1..5.
+    - Server route: in `getClubFootfall` in `server/src/controllers/adminController.js`, add `vibe: true` to the existing `checkIn.findMany` `select`, and add `vibe: computeVibeSummary(checkIns.map((c) => c.vibe))` to the response. It uses the same window as the rest of the report, and no ids leave the server.
+    - Client model: in `client/lib/data/classes/club_footfall_model.dart`, add a `VibeSummary {int count; double? average; List<int>? distribution}` with `fromMap`, and a nullable `vibe` field on `ClubFootfallModel` that is null when the key is absent.
+    - Client page: in `client/lib/views/pages/admin/admin_club_footfall_page.dart`, add a "Guest vibe" section (`Key('footfallVibe')`) after the existing sections. With an average it shows "★4.3 from 27 ratings" and one row per star level (5 down to 1) with its count. Below the floor it shows "Not enough ratings yet (3 of 5)".
+    - Copy summary: in `footfallSummaryText` in `client/lib/data/classes/footfall_summary.dart`, add the line "Guest vibe: ★4.3 from 27 ratings" when an average is present, and no line otherwise.
+    - Out: per-guest ratings or notes (notes never leave the user), changing the public club vibe score, vibe in the club ranking (B94).
+  - Acceptance:
+    - Unit tests added to `server/src/__tests__/footfallService.test.js`:
+      - Ratings `[5, 4, 4, null, 3, 5]` give count 5, average 4.2 and distribution `[0, 0, 1, 2, 2]`.
+      - Four ratings give count 4 with `average` and `distribution` null.
+    - Extend the existing "defaults to 12 weekly buckets" case in `server/src/__tests__/routes.test.js`: with mocked rows carrying `vibe`, the body has `vibe.count`, and the existing no-`userId` assertion still holds.
+    - Flutter tests:
+      - In `client/test/admin_club_footfall_test.dart`, a fixture with an average shows "★4.3 from 27 ratings", and a fixture below the floor shows "Not enough ratings yet".
+      - A payload without `vibe` still parses and renders.
+      - In `client/test/footfall_summary_test.dart`, the summary contains "Guest vibe: ★4.3" only when an average is present.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: approved
+  - Why: core loop step 4 ("find the next place to go") gets its best ideas from friends, and B77 already counts the clubs we've both been to. The clubs a friend has been to and I've never tried are the natural next suggestion. They come only from that friend's already-visible nights (the same `visibleCheckInsWhere` rule: ended, unhidden, both sharing, not blocked), so nothing new is revealed (principles 2 and 3).
+  - Scope: server and client, no schema change.
+    - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, change the `theirs` query to also select `club: { select: { id: true, name: true, city: true } }`. Add `newToYou` to the body: the friend's distinct clubs whose id isn't in `mineIds`, sorted by name, each `{id, name, city}`. The `base` null branch returns `newToYou: []`. Keep `sharedClubCount` unchanged. No dates or counts per club.
+    - Client model: in `client/lib/data/classes/feed_model.dart`, add `List<({String id, String name, String? city})> newToYou` to `FeedPage`, defaulting to empty when the key is absent.
+    - Client page: in `client/lib/views/pages/friend_nights_page.dart`, keep the page-1 `newToYou` in state the way `_sharedClubCount` is kept. When it is non-empty, show a section `Key('newToYou')` above the nights list titled "Been there, you haven't". Each row has `Key('newToYou_<clubId>')` and shows the club name and city.
+      - Tapping a row finds the club in `Get.find<ClubController>().clubs` by id and pushes `ClubDetailsPage(club: ...)` with `Get.to`. When the club isn't in the loaded list (e.g. unapproved), the row isn't tappable.
+    - Out: the friend's visit counts or dates per club, suggestions merged from several friends, anything about tonight.
+  - Acceptance:
+    - Supertest tests added to `server/src/__tests__/feed.test.js`:
+      - With the friend's clubs c1 and c2 and my club c1, page 1 returns `newToYou` with only c2, and the body has no `checkedInAt`.
+      - A viewer with sharing off gets `newToYou: []`.
+      - Page 2 has no `newToYou`.
+    - Widget tests in `client/test/friend_nights_test.dart`, with the existing fake `FeedService`:
+      - A page-1 result with one new club shows `Key('newToYou')` and the club name.
+      - An empty `newToYou` shows no section.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B93 "Until 05:00" and "Next: Fri 23:00": when a club closes, or when it next opens — status: approved
+  - Why: the opening chip says "Open now", "Opens 23:00" or "Closed", but on a night out the next question is "how long have I got?", and on a Tuesday it's "when can I go?". Answering both on the club page and the Want to go list helps plan tonight (core loop step 4) from data 7.2 already stores.
+  - Scope: client only, no server or schema change. Leave `openingChipText` and its tests unchanged, because `clubsOpenAt` and the chip colour compare against its exact strings.
+    - Pure logic: add `String? openingDetailText(Map<String, dynamic>? hours, DateTime now)` to `client/lib/data/classes/club_profile.dart`, next to `openingChipText`, reusing `_slots`, `_minutes` and `weekdayKeys`.
+      - When the club is open (today's slot, or yesterday's slot running past midnight), it returns "Until HH:MM", the close time of that slot.
+      - When it is closed and has no later slot today, it returns "Next: <Ddd> HH:MM" for the earliest slot in the following 7 days, with a 3-letter English day name ("Fri").
+      - It returns null when `openingChipText` would say "Opens HH:MM" (already said), and when the club has no schedule.
+    - UI:
+      - In `client/lib/views/pages/club_details_page.dart`, show `Text(detail, key: const Key('openingDetailText'))` next to the existing `Key('openStatusChip')` when the detail is non-null, using `club.localNow` like the chip.
+      - In `client/lib/views/pages/want_to_go_page.dart`, append the detail to the existing status in the subtitle ("Cluj · Open now · Until 05:00").
+    - Out: holiday or exception hours, countdowns, notifications.
+  - Acceptance:
+    - Unit tests added to the `openingChipText` area of `client/test/club_profile_test.dart`, using the same Friday 23:00-05:00 fixture:
+      - Saturday 02:00 gives "Until 05:00", and Friday 23:30 gives "Until 05:00".
+      - Saturday 06:00 gives "Next: Fri 23:00".
+      - Friday 18:00 gives null, and null hours give null.
+    - A widget test in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests, finds `Key('openingDetailText')` for a club with hours and none for a club without.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B94 Admin club ranking shows each club's guest vibe next to its check-ins (after B91) — status: proposed
+  - Why: the ranking (B65) shows which clubs are growing, but not which ones guests rate well. Together they tell an admin which venues to pitch first. It reuses B91's `computeVibeSummary` and its 5-rating floor.
+  - Scope: server and client, no schema change. Build only after B91 has landed.
+    - Server: in `getClubRanking` in `server/src/controllers/adminController.js`, also select `vibe` for the current window and attach `vibe: {count, average}` to each entry through `computeVibeSummary`.
+    - Client: show "★4.3" on each ranking row when an average is present.
+    - Out: sorting the ranking by vibe, vibe in the pilot report text.
+  - Acceptance:
+    - Jest: a club below the floor has `vibe.average` null, and no ids leave the endpoint.
+    - A widget test for the star label.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
