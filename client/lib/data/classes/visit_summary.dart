@@ -45,6 +45,23 @@ List<DateTime> nightsAtClub(String clubId, List<CheckInModel> checkIns) {
   return nights;
 }
 
+/// Pure: the average of the user's own vibe ratings at one club, or null when
+/// they never rated a night there.
+({double average, int count})? myVibeAtClub(
+  String clubId,
+  List<CheckInModel> checkIns,
+) {
+  final vibes = [
+    for (final c in checkIns)
+      if (c.clubId == clubId && c.vibe != null) c.vibe!,
+  ];
+  if (vibes.isEmpty) return null;
+  return (
+    average: vibes.reduce((a, b) => a + b) / vibes.length,
+    count: vibes.length,
+  );
+}
+
 /// Pure: distinct nights per club id, for the map pins' count badges.
 Map<String, int> nightsPerClub(List<CheckInModel> checkIns) {
   final nights = <String, Set<DateTime>>{};
