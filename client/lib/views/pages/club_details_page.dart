@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:clubsy/data/classes/club_directions.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/club_profile.dart';
 import 'package:clubsy/services/location_lookup.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -51,6 +52,83 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
     if (!opened) {
       Get.snackbar('Directions', 'No maps app available');
     }
+  }
+
+  Future<void> _openLink(String url) async {
+    final opened = await launchUrl(
+      Uri.parse(url),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened) Get.snackbar('Link', 'Could not open $url');
+  }
+
+  List<Widget> _profileSection(BuildContext context) {
+    final status = openingChipText(club.openingHours, DateTime.now());
+    final description = club.description;
+    return [
+      if (status != null) ...[
+        const SizedBox(height: 8),
+        Chip(
+          key: const Key('openStatusChip'),
+          avatar: Icon(
+            Icons.access_time,
+            size: 18,
+            color: status == 'Open now' ? Colors.white : null,
+          ),
+          label: Text(status),
+          backgroundColor: status == 'Open now' ? Colors.green : null,
+          labelStyle: status == 'Open now'
+              ? const TextStyle(color: Colors.white)
+              : null,
+        ),
+      ],
+      if (club.genres.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Wrap(
+          key: const Key('genreChips'),
+          spacing: 6,
+          children: [for (final g in club.genres) Chip(label: Text(g))],
+        ),
+      ],
+      if (description != null && description.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text(description),
+      ],
+      if (status != null)
+        ExpansionTile(
+          key: const Key('openingHoursTile'),
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Opening hours'),
+          children: [
+            for (final row in openingHoursRows(club.openingHours))
+              ListTile(
+                dense: true,
+                title: Text(row.day),
+                trailing: Text(row.hours),
+              ),
+          ],
+        ),
+      if (club.instagramUrl != null || club.websiteUrl != null)
+        Wrap(
+          spacing: 8,
+          children: [
+            if (club.instagramUrl != null)
+              TextButton.icon(
+                key: const Key('instagramLink'),
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: const Text('Instagram'),
+                onPressed: () => _openLink(club.instagramUrl!),
+              ),
+            if (club.websiteUrl != null)
+              TextButton.icon(
+                key: const Key('websiteLink'),
+                icon: const Icon(Icons.language),
+                label: const Text('Website'),
+                onPressed: () => _openLink(club.websiteUrl!),
+              ),
+          ],
+        ),
+    ];
   }
 
   @override
@@ -110,6 +188,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
                 const SizedBox(height: 4),
                 Text('$_distance from you'),
               ],
+              ..._profileSection(context),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 key: const Key('directionsButton'),

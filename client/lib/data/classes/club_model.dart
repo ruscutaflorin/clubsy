@@ -8,6 +8,12 @@ class ClubModel {
   final String imageUrl;
   final bool isApproved;
   final String? qrCode;
+  final String? description;
+  final List<String> genres;
+  final Map<String, dynamic>? openingHours;
+  final String? instagramUrl;
+  final String? websiteUrl;
+  final String timezone;
 
   ClubModel({
     required this.id,
@@ -19,6 +25,12 @@ class ClubModel {
     required this.imageUrl,
     required this.isApproved,
     this.qrCode,
+    this.description,
+    this.genres = const [],
+    this.openingHours,
+    this.instagramUrl,
+    this.websiteUrl,
+    this.timezone = 'Europe/Bucharest',
   });
 
   factory ClubModel.fromMap(Map<String, dynamic> map) {
@@ -32,6 +44,14 @@ class ClubModel {
       imageUrl: map['imageUrl'],
       isApproved: map['isApproved'] ?? false,
       qrCode: map['qrCode'],
+      description: map['description'],
+      genres: List<String>.from(map['genres'] ?? const []),
+      openingHours: map['openingHours'] == null
+          ? null
+          : Map<String, dynamic>.from(map['openingHours']),
+      instagramUrl: map['instagramUrl'],
+      websiteUrl: map['websiteUrl'],
+      timezone: map['timezone'] ?? 'Europe/Bucharest',
     );
   }
 
@@ -45,5 +65,11 @@ class ClubModel {
     'imageUrl': imageUrl,
     'isApproved': isApproved,
     'qrCode': qrCode,
+    'description': description,
+    'genres': genres,
+    'openingHours': openingHours,
+    'instagramUrl': instagramUrl,
+    'websiteUrl': websiteUrl,
+    'timezone': timezone,
   };
 }

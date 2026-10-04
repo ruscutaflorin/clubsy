@@ -1,5 +1,7 @@
 import prisma from "../prisma/client.js";
+import { Prisma } from "@prisma/client";
 import { validationResult } from "express-validator";
+import { GENRES } from "../utils/genres.js";
 import { displayKey, generateClubQr, generateQrSecret } from "../services/venueQrService.js";
 
 // qrSecret authenticates on-site check-ins; it must never reach non-admin clients.
@@ -18,7 +20,30 @@ const handleClubError = (res, error, label, message) => {
   return res.status(500).json({ message });
 };
 
-const EDITABLE_FIELDS = ["name", "address", "city", "latitude", "longitude", "imageUrl"];
+const EDITABLE_FIELDS = [
+  "name",
+  "address",
+  "city",
+  "latitude",
+  "longitude",
+  "imageUrl",
+  "description",
+  "genres",
+  "openingHours",
+  "instagramUrl",
+  "websiteUrl",
+  "timezone",
+];
+
+// Profile fields a create may set; empty URLs mean "not set".
+const profileData = (body) => ({
+  description: body.description || undefined,
+  genres: body.genres,
+  openingHours: body.openingHours ?? undefined,
+  instagramUrl: body.instagramUrl || undefined,
+  websiteUrl: body.websiteUrl || undefined,
+  timezone: body.timezone,
+});
 
 export const createClub = async (req, res) => {
   try {
@@ -37,6 +62,7 @@ export const createClub = async (req, res) => {
         latitude,
         longitude,
         imageUrl: imageUrl || undefined,
+        ...profileData(req.body),
         qrSecret: generateQrSecret(),
       },
     });
@@ -60,7 +86,7 @@ const parsePositiveInt = (value, fallback) => {
 
 export const getClubs = async (req, res) => {
   try {
-    const { search, city } = req.query;
+    const { search, city, genre } = req.query;
     const page = parsePositiveInt(req.query.page, 1);
     const limit = Math.min(parsePositiveInt(req.query.limit, 20), 50);
     const skip = (page - 1) * limit;
@@ -68,6 +94,7 @@ export const getClubs = async (req, res) => {
     const where = {
       ...(req.user?.role !== "ADMIN" && { isApproved: true }),
       ...(city && { city: { equals: city, mode: "insensitive" } }),
+      ...(GENRES.includes(genre) && { genres: { has: genre } }),
       ...(search && {
         OR: [
           { name: { contains: search, mode: "insensitive" } },
@@ -154,7 +181,16 @@ export const updateClub = async (req, res) => {
 
     const data = {};
     for (const field of EDITABLE_FIELDS) {
-      if (req.body[field] !== undefined) data[field] = req.body[field];
+      const value = req.body[field];
+      if (value === undefined) continue;
+      if (field === "openingHours" && value === null) {
+        // Prisma Json columns need an explicit marker to clear.
+        data[field] = Prisma.DbNull;
+      } else if (value === "" && (field === "instagramUrl" || field === "websiteUrl")) {
+        data[field] = null;
+      } else {
+        data[field] = value;
+      }
     }
     if (Object.keys(data).length === 0) {
       return res.status(400).json({ message: "No fields to update" });
