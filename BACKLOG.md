@@ -1207,3 +1207,84 @@ Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now descri
     - Widget tests in `client/test/friend_nights_test.dart`: `Key('theirSound')` shows for a non-empty list and is absent for an empty one.
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
+
+---
+
+Product-owner proposals, 2026-10-04 (night, latest). Club pages can now suggest places with a similar sound, but not the ones a short walk away, which is how a night with several clubs actually gets planned. And the diary holds months of vibe ratings, but the user has no way to find just their best nights.
+
+- [ ] B99 "Round the corner": approved clubs within walking distance of this one, on its page — status: approved
+  - Why: B69 shows that people combine clubs on the same night, and core loop step 4 ("find the next place to go") often happens mid-night, on a club page. "Club Y · 350 m away" answers "where do we go after this?". It uses only public club coordinates, not the user's location or anyone else's data (principle 2), and it works for unvisited clubs and new users.
+  - Scope: client only, no server or schema change. `ClubController.clubs` already holds approved clubs with `latitude`/`longitude`.
+    - Pure logic, in `client/lib/data/classes/club_directions.dart` next to `formatDistance`:
+      - `double distanceMeters(double lat1, double lng1, double lat2, double lng2)`: haversine with an Earth radius of 6371000 m, matching `distanceInMeters` in `server/src/utils/geo.js`. Don't use `Geolocator` here, so the helper stays pure.
+      - `List<({ClubModel club, double meters})> nearbyClubs(ClubModel club, List<ClubModel> clubs, {double maxMeters = 1000, int limit = 3})`. Candidates are `isApproved` clubs other than `club` (compared by id) within `maxMeters`. Sort by distance ascending, then by name (case-insensitive), and respect `limit`.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add a "Round the corner" section (`Key('nearbyClubs')`) directly after the existing `Key('similarClubs')` section, built the same way. It is not limited to visited clubs, it reads `clubController.clubs` inside an `Obx`, and it shows only when `nearbyClubs` is non-empty.
+      - Each row is a `ListTile` with `Key('nearby_<clubId>')`, the club name as the title, and `"${formatDistance(meters)} away"` as the subtitle.
+      - Tapping a row pushes `ClubDetailsPage(club: ...)` with `Get.to`, like the similar-club rows.
+      - A club that is also in "More like this" may appear in both sections.
+    - Out: the user's own location (that's B39), walking routes, opening status in the rows.
+  - Acceptance:
+    - Unit tests added to `client/test/club_directions_test.dart`:
+      - `distanceMeters` for two points 0.009° of latitude apart is about 1000 m (within 5 m), and identical points give 0.
+      - `nearbyClubs`: a club 300 m away ranks above one 800 m away. A club 1.5 km away, an unapproved club 100 m away and the club itself are excluded. `limit` is respected.
+    - Widget tests in `client/test/pages_widget_test.dart`, in a new group next to `ClubDetailsPage similar clubs`:
+      - With a fixture club about 300 m away, `Key('nearbyClubs')` and that club's name are shown, with a subtitle ending in "m away".
+      - With no club within 1 km, `Key('nearbyClubs')` is absent.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B100 "Best nights" filter in the history diary: only the nights I rated ★4 or more — status: approved
+  - Why: 7.4 asks for a vibe rating after every night (the morning prompt in `vibe_prompt.dart` keeps people rating), but the diary can only be searched by club or city. "Show me my best nights" is the look-back step (core loop step 3) at its most rewarding, and it is also the quickest way to answer "where should we go again?". It uses only the user's own data, on the device (principle 2).
+  - Scope: client only, no server or schema change.
+    - Pure logic: in `client/lib/data/classes/check_in_grouping.dart`, next to `filterNightGroups`, add `List<NightGroup> filterBestNights(List<NightGroup> groups, {int minVibe = 4})`. It keeps the check-ins whose `vibe` is non-null and `>= minVibe`, and drops nights left empty, the same way `filterNightGroups` does.
+    - UI: in `client/lib/views/pages/check_in_history_page.dart`:
+      - Below the `Key('history_search')` field, add a `FilterChip` (`Key('history_best_nights')`, label "★4+ nights") that keeps a `_bestOnly` bool in the page state.
+      - When it is on, apply `filterBestNights` after `filterNightGroups`, so it combines with the search. Hide the month summary and the "On this night" memories while it is on, the same way they are hidden while searching.
+      - When the filtered list is empty, show `Text("No nights rated ★4 or more yet. Rate a night from its diary entry.", key: const Key('history_best_empty'))`.
+    - Out: other thresholds in the UI, sorting by rating, recap changes (B83), notes search (B79).
+  - Acceptance:
+    - Unit tests added to `client/test/check_in_grouping_test.dart`:
+      - A night with check-ins rated 5 and 2 keeps only the 5. A night rated 3 and a night with null ratings are dropped.
+      - `minVibe: 5` keeps only the 5s, and an empty list gives an empty list.
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `CheckInHistoryPage search` group:
+      - With fixture check-ins at "Club A" (vibe 5) and "Club B" (vibe 2), tapping `Key('history_best_nights')` shows "Club A" and no longer shows "Club B".
+      - With no check-in rated 4 or more, tapping the chip shows `Key('history_best_empty')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B101 "Open tonight" filter on the Want to go page (after B87) — status: proposed
+  - Why: the Want to go list (B81) shows each saved club's opening status, but on a Friday evening the question is "which of my saved places can I go to tonight?". A filter turns the saved list into a plan for tonight (core loop step 4). It also settles B90's open question by keeping this on the Want to go page rather than the map.
+  - Scope: client only. Build it only after B87 has landed on `develop`, because both edit `client/lib/views/pages/want_to_go_page.dart` and `client/test/want_to_go_test.dart`.
+    - Pure logic: in `client/lib/data/classes/club_profile.dart`, next to `clubsOpenAt`, add `bool openTonight(ClubModel club)`. It is true when `openingChipText(club.openingHours, club.localNow)` is "Open now" or starts with "Opens ", using each club's own `localNow`. Leave `clubsOpenAt` unchanged.
+    - UI: a `FilterChip` (`Key('wantToGoOpenTonight')`, "Open tonight") above the list in `WantToGoPage`. When it is on, only entries whose club passes `openTonight` are shown. With none, it shows "None of your saved clubs open tonight". The "You might like" section from B87 isn't filtered.
+    - Out: the map chip (B90), notifications.
+  - Acceptance:
+    - Unit tests in `client/test/club_profile_test.dart`: an open club and a club that opens later today pass, and a closed club and a club with null hours don't.
+    - Widget tests in `client/test/want_to_go_test.dart`: with the chip on, a closed favourite's `Key('wantToGo_<id>')` row disappears and an open one stays.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B102 Change my email, confirmed by a code sent to the new address — status: proposed
+  - Why: email is the only way back into an account (7.6 password reset), but there is no way to change it. A user who loses access to their old inbox loses their verified history the next time they forget their password. This completes the account basics alongside 7.6, 7.7, B43 and B74.
+  - Scope: needs a product decision first: whether the old address also gets a "your email was changed" notice, and whether a change signs out other sessions (reusing 7.7's `tokenVersion`). Once decided, the likely build is:
+    - Schema: `User.pendingEmail`, a hashed code and an expiry, with a migration, or reuse the 7.6 reset-code storage if its shape fits.
+    - Server: `POST /api/auth/me/email` takes the current password and the new email. It returns 409 when the email is taken, sends a 6-digit code through `server/src/services/emailService.js`, and is rate-limited like the reset routes. `POST /api/auth/me/email/confirm` takes the code and swaps the email.
+    - Client: a "Change email" tile on Profile, and a two-step page modelled on `forgot_password_page.dart`.
+    - Out: changing the username, social sign-in (B31).
+  - Acceptance (once decided):
+    - Supertest tests with a fake email sender: a wrong password is rejected, a taken email gives 409, a wrong or expired code is rejected, and a correct code changes the email with no code in any response body.
+    - A widget test for the two steps, with a fake service.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B103 Admin club ranking shows each club's regulars next to its check-ins (after B97) — status: proposed
+  - Why: the ranking (B65) shows which clubs are growing, and B97 counts the guests who came on 3+ nights to one club. Putting the regulars count on the ranking tells an admin which venues already have a loyal crowd to pitch "reward your regulars" to (B24, PLAN decision 6), without opening each footfall report.
+  - Scope: server and client, no schema change. Build it only after B97 has landed, and reuse B97's frequency counting in `server/src/services/footfallService.js` rather than re-implementing it.
+    - Server: in `getClubRanking` in `server/src/controllers/adminController.js`, select `userId` and `checkedInAt` for the current window and attach `regulars` (a count, no ids) to each entry.
+    - Client: parse `regulars` in `client/lib/data/classes/club_ranking_model.dart` (0 when absent) and show "N regulars" on each ranking row.
+    - Out: sorting by regulars, naming regulars.
+  - Acceptance:
+    - Jest: a club with one user on 3 nights and one on 1 night has `regulars: 1`, and no `userId` appears in the body.
+    - A Flutter model test for the missing key, and a widget test for the label.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
