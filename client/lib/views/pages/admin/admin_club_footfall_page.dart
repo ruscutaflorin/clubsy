@@ -28,6 +28,7 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
   ClubFootfallModel? _footfall;
   String? _error;
   bool _loading = false;
+  int _weeks = 12;
 
   @override
   void initState() {
@@ -43,7 +44,7 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
     });
     try {
       final service = widget.service ?? AdminService();
-      final data = await service.getClubFootfall(widget.club.id);
+      final data = await service.getClubFootfall(widget.club.id, weeks: _weeks);
       if (!mounted) return;
       setState(() => _footfall = data);
     } on ApiException catch (e) {
@@ -133,6 +134,21 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SegmentedButton<int>(
+            key: const Key('footfallWeeks'),
+            segments: const [
+              ButtonSegment(value: 4, label: Text('4 wk')),
+              ButtonSegment(value: 12, label: Text('12 wk')),
+              ButtonSegment(value: 26, label: Text('26 wk')),
+              ButtonSegment(value: 52, label: Text('52 wk')),
+            ],
+            selected: {_weeks},
+            onSelectionChanged: (s) {
+              setState(() => _weeks = s.first);
+              _load();
+            },
+          ),
+          const SizedBox(height: 16),
           if (_loading) const LinearProgressIndicator(),
           if (_error != null)
             Text(_error!, style: const TextStyle(color: Colors.redAccent)),
