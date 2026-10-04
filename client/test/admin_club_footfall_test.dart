@@ -142,5 +142,42 @@ void main() {
       find.textContaining('close to the 150 m limit: check'),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('footfallVibe')), findsNothing);
+  });
+
+  Future<void> pumpVibe(WidgetTester tester, Map<String, dynamic> extra) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(
+          club: club,
+          footfall: ClubFootfallModel.fromMap({'weekly': [], ...extra}),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('shows the guest vibe average and star rows', (tester) async {
+    await pumpVibe(tester, {
+      'vibe': {
+        'count': 27,
+        'average': 4.3,
+        'distribution': [0, 1, 4, 9, 13],
+      },
+    });
+    expect(find.text('★4.3 from 27 ratings'), findsOneWidget);
+    expect(find.text('5★  13'), findsOneWidget);
+    expect(find.text('1★  0'), findsOneWidget);
+  });
+
+  testWidgets('guest vibe below the floor says not enough ratings', (
+    tester,
+  ) async {
+    await pumpVibe(tester, {
+      'vibe': {'count': 3, 'average': null, 'distribution': null},
+    });
+    expect(find.text('Not enough ratings yet (3 of 5)'), findsOneWidget);
   });
 }

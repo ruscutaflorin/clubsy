@@ -105,6 +105,30 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
     );
   }
 
+  Widget _vibeCard(VibeSummary v) {
+    final dist = v.distribution;
+    final enough = v.average != null && dist != null && dist.length == 5;
+    return Card(
+      key: const Key('footfallVibe'),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Guest vibe', style: Theme.of(context).textTheme.titleMedium),
+            if (!enough)
+              Text('Not enough ratings yet (${v.count} of 5)')
+            else ...[
+              Text(vibeLabel(v)),
+              for (var star = 5; star >= 1; star--)
+                Text('$star★  ${dist[star - 1]}'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = _footfall;
@@ -187,6 +211,10 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
             if (data.distance != null) ...[
               const SizedBox(height: 24),
               _distanceCard(data.distance!),
+            ],
+            if (data.vibe != null) ...[
+              const SizedBox(height: 24),
+              _vibeCard(data.vibe!),
             ],
           ],
         ],
