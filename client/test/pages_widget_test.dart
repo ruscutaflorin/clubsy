@@ -203,6 +203,39 @@ void main() {
     });
   });
 
+  group('ClubDetailsPage similar clubs', () {
+    ClubModel withGenres(String id, String name) => ClubModel(
+      id: id,
+      name: name,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: 46,
+      longitude: 23.5,
+      imageUrl: 'http://localhost/img.png',
+      isApproved: true,
+      genres: ['techno'],
+    );
+
+    testWidgets('shows a similar club', (tester) async {
+      final a = withGenres('a', 'Club Alpha');
+      controller.clubs.addAll([a, withGenres('s', 'Club Sigma')]);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('similarClubs')), findsOneWidget);
+      expect(find.text('Club Sigma'), findsOneWidget);
+    });
+
+    testWidgets('hides the section without a similar club', (tester) async {
+      final a = withGenres('a', 'Club Alpha');
+      controller.clubs.add(a);
+      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: a)));
+      tester.takeException();
+
+      expect(find.byKey(const Key('similarClubs')), findsNothing);
+    });
+  });
+
   group('CheckInHistoryPage', () {
     testWidgets('shows empty state without check-ins', (tester) async {
       await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));

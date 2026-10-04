@@ -82,4 +82,57 @@ void main() {
     ]);
     expect(text, 'Your sound: techno · house · latin');
   });
+
+  group('similarClubs', () {
+    ClubModel club(
+      String id,
+      List<String> genres, {
+      String city = 'Cluj',
+      bool approved = true,
+    }) => ClubModel(
+      id: id,
+      name: id,
+      address: '1 Main St',
+      city: city,
+      latitude: 46,
+      longitude: 23.5,
+      imageUrl: 'http://img',
+      isApproved: approved,
+      genres: genres,
+    );
+
+    final me = club('me', ['techno', 'house']);
+
+    test('ranks more shared genres first and excludes non-matches', () {
+      final r = similarClubs(me, [
+        me,
+        club('techno-only', ['techno']),
+        club('both', ['house', 'techno']),
+        club('bucharest', ['techno'], city: 'Bucharest'),
+        club('pending', ['techno'], approved: false),
+        club('latin', ['latin']),
+      ]);
+      expect(r.map((e) => e.club.id), ['both', 'techno-only']);
+      expect(r.first.shared, ['techno', 'house']);
+    });
+
+    test('ignores case and surrounding spaces, and respects limit', () {
+      final spaced = club('me2', ['Techno ']);
+      final r = similarClubs(spaced, [
+        club('a', [' techno']),
+        club('b', ['TECHNO']),
+      ], limit: 1);
+      expect(r.map((e) => e.club.id), ['a']);
+      expect(r.first.shared, ['Techno']);
+    });
+
+    test('a club with no genres has no similar clubs', () {
+      expect(
+        similarClubs(club('x', []), [
+          club('a', ['techno']),
+        ]),
+        isEmpty,
+      );
+    });
+  });
 }
