@@ -21,6 +21,11 @@ model User {
   passwordResetTokens PasswordResetToken[]
   friendshipsSent     Friendship[]         @relation("FriendshipRequester")
   friendshipsReceived Friendship[]         @relation("FriendshipAddressee")
+  blocksMade          Block[]              @relation("BlockBlocker")
+  blocksReceived      Block[]              @relation("BlockBlocked")
+  reportsMade         Report[]             @relation("ReportReporter")
+  reportsAgainst      Report[]             @relation("ReportReported")
+  reportsHandled      Report[]             @relation("ReportHandler")
 
   username        String?   @unique
   homeCity        String?
@@ -111,6 +116,50 @@ model Friendship {
 
   @@unique([requesterId, addresseeId])
   @@index([addresseeId])
+}
+
+model Block {
+  id        String   @id @default(uuid())
+  blockerId String
+  blocker   User     @relation("BlockBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("BlockBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  ACTIONED
+  DISMISSED
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  reporterId     String
+  reporter       User         @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUserId String
+  reportedUser   User         @relation("ReportReported", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reason         ReportReason
+  details        String?
+  status         ReportStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  handledById    String?
+  handledBy      User?        @relation("ReportHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt      DateTime?
+
+  @@index([reportedUserId, status])
+  @@index([status, createdAt])
 }
 
 enum Role {

@@ -6,6 +6,7 @@ import 'package:clubsy/views/pages/admin/admin_club_footfall_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_form_page.dart';
 import 'package:clubsy/views/pages/admin/admin_club_qr_page.dart';
 import 'package:clubsy/views/pages/admin/admin_metrics_page.dart';
+import 'package:clubsy/views/pages/admin/admin_reports_page.dart';
 
 class AdminClubsPage extends StatefulWidget {
   const AdminClubsPage({super.key});
@@ -52,6 +53,12 @@ class _AdminClubsPageState extends State<AdminClubsPage> {
             tooltip: 'Data health',
             icon: const Icon(Icons.rule),
             onPressed: () => Get.to(() => const AdminClubDataHealthPage()),
+          ),
+          IconButton(
+            key: const Key('openReportsQueue'),
+            tooltip: 'Reports',
+            icon: const Icon(Icons.flag),
+            onPressed: () => Get.to(() => const AdminReportsPage()),
           ),
           IconButton(
             key: const Key('adminMetrics'),

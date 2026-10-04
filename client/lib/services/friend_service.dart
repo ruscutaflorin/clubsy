@@ -26,4 +26,26 @@ class FriendService {
   Future<void> cancel(String id) => _api.delete('/friends/requests/$id');
 
   Future<void> unfriend(String id) => _api.delete('/friends/$id');
+
+  Future<List<FriendEntry>> getBlocked() async {
+    final data = await _api.get('/blocks');
+    return ((data['blocked'] as List?) ?? [])
+        .map((e) => FriendEntry.fromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> block(String userId) =>
+      _api.post('/blocks', body: {'userId': userId});
+
+  Future<void> unblock(String userId) => _api.delete('/blocks/$userId');
+
+  Future<void> report(String userId, String reason, {String? details}) =>
+      _api.post(
+        '/reports',
+        body: {
+          'userId': userId,
+          'reason': reason,
+          if (details != null && details.isNotEmpty) 'details': details,
+        },
+      );
 }

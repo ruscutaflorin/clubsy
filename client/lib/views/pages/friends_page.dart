@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:clubsy/data/classes/friend_model.dart';
 import 'package:clubsy/src/core/controllers/friend_controller.dart';
+import 'package:clubsy/widgets/user_actions_menu.dart';
 
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -51,7 +52,13 @@ class _FriendsPageState extends State<FriendsPage> {
             leading: const Icon(Icons.person),
             title: Text(e.label),
             subtitle: e.username != null ? Text(e.name) : null,
-            trailing: actions(e),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                actions(e),
+                UserActionsMenu(entry: e),
+              ],
+            ),
           ),
       ],
     );

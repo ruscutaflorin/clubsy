@@ -70,6 +70,48 @@ class FriendController extends GetxController {
   Future<void> unfriend(FriendEntry entry) =>
       _act(() => _service.unfriend(entry.id));
 
+  final blocked = <FriendEntry>[].obs;
+
+  Future<void> loadBlocked() async {
+    try {
+      blocked.assignAll(await _service.getBlocked());
+      error.value = null;
+    } on ApiException catch (e) {
+      error.value = e.message;
+    }
+  }
+
+  /// Blocking also ends the friendship server-side, so both lists reload.
+  Future<void> block(FriendEntry entry) async {
+    await _act(() => _service.block(entry.userId));
+    await loadBlocked();
+  }
+
+  Future<void> unblock(FriendEntry entry) async {
+    try {
+      await _service.unblock(entry.userId);
+    } on ApiException catch (e) {
+      error.value = e.message;
+    }
+    await loadBlocked();
+  }
+
+  /// Returns whether the report was accepted.
+  Future<bool> report(
+    FriendEntry entry,
+    String reason, {
+    String? details,
+  }) async {
+    try {
+      await _service.report(entry.userId, reason, details: details?.trim());
+      error.value = null;
+      return true;
+    } on ApiException catch (e) {
+      error.value = e.message;
+      return false;
+    }
+  }
+
   Future<void> _act(Future<void> Function() call) async {
     String? failure;
     try {

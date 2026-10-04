@@ -10,6 +10,7 @@ import 'package:clubsy/views/pages/achievements_page.dart';
 import 'package:clubsy/views/pages/admin/admin_clubs_page.dart';
 import 'package:clubsy/views/pages/change_password_page.dart';
 import 'package:clubsy/views/pages/edit_profile_page.dart';
+import 'package:clubsy/views/pages/blocked_users_page.dart';
 import 'package:clubsy/views/pages/friends_page.dart';
 import 'package:clubsy/src/core/controllers/friend_controller.dart';
 import 'package:clubsy/views/pages/legal_page.dart';
@@ -440,6 +441,13 @@ class ProfilePage extends StatelessWidget {
                   )
                 : _friendsTrailing(0),
             onTap: () => Get.to(() => const FriendsPage()),
+          ),
+          ListTile(
+            key: const Key('blockedUsersTile'),
+            leading: const Icon(Icons.block),
+            title: const Text('Blocked users'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.to(() => const BlockedUsersPage()),
           ),
           const SizedBox(height: 24),
           Obx(

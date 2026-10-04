@@ -9,6 +9,7 @@ import checkInRoutes from "./routes/checkInRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import venueDisplayRoutes from "./routes/venueDisplayRoutes.js";
 import friendRoutes from "./routes/friendRoutes.js";
+import { blockRouter, reportRouter } from "./routes/blockRoutes.js";
 
 const app = express();
 
@@ -41,6 +42,8 @@ app.use("/api/clubs", clubRoutes);
 app.use("/api/check-ins", checkInRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/friends", friendRoutes);
+app.use("/api/blocks", blockRouter);
+app.use("/api/reports", reportRouter);
 app.use("/venue-display", venueDisplayRoutes);
 
 // Health check
