@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, query } from 'express-validator';
-import { changePassword, forgotPassword, resetPassword,checkUsernameAvailable, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp, updateMyProfile } from '../controllers/authController.js';
+import { changePassword, forgotPassword, resetPassword,checkUsernameAvailable, deleteMyAccount, exportMyData, getCurrentUser, signIn, signOutAll, signUp, updateMyProfile } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 import { authLimiter, passwordResetEmailLimiter, passwordResetIpLimiter, usernameCheckLimiter } from '../middlewares/rateLimiters.js';
 
@@ -51,6 +51,9 @@ router.post(
   body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   resetPassword
 );
+
+// Sign out of every device
+router.post('/signout-all', authMiddleware, signOutAll);
 
 // Current user
 router.get('/me', authMiddleware, getCurrentUser);

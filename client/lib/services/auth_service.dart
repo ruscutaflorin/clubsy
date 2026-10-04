@@ -75,11 +75,22 @@ class AuthService {
   /// Changes the password (`POST /auth/me/password`). A wrong current
   /// password is a 401 that must not end the session.
   Future<void> changePassword(String current, String next) async {
-    await _api.post(
+    final data = await _api.post(
       '/auth/me/password',
       body: {'currentPassword': current, 'newPassword': next},
       expireSession: false,
     );
+    // Other devices are signed out; keep this one with the fresh token.
+    final token = data is Map ? data['token'] : null;
+    if (token is String) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(tokenKey, token);
+    }
+  }
+
+  /// Revokes every session of this account (`POST /auth/signout-all`).
+  Future<void> signOutAll() async {
+    await _api.post('/auth/signout-all', expireSession: false);
   }
 
   /// Asks for a reset code by email (`POST /auth/password/forgot`). The

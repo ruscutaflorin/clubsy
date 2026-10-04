@@ -6,6 +6,13 @@ import crypto from "node:crypto";
 import config from "../config.js";
 import { getEmailSender } from "../services/emailService.js";
 
+const issueToken = (user) =>
+  jwt.sign(
+    { userId: user.id, email: user.email, role: user.role, tv: user.tokenVersion ?? 0 },
+    config.JWT_SECRET,
+    { expiresIn: config.JWT_EXPIRES_IN }
+  );
+
 const profileSelect = {
   username: true,
   homeCity: true,
@@ -54,11 +61,7 @@ export const signUp = async (req, res) => {
     });
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN }
-    );
+    const token = issueToken(user);
 
     res.status(201).json({
       message: "User created successfully",
@@ -105,11 +108,7 @@ export const signIn = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: user.role },
-      config.JWT_SECRET,
-      { expiresIn: config.JWT_EXPIRES_IN }
-    );
+    const token = issueToken(user);
 
     res.json({
       user: {
@@ -130,6 +129,20 @@ export const signOut = async (req, res) => {
   // Since we're using JWT, we don't need to do anything on the server side
   // The client should remove the token
   res.json({ message: "Signed out successfully" });
+};
+
+// Invalidates every token issued so far, including the caller's.
+export const signOutAll = async (req, res) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tokenVersion: { increment: 1 } },
+    });
+    res.json({ message: "Signed out of all devices" });
+  } catch (error) {
+    console.error("Sign out all error:", error);
+    res.status(500).json({ message: "Error signing out" });
+  }
 };
 
 export const getCurrentUser = async (req, res) => {
@@ -230,10 +243,17 @@ export const changePassword = async (req, res) => {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: await bcrypt.hash(newPassword, 10) },
+      data: {
+        password: await bcrypt.hash(newPassword, 10),
+        tokenVersion: { increment: 1 },
+      },
     });
 
-    res.json({ message: "Password changed" });
+    // Other devices are signed out; this one gets a fresh token.
+    res.json({
+      message: "Password changed",
+      token: issueToken({ ...user, tokenVersion: (user.tokenVersion ?? 0) + 1 }),
+    });
   } catch (error) {
     console.error("Change password error:", error);
     res.status(500).json({ message: "Error changing password" });
@@ -336,8 +356,8 @@ export const deleteMyAccount = async (req, res) => {
 
     // Every task that adds user-owned rows (favourites, friendships, reports, ...)
     // must add its table to this transaction, before the user delete.
-    // When 7.7 lands, bump tokenVersion first.
     await prisma.$transaction([
+      prisma.user.update({ where: { id: userId }, data: { tokenVersion: { increment: 1 } } }),
       prisma.checkIn.deleteMany({ where: { userId } }),
       prisma.favorite.deleteMany({ where: { userId } }),
       prisma.user.delete({ where: { id: userId } }),
@@ -422,7 +442,10 @@ export const resetPassword = async (req, res) => {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: await bcrypt.hash(newPassword, 10) },
+      data: {
+        password: await bcrypt.hash(newPassword, 10),
+        tokenVersion: { increment: 1 },
+      },
     });
 
     res.json({ message: "Password reset" });
