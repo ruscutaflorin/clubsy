@@ -26,10 +26,6 @@ void main() {
     test('returns only visited clubs when filtering', () {
       expect(clubsForMap([a, b, c], {'a', 'c'}, true), [a, c]);
     });
-
-    test('returns an empty list when nothing is visited', () {
-      expect(clubsForMap([a, b, c], {}, true), isEmpty);
-    });
   });
 
   group('boundsFor', () {

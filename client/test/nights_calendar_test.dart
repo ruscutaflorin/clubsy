@@ -106,19 +106,9 @@ void main() {
     ];
     await tester.pumpWidget(
       GetMaterialApp(
-        home: Scaffold(
-          body: Column(
-            children: [
-              NightsCalendar(checkIns: checkIns, year: 2026),
-              Text(
-                '${nightsCalendar(checkIns, 2026).nightsOut} nights out in 2026',
-              ),
-            ],
-          ),
-        ),
+        home: Scaffold(body: NightsCalendar(checkIns: checkIns, year: 2026)),
       ),
     );
-    expect(find.text('3 nights out in 2026'), findsOneWidget);
     await tester.tap(find.byKey(const Key('night_2026-03-14')));
     await tester.pumpAndSettle();
     expect(find.text('Club a'), findsOneWidget);

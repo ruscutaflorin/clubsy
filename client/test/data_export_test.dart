@@ -10,9 +10,13 @@ import 'package:clubsy/views/pages/profile_page.dart';
 
 class FakeExportService extends DataExportService {
   int calls = 0;
+  int csvCalls = 0;
 
   @override
   Future<void> exportMyData() async => calls++;
+
+  @override
+  Future<void> exportMyCheckInsCsv() async => csvCalls++;
 }
 
 void main() {
@@ -38,8 +42,9 @@ void main() {
     expect(fake.calls, 1);
   });
 
-  testWidgets('shows the CSV download tile', (tester) async {
-    Get.put<DataExportService>(FakeExportService());
+  testWidgets('CSV tile triggers the CSV export only', (tester) async {
+    final fake = FakeExportService();
+    Get.put<DataExportService>(fake);
     Get.put(AuthController());
     Get.put(ThemeController());
     Get.put(ClubController());
@@ -47,7 +52,10 @@ void main() {
     await tester.pump();
 
     await tester.ensureVisible(find.byKey(const Key('exportCsvTile')));
-    expect(find.byKey(const Key('exportCsvTile')), findsOneWidget);
-    expect(find.text('Download as spreadsheet (CSV)'), findsOneWidget);
+    await tester.tap(find.text('Download as spreadsheet (CSV)'));
+    await tester.pump();
+
+    expect(fake.csvCalls, 1);
+    expect(fake.calls, 0);
   });
 }

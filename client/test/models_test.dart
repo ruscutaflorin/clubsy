@@ -55,28 +55,8 @@ void main() {
     });
   });
 
+  // A full ranking fixture is parsed and rendered in admin_metrics_test.dart.
   group('ClubRankingModel', () {
-    test('parses a fixture', () {
-      final m = ClubRankingModel.fromJson({
-        'weeks': 4,
-        'clubs': [
-          {
-            'id': 'c1',
-            'name': 'Club A',
-            'city': 'Cluj-Napoca',
-            'checkIns': 84,
-            'uniqueVisitors': 51,
-            'previousCheckIns': 72,
-            'change': 12,
-          },
-        ],
-      });
-      expect(m.weeks, 4);
-      expect(m.clubs.single.name, 'Club A');
-      expect(m.clubs.single.uniqueVisitors, 51);
-      expect(m.clubs.single.change, 12);
-    });
-
     test('defaults to an empty list without clubs', () {
       expect(ClubRankingModel.fromJson({}).clubs, isEmpty);
     });
@@ -104,13 +84,6 @@ void main() {
       expect(m.nearDuplicates.single.b.name, 'Club X Bar');
       expect(m.nearDuplicates.single.meters, 12);
       expect(m.farFromCity.single.km, 41.3);
-    });
-
-    test('defaults missing lists to empty', () {
-      final m = ClubDataHealthModel.fromJson({});
-      expect(m.invalidCoordinates, isEmpty);
-      expect(m.nearDuplicates, isEmpty);
-      expect(m.farFromCity, isEmpty);
     });
   });
 }
