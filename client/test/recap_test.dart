@@ -174,6 +174,8 @@ void main() {
       expect(r.$2, DateTime(2026, 1, 1, 6));
     });
 
+    final now = DateTime(2026, 10, 2, 12);
+
     Future<void> pump(WidgetTester tester, List<CheckInModel> items) async {
       SharedPreferences.setMockInitialValues({});
       Get.reset();
@@ -183,12 +185,11 @@ void main() {
       );
       Get.put<ClubController>(c);
       c.myCheckIns.assignAll(items);
-      await tester.pumpWidget(const GetMaterialApp(home: RecapPage()));
+      await tester.pumpWidget(GetMaterialApp(home: RecapPage(now: now)));
       await tester.pump();
     }
 
     testWidgets('page shows comparison', (tester) async {
-      final now = DateTime.now();
       final last = lastMonthRange(now).$1;
       final prev = previousMonthRange(now).$1;
       await pump(tester, [
@@ -206,7 +207,7 @@ void main() {
     testWidgets('page hides comparison without previous check-ins', (
       tester,
     ) async {
-      final last = lastMonthRange(DateTime.now()).$1;
+      final last = lastMonthRange(now).$1;
       await pump(tester, [ci('a', DateTime(last.year, last.month, 5, 23))]);
       expect(find.byKey(const Key('recapComparison')), findsNothing);
     });
