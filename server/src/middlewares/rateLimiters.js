@@ -22,6 +22,16 @@ export const usernameCheckLimiter = rateLimit({
   message: tooMany("Too many username checks, try again in a minute"),
 });
 
+// Mount after authMiddleware: keyed by the signed-in user. Counts every attempt, known username or not.
+export const friendRequestLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: config.RATE_LIMIT_FRIEND_REQUESTS_PER_DAY,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user.id,
+  message: tooMany("Too many friend requests today, try again tomorrow"),
+});
+
 const passwordResetOptions = {
   windowMs: 60 * 60 * 1000,
   standardHeaders: true,
