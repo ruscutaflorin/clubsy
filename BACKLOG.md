@@ -936,7 +936,7 @@ Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe rat
 
 Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genres, but genres only show as chips on a club page and as a search filter. These items turn them into a taste profile ("your sound") that feeds the "where next?" step of the core loop. They also add an admin check so pilot clubs actually have the genres and hours these features need.
 
-- [ ] B86 "Your sound": my top music genres from my nights, on Profile and on the recap card — status: approved
+- [x] B86 "Your sound": my top music genres from my nights, on Profile and on the recap card — status: done
   - Why: the regular wants to know what their nights say about them, and the recap card is the part people share. "Your sound: techno · house" is a fun piece of identity that comes only from verified check-ins (principle 5) and uses only the user's own data (principle 2). It is also the base for genre-based suggestions (B87).
   - Scope: client only, no server or schema change. `CheckInModel.club.genres` is already loaded into `ClubController.myCheckIns`.
     - Pure logic: add a new `client/lib/data/classes/genre_taste.dart` with `List<({String genre, int nights})> genreNights(List<CheckInModel> checkIns)`.
