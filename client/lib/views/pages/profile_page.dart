@@ -481,6 +481,22 @@ class ProfilePage extends StatelessWidget {
             },
           ),
           ListTile(
+            key: const Key('signOutAllTile'),
+            leading: const Icon(Icons.devices_other, color: Colors.red),
+            title: const Text(
+              'Sign out of all devices',
+              style: TextStyle(color: Colors.red),
+            ),
+            onTap: () async {
+              try {
+                await authController.signOutAll();
+                Get.offAllNamed('/login');
+              } catch (_) {
+                Get.snackbar('Error', 'Could not sign out of all devices');
+              }
+            },
+          ),
+          ListTile(
             key: const Key('deleteAccountTile'),
             leading: const Icon(Icons.delete_forever, color: Colors.red),
             title: const Text(
