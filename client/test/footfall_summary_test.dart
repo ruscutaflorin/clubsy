@@ -113,6 +113,22 @@ void main() {
     );
   });
 
+  test('summary lists the regulars count', () {
+    final m = ClubFootfallModel(
+      visitFrequency: const VisitFrequency(threePlus: 4),
+      totalCheckIns: 1,
+      uniqueVisitors: 1,
+      returningVisitorRate: 0,
+      firstTimeShare: 1,
+      weekly: const [],
+      byWeekday: const [],
+    );
+    expect(
+      footfallSummaryText('Alpha', m),
+      contains('Regulars (3+ nights): 4'),
+    );
+  });
+
   test('percentages are whole numbers; name and week count included', () {
     final t = footfallSummaryText('Alpha', model());
     expect(t, contains('Returning visitors: 38%'));

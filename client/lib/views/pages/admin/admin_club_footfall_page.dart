@@ -105,6 +105,25 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
     );
   }
 
+  Widget _frequencyCard(VisitFrequency f) => Card(
+    key: const Key('footfallFrequency'),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'How often guests come',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text('1 night: ${f.once}'),
+          Text('2 nights: ${f.twice}'),
+          Text('3+ nights (regulars): ${f.threePlus}'),
+        ],
+      ),
+    ),
+  );
+
   Widget _vibeCard(VibeSummary v) {
     final dist = v.distribution;
     final enough = v.average != null && dist != null && dist.length == 5;
@@ -201,6 +220,8 @@ class _AdminClubFootfallPageState extends State<AdminClubFootfallPage> {
                 ),
               ],
             ),
+            const SizedBox(height: 24),
+            _frequencyCard(data.visitFrequency),
             const SizedBox(height: 24),
             Text(
               'Weekly check-ins',

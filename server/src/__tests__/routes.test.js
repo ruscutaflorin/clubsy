@@ -380,6 +380,7 @@ describe("admin club footfall route", () => {
     expect(res.body.weekly).toHaveLength(12);
     expect(res.body.distance.count).toBe(1);
     expect(res.body.vibe.count).toBe(1);
+    expect(res.body.visitFrequency).toEqual({ once: 1, twice: 0, threePlus: 0 });
     expect(JSON.stringify(res.body)).not.toMatch(/userId|u1/);
   });
 

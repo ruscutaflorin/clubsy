@@ -47,6 +47,7 @@ String footfallSummaryText(String clubName, ClubFootfallModel m) {
     'Unique visitors: ${m.uniqueVisitors}',
     'Returning visitors: ${_pct(m.returningVisitorRate)}',
     'First-time visitors: ${_pct(m.firstTimeShare)}',
+    'Regulars (3+ nights): ${m.visitFrequency.threePlus}',
   ];
 
   var bestDay = -1;

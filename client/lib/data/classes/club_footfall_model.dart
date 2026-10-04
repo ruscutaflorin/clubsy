@@ -56,6 +56,20 @@ class VibeSummary {
   );
 }
 
+class VisitFrequency {
+  final int once;
+  final int twice;
+  final int threePlus;
+
+  const VisitFrequency({this.once = 0, this.twice = 0, this.threePlus = 0});
+
+  factory VisitFrequency.fromMap(Map<String, dynamic> map) => VisitFrequency(
+    once: (map['once'] as num?)?.toInt() ?? 0,
+    twice: (map['twice'] as num?)?.toInt() ?? 0,
+    threePlus: (map['threePlus'] as num?)?.toInt() ?? 0,
+  );
+}
+
 class ClubFootfallModel {
   final int totalCheckIns;
   final int uniqueVisitors;
@@ -65,8 +79,10 @@ class ClubFootfallModel {
   final List<int> byWeekday;
   final DistanceHealth? distance;
   final VibeSummary? vibe;
+  final VisitFrequency visitFrequency;
 
   const ClubFootfallModel({
+    this.visitFrequency = const VisitFrequency(),
     this.distance,
     this.vibe,
     required this.totalCheckIns,
@@ -93,6 +109,11 @@ class ClubFootfallModel {
         distance: map['distance'] is Map
             ? DistanceHealth.fromMap(Map<String, dynamic>.from(map['distance']))
             : null,
+        visitFrequency: map['visitFrequency'] is Map
+            ? VisitFrequency.fromMap(
+                Map<String, dynamic>.from(map['visitFrequency']),
+              )
+            : const VisitFrequency(),
         vibe: map['vibe'] is Map
             ? VibeSummary.fromMap(Map<String, dynamic>.from(map['vibe']))
             : null,

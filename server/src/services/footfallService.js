@@ -107,6 +107,12 @@ export const computeClubFootfall = ({
     if (!cameBefore) firstTime += 1;
   }
   const uniqueVisitors = nightsByUser.size;
+  const visitFrequency = { once: 0, twice: 0, threePlus: 0 };
+  for (const nights of nightsByUser.values()) {
+    if (nights.size >= 3) visitFrequency.threePlus += 1;
+    else if (nights.size === 2) visitFrequency.twice += 1;
+    else visitFrequency.once += 1;
+  }
 
   return {
     totalCheckIns,
@@ -119,6 +125,8 @@ export const computeClubFootfall = ({
       uniqueVisitors: w.users.size,
     })),
     byWeekday,
+    visitFrequency,
+    regulars: visitFrequency.threePlus,
   };
 };
 
