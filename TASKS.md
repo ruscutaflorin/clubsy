@@ -898,7 +898,7 @@ follows the 8.0 decisions below.
 Goal: close the gaps the 2026-10-04 test audit found (PR #4). No schema changes. New tests must
 pass the testing policy in `.nightshift/rules.md`.
 
-- [ ] 9.1 Server: cover the empty club update and remove the dead `signOut` controller.
+- [x] 9.1 Server: cover the empty club update and remove the dead `signOut` controller.
       - Scope: in `server/src/__tests__/routes.test.js`, add one supertest case:
         `PATCH /api/clubs/:id` as ADMIN with a body that sets no editable field (e.g. `{}`)
         returns 400 `{message: "No fields to update"}` and never calls `club.update`. Delete the

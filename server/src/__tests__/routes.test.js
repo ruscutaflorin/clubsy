@@ -182,6 +182,13 @@ describe("club routes", () => {
     expect(clubUpdate.mock.calls[1][0].data.openingHours).toBe(Prisma.DbNull);
   });
 
+  it("PATCH /api/clubs/:id rejects a body that sets no editable field", async () => {
+    const res = await request(app).patch("/api/clubs/c1").set(auth(adminToken)).send({});
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ message: "No fields to update" });
+    expect(clubUpdate).not.toHaveBeenCalled();
+  });
+
   it("GET /api/clubs filters by a known genre and ignores an unknown one", async () => {
     clubFindMany.mockResolvedValue([club]);
     clubCount.mockResolvedValue(1);
