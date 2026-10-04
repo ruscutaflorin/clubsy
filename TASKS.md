@@ -882,7 +882,7 @@ follows the 8.0 decisions below.
       - Verified by: Jest for the defaults (a new user shares nothing) and the toggles,
         `pnpm test` and `flutter test`.
 
-- [ ] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
+- [x] 8.4 Friends' nights feed: delayed, opt-in on both sides, past nights only.
       - Server: `GET /api/feed` returns friends' check-ins only when **both** users have
         `shareNightsWithFriends` on, the check-in isn't hidden, and its night has **ended** (now is
         at or after `nightEnd(checkedInAt)`). It shows the club and the night date, never the
