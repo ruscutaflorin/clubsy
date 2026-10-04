@@ -316,6 +316,35 @@ void main() {
       expect(find.textContaining('No nights match'), findsOneWidget);
       expect(find.byType(ListTile), findsNothing);
     });
+
+    testWidgets('best nights chip keeps only check-ins rated 4 or more', (
+      tester,
+    ) async {
+      controller.myCheckIns.addAll([
+        fixtureCheckIn('1', fixtureClub('a', 'Club A')).withDiary(vibe: 5),
+        fixtureCheckIn('2', fixtureClub('b', 'Club B')).withDiary(vibe: 2),
+      ]);
+      await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
+
+      await tester.tap(find.byKey(const Key('history_best_nights')));
+      await tester.pump();
+      expect(find.text('Club A'), findsOneWidget);
+      expect(find.text('Club B'), findsNothing);
+    });
+
+    testWidgets('best nights chip shows the empty state without 4+ ratings', (
+      tester,
+    ) async {
+      controller.myCheckIns.add(
+        fixtureCheckIn('1', fixtureClub('b', 'Club B')).withDiary(vibe: 2),
+      );
+      await tester.pumpWidget(const MaterialApp(home: CheckInHistoryPage()));
+
+      await tester.tap(find.byKey(const Key('history_best_nights')));
+      await tester.pump();
+      expect(find.byKey(const Key('history_best_empty')), findsOneWidget);
+      expect(find.byType(ListTile), findsNothing);
+    });
   });
 
   group('ProfileStatsCard', () {
