@@ -43,8 +43,10 @@ in this repo should reintroduce event/ticketing/cart concepts.
   tasks (`.nightshift/config.json` service `postgres`), and `server/.env` already points at it: use
   that `DATABASE_URL`, never invent a connection string. The database holds seed data only and is
   disposable. If `prisma migrate dev` reports drift or migrations the branch doesn't have (left by
-  an earlier attempt), run `cd server && npx prisma migrate reset --force` (it re-applies the
-  branch's migrations and re-seeds), then retry. Server tests still mock Prisma and never need
+  an earlier attempt), reset it with exactly
+  `docker exec clubsy-db psql -U clubsy -d clubsy -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"`
+  then `cd server && npx prisma migrate deploy && npx prisma db seed`, then retry. Don't use
+  `prisma migrate reset`: Prisma refuses it when run by an AI agent. Server tests still mock Prisma and never need
   the database. If the database is unreachable, end `BLOCKED: no database available`.
 - To verify the server boots without crashing, run exactly `timeout 5 node server/src/index.js`
   (that precise command, from the repo root) — it is the one allowlisted in `.claude/settings.json`.
