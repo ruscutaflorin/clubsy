@@ -27,6 +27,15 @@ CheckInModel checkIn(String id, String clubId) => CheckInModel(
   }),
 );
 
+CheckInModel _withGenres(CheckInModel c, List<String> genres) => CheckInModel(
+  id: c.id,
+  clubId: c.clubId,
+  checkedInAt: c.checkedInAt,
+  verificationMethod: c.verificationMethod,
+  distanceMeters: c.distanceMeters,
+  club: ClubModel.fromMap({...c.club.toMap(), 'genres': genres}),
+);
+
 CheckInModel _record(String id, String clubId) => checkIn(id, clubId);
 
 void main() {
@@ -41,6 +50,35 @@ void main() {
         checkIn('3', 'b'),
       ]);
       expect(controller.visitedClubIds, {'a', 'b'});
+    });
+
+    test('checkIn reports genres new to the user', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.myCheckIns.add(_withGenres(checkIn('1', 'a'), ['techno']));
+      controller.clubs.add(
+        _withGenres(checkIn('x', 'b'), ['techno', 'house']).club,
+      );
+
+      final result = await controller.checkIn(
+        clubId: 'b',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.newGenres, ['house']);
+    });
+
+    test('first-ever checkIn reports no new genres', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.clubs.add(_withGenres(checkIn('x', 'b'), ['house']).club);
+
+      final result = await controller.checkIn(
+        clubId: 'b',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.newGenres, isEmpty);
     });
 
     test('checkIn re-fetches stats afterwards', () async {

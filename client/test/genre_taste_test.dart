@@ -24,6 +24,33 @@ CheckInModel ci(String clubId, DateTime at, List<String> genres) =>
     );
 
 void main() {
+  test('newGenres lists genres no earlier night had', () {
+    final prev = [
+      ci('a', DateTime(2026, 9, 5, 22), ['techno']),
+    ];
+    expect(newGenres(['techno', 'house'], prev), ['house']);
+  });
+
+  test('newGenres ignores case and whitespace', () {
+    final prev = [
+      ci('a', DateTime(2026, 9, 5, 22), ['techno ']),
+    ];
+    expect(newGenres(['Techno'], prev), isEmpty);
+  });
+
+  test('newGenreText names up to three genres', () {
+    expect(newGenreText(['techno']), 'Your first techno night!');
+    expect(
+      newGenreText(['techno', 'house']),
+      'Your first techno and house night!',
+    );
+    expect(
+      newGenreText(['techno', 'house', 'latin', 'rnb']),
+      'Your first techno, house and latin night!',
+    );
+    expect(newGenreText([]), isNull);
+  });
+
   test('two techno clubs on one night count techno once', () {
     final r = genreNights([
       ci('a', DateTime(2026, 9, 5, 22), ['techno']),
