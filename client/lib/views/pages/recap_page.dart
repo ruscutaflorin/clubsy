@@ -143,7 +143,9 @@ class RecapCard extends StatelessWidget {
 }
 
 class RecapPage extends StatefulWidget {
-  const RecapPage({super.key});
+  final DateTime? now;
+
+  const RecapPage({super.key, this.now});
 
   @override
   State<RecapPage> createState() => _RecapPageState();
@@ -151,7 +153,7 @@ class RecapPage extends StatefulWidget {
 
 class _RecapPageState extends State<RecapPage> {
   final _boundaryKey = GlobalKey();
-  final _now = DateTime.now();
+  late final _now = widget.now ?? DateTime.now();
   int? _year;
   bool _hideNames = true;
   String? _error;

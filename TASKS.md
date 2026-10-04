@@ -909,7 +909,7 @@ pass the testing policy in `.nightshift/rules.md`.
         `updateClub` is removed, `grep -rn signOut server/src` finds nothing, and `pnpm test`
         passes.
 
-- [ ] 9.2 Client: make the date-dependent history and recap widget tests deterministic.
+- [x] 9.2 Client: make the date-dependent history and recap widget tests deterministic.
       - Goal: `on_this_night_test.dart` ("history page shows the On this night card", "history
         page has no card when nothing matches") and `recap_test.dart` ("page shows comparison",
         "page hides comparison without previous check-ins") build their fixtures from
