@@ -1081,7 +1081,7 @@ Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' n
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B93 "Until 05:00" and "Next: Fri 23:00": when a club closes, or when it next opens — status: approved
+- [x] B93 "Until 05:00" and "Next: Fri 23:00": when a club closes, or when it next opens — status: done
   - Why: the opening chip says "Open now", "Opens 23:00" or "Closed", but on a night out the next question is "how long have I got?", and on a Tuesday it's "when can I go?". Answering both on the club page and the Want to go list helps plan tonight (core loop step 4) from data 7.2 already stores.
   - Scope: client only, no server or schema change. Leave `openingChipText` and its tests unchanged, because `clubsOpenAt` and the chip colour compare against its exact strings.
     - Pure logic: add `String? openingDetailText(Map<String, dynamic>? hours, DateTime now)` to `client/lib/data/classes/club_profile.dart`, next to `openingChipText`, reusing `_slots`, `_minutes` and `weekdayKeys`.
