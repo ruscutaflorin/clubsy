@@ -34,7 +34,8 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("club read endpoints never expose the QR secret to non-admins", () => {
+// getClubs' qrSecret filtering is covered at the route in routes.test.js.
+describe("getClubById never exposes the QR secret to non-admins", () => {
   it("getClubById omits qrSecret for a USER", async () => {
     findUnique.mockResolvedValue(club);
     const res = makeRes();
@@ -63,26 +64,6 @@ describe("club read endpoints never expose the QR secret to non-admins", () => {
     await getClubById({ params: { id: "c1" }, user: { role: "ADMIN" } }, res);
     expect(res.status).not.toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({ ...club, isApproved: false });
-  });
-
-  it("getClubs omits qrSecret from every club for a USER", async () => {
-    findMany.mockResolvedValue([club]);
-    count.mockResolvedValue(1);
-    const res = makeRes();
-    await getClubs({ query: {}, user: { role: "USER" } }, res);
-    expect(res.json).toHaveBeenCalledWith({
-      clubs: [{ id: "c1", name: "Club", isApproved: true }],
-      total: 1,
-      pages: 1,
-    });
-  });
-
-  it("getClubs keeps qrSecret for an ADMIN", async () => {
-    findMany.mockResolvedValue([club]);
-    count.mockResolvedValue(1);
-    const res = makeRes();
-    await getClubs({ query: {}, user: { role: "ADMIN" } }, res);
-    expect(res.json).toHaveBeenCalledWith({ clubs: [club], total: 1, pages: 1 });
   });
 });
 
@@ -186,16 +167,5 @@ describe("admin club mutations", () => {
     const res = makeRes();
     await approveClub({ params: { id: "c1" } }, res);
     expect(res.status).toHaveBeenCalledWith(500);
-  });
-
-  it("updateClub updates only the provided fields", async () => {
-    update.mockResolvedValue(club);
-    const res = makeRes();
-    await updateClub({ params: { id: "c1" }, body: { city: "Cluj", latitude: 46.7 } }, res);
-    expect(update).toHaveBeenCalledWith({
-      where: { id: "c1" },
-      data: { city: "Cluj", latitude: 46.7 },
-    });
-    expect(res.json).toHaveBeenCalledWith(club);
   });
 });

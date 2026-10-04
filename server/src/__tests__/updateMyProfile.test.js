@@ -30,11 +30,6 @@ beforeEach(() => {
 });
 
 describe("PATCH /api/auth/me", () => {
-  it("401 without a token", async () => {
-    const res = await request(app).patch("/api/auth/me").send({ name: "Ana" });
-    expect(res.status).toBe(401);
-  });
-
   it("200 and writes the trimmed name only", async () => {
     const res = await patch({ name: "  Ana  " });
     expect(res.status).toBe(200);

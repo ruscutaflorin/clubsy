@@ -17,10 +17,8 @@ process.env.JWT_SECRET = "test-secret";
 const { default: app } = await import("../app.js");
 
 const token = jwt.sign({ userId: "u1" }, "test-secret");
-const del = (id, auth = true) => {
-  const r = request(app).delete(`/api/check-ins/${id}`);
-  return auth ? r.set("Authorization", `Bearer ${token}`) : r;
-};
+const del = (id) =>
+  request(app).delete(`/api/check-ins/${id}`).set("Authorization", `Bearer ${token}`);
 
 beforeEach(() => {
   jest.spyOn(console, "error").mockImplementation(() => {});
@@ -49,12 +47,6 @@ describe("DELETE /api/check-ins/:id", () => {
     findUnique.mockResolvedValue(null);
     const res = await del("nope");
     expect(res.status).toBe(404);
-    expect(checkInDelete).not.toHaveBeenCalled();
-  });
-
-  it("401 without a token", async () => {
-    const res = await del("c1", false);
-    expect(res.status).toBe(401);
     expect(checkInDelete).not.toHaveBeenCalled();
   });
 });

@@ -17,20 +17,17 @@ const OPTIONAL = new Set([
   "PRISMA_LOG_QUERIES",
 ]);
 
+// Values that only restate render.yaml aren't asserted; these check that what it points at exists.
 describe("render.yaml", () => {
-  it("configures the web service", () => {
-    expect(service.rootDir).toBe("server");
-    expect(service.region).toBe("frankfurt");
+  it("points at a start script, readiness route, migrations and database that exist", () => {
+    const serviceDir = path.join(root, service.rootDir);
+    const [, script] = service.startCommand.split(" ");
+    expect(fs.existsSync(path.join(serviceDir, script))).toBe(true);
+    // Served by app.js; behavior covered in routes.security.test.js.
     expect(service.healthCheckPath).toBe("/health/ready");
     expect(service.preDeployCommand).toBe("npx prisma migrate deploy");
-    expect(service.startCommand).toBe("node src/index.js");
-  });
-
-  it("wires the database", () => {
-    const db = blueprint.databases.find((d) => d.name === "clubsy-db");
-    expect(db.region).toBe("frankfurt");
     const url = service.envVars.find((v) => v.key === "DATABASE_URL");
-    expect(url.fromDatabase.name).toBe("clubsy-db");
+    expect(blueprint.databases.map((d) => d.name)).toContain(url.fromDatabase.name);
   });
 
   it("declares every variable config.js reads in production", () => {

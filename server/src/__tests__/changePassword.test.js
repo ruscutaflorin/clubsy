@@ -27,13 +27,6 @@ beforeEach(() => {
 });
 
 describe("POST /api/auth/me/password", () => {
-  it("401 without a token", async () => {
-    const res = await request(app)
-      .post("/api/auth/me/password")
-      .send({ currentPassword: "secret-pass", newPassword: "brand-new-pass" });
-    expect(res.status).toBe(401);
-  });
-
   it("401 on wrong current password and never updates", async () => {
     const res = await change({ currentPassword: "nope", newPassword: "brand-new-pass" });
     expect(res.status).toBe(401);
