@@ -860,7 +860,7 @@ follows the 8.0 decisions below.
         auto-accept, requesting yourself → 400, and an unknown username giving the same response
         as a known one, plus Flutter controller tests.
 
-- [ ] 8.2 Block and report, plus an admin moderation queue.
+- [x] 8.2 Block and report, plus an admin moderation queue.
       - Schema: `Block {blockerId, blockedId, createdAt, @@unique}` and `Report {id, reporterId,
         reportedUserId, reason enum, details ≤ 500, status OPEN|ACTIONED|DISMISSED, createdAt,
         handledById, handledAt}`.
