@@ -14,7 +14,18 @@ export function loadConfig(env = process.env) {
     .map((o) => o.trim())
     .filter(Boolean);
 
+  if (NODE_ENV === "production") {
+    const missing = ["RESEND_API_KEY", "EMAIL_FROM"].filter((k) => !env[k]);
+    if (missing.length > 0) {
+      throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
+    }
+  }
+
   return {
+    RESEND_API_KEY: env.RESEND_API_KEY || null,
+    EMAIL_FROM: env.EMAIL_FROM || "Clubsy <noreply@localhost>",
+    RATE_LIMIT_PASSWORD_RESET_PER_HOUR: toInt(env.RATE_LIMIT_PASSWORD_RESET_PER_HOUR, 5),
+    RATE_LIMIT_PASSWORD_RESET_IP_PER_HOUR: toInt(env.RATE_LIMIT_PASSWORD_RESET_IP_PER_HOUR, 20),
     PORT: toInt(env.PORT, 3000),
     NODE_ENV,
     IS_PRODUCTION: NODE_ENV === "production",

@@ -82,6 +82,27 @@ class AuthService {
     );
   }
 
+  /// Asks for a reset code by email (`POST /auth/password/forgot`). The
+  /// server answers 202 whether or not the account exists.
+  Future<void> requestPasswordReset(String email) async {
+    await _api.post(
+      '/auth/password/forgot',
+      body: {'email': email},
+      authenticated: false,
+      expireSession: false,
+    );
+  }
+
+  /// Sets a new password with the emailed code (`POST /auth/password/reset`).
+  Future<void> resetPassword(String email, String code, String next) async {
+    await _api.post(
+      '/auth/password/reset',
+      body: {'email': email, 'code': code, 'newPassword': next},
+      authenticated: false,
+      expireSession: false,
+    );
+  }
+
   /// Changes the display name (`PATCH /auth/me`) and refreshes the cached user.
   Future<Map<String, dynamic>> updateName(String name) async {
     final data = await _api.patch(

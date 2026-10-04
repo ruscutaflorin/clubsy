@@ -4,6 +4,7 @@ import 'package:clubsy/src/core/controllers/auth_controller.dart';
 import 'package:clubsy/views/widget_tree.dart';
 import 'package:clubsy/widgets/auth_widget.dart';
 
+import 'forgot_password_page.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatelessWidget {
@@ -67,7 +68,15 @@ class LoginPage extends StatelessWidget {
                   onAuth: handleLogin,
                   buttonText: 'Sign In',
                 ),
-                const SizedBox(height: 16),
+                TextButton(
+                  key: const Key('forgotPasswordLink'),
+                  onPressed: () => Get.to(() => const ForgotPasswordPage()),
+                  child: const Text(
+                    'Forgot password?',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {
                     Get.to(() => const RegisterPage());

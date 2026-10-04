@@ -2,7 +2,9 @@ import prisma from "../prisma/client.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { validationResult } from "express-validator";
+import crypto from "node:crypto";
 import config from "../config.js";
+import { getEmailSender } from "../services/emailService.js";
 
 const profileSelect = {
   username: true,
@@ -345,5 +347,87 @@ export const deleteMyAccount = async (req, res) => {
   } catch (error) {
     console.error("Delete account error:", error);
     res.status(500).json({ message: "Error deleting account" });
+  }
+};
+
+const RESET_CODE_TTL_MS = 15 * 60 * 1000;
+
+const hashCode = (code) => crypto.createHash("sha256").update(code).digest("hex");
+
+// Always 202, whether or not the email belongs to an account.
+export const forgotPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: req.body.email } });
+    if (user) {
+      const code = crypto.randomInt(0, 1000000).toString().padStart(6, "0");
+      // Only the newest code works.
+      await prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: hashCode(code),
+          expiresAt: new Date(Date.now() + RESET_CODE_TTL_MS),
+        },
+      });
+      await getEmailSender().send({
+        to: user.email,
+        subject: "Your Clubsy password reset code",
+        text: `Your Clubsy password reset code is ${code}. It expires in 15 minutes. If you didn't ask for it, ignore this email.`,
+      });
+    }
+  } catch (error) {
+    // Don't leak account existence through failures either.
+    console.error("Forgot password error:", error);
+  }
+  res.status(202).json({ message: "If that email has an account, a code is on its way" });
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, code, newPassword } = req.body;
+    const invalid = () => res.status(400).json({ message: "Invalid or expired code" });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return invalid();
+
+    const token = await prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user.id,
+        tokenHash: hashCode(code),
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    if (!token) return invalid();
+
+    // Claim the token atomically so concurrent requests can't both use it.
+    const claimed = await prisma.passwordResetToken.updateMany({
+      where: { id: token.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (claimed.count !== 1) return invalid();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: await bcrypt.hash(newPassword, 10) },
+    });
+
+    res.json({ message: "Password reset" });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ message: "Error resetting password" });
   }
 };

@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  password  String
-  name      String
-  role      Role      @default(USER)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  checkIns  CheckIn[]
-  favorites Favorite[]
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  name                String
+  role                Role                 @default(USER)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  checkIns            CheckIn[]
+  favorites           Favorite[]
+  passwordResetTokens PasswordResetToken[]
 
   username        String?   @unique
   homeCity        String?
@@ -25,18 +26,30 @@ model User {
   ageConfirmedAt  DateTime?
 }
 
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
 model Club {
-  id         String    @id @default(uuid())
+  id         String     @id @default(uuid())
   name       String
   address    String
   city       String
   latitude   Float
   longitude  Float
-  qrSecret   String    @unique
-  imageUrl   String    @default("https://picsum.photos/400/200")
-  isApproved Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  qrSecret   String     @unique
+  imageUrl   String     @default("https://picsum.photos/400/200")
+  isApproved Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   checkIns   CheckIn[]
   favorites  Favorite[]
 

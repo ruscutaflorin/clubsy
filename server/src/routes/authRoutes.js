@@ -1,8 +1,8 @@
 import express from 'express';
 import { body, query } from 'express-validator';
-import { changePassword, checkUsernameAvailable, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp, updateMyProfile } from '../controllers/authController.js';
+import { changePassword, forgotPassword, resetPassword,checkUsernameAvailable, deleteMyAccount, exportMyData, getCurrentUser, signIn, signUp, updateMyProfile } from '../controllers/authController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
-import { authLimiter, usernameCheckLimiter } from '../middlewares/rateLimiters.js';
+import { authLimiter, passwordResetEmailLimiter, passwordResetIpLimiter, usernameCheckLimiter } from '../middlewares/rateLimiters.js';
 
 const router = express.Router();
 
@@ -32,6 +32,25 @@ router.post('/signup', authLimiter, signUpValidation, signUp);
 
 // Sign in
 router.post('/signin', authLimiter, signInValidation, signIn);
+
+// Password reset by emailed 6-digit code
+router.post(
+  '/password/forgot',
+  passwordResetIpLimiter,
+  passwordResetEmailLimiter,
+  body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+  forgotPassword
+);
+
+router.post(
+  '/password/reset',
+  passwordResetIpLimiter,
+  passwordResetEmailLimiter,
+  body('email').isEmail().withMessage('Valid email is required').normalizeEmail(),
+  body('code').matches(/^\d{6}$/).withMessage('Code must be 6 digits'),
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+  resetPassword
+);
 
 // Current user
 router.get('/me', authMiddleware, getCurrentUser);
