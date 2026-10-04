@@ -108,6 +108,41 @@ void main() {
     });
   });
 
+  group('ClubDetailsPage opening detail', () {
+    testWidgets('shows when the club closes, and nothing without hours', (
+      tester,
+    ) async {
+      final withHours = ClubModel(
+        id: 'h',
+        name: 'Club Hours',
+        address: '1 Main St',
+        city: 'Cluj',
+        latitude: 46,
+        longitude: 23.5,
+        imageUrl: 'http://localhost/img.png',
+        isApproved: true,
+        openingHours: {
+          'fri': [
+            {'open': '23:00', 'close': '05:00'},
+          ],
+        },
+        localNow: DateTime(2026, 10, 3, 2),
+      );
+      await tester.pumpWidget(
+        MaterialApp(home: ClubDetailsPage(club: withHours)),
+      );
+      tester.takeException();
+      expect(find.byKey(const Key('openingDetailText')), findsOneWidget);
+      expect(find.text('Until 05:00'), findsOneWidget);
+
+      await tester.pumpWidget(
+        MaterialApp(home: ClubDetailsPage(club: fixtureClub('n', 'Club None'))),
+      );
+      tester.takeException();
+      expect(find.byKey(const Key('openingDetailText')), findsNothing);
+    });
+  });
+
   group('ClubDetailsPage my vibe', () {
     final club = fixtureClub('a', 'Club Alpha');
 

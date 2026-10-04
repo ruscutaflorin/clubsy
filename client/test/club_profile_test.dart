@@ -76,6 +76,33 @@ void main() {
     });
   });
 
+  group('openingDetailText', () {
+    test('gives the close time while open, also past midnight', () {
+      expect(openingDetailText(hours, DateTime(2026, 10, 3, 2)), 'Until 05:00');
+      expect(
+        openingDetailText(hours, DateTime(2026, 10, 2, 23, 30)),
+        'Until 05:00',
+      );
+    });
+
+    test('names the next opening once closed for the day', () {
+      final fridayOnly = {'fri': hours['fri']};
+      expect(
+        openingDetailText(fridayOnly, DateTime(2026, 10, 3, 6)),
+        'Next: Fri 23:00',
+      );
+      expect(
+        openingDetailText(hours, DateTime(2026, 10, 3, 6)),
+        'Next: Wed 20:00',
+      );
+    });
+
+    test('is null when the chip says "Opens" or there is no schedule', () {
+      expect(openingDetailText(hours, DateTime(2026, 10, 2, 18)), isNull);
+      expect(openingDetailText(null, DateTime(2026, 10, 2, 18)), isNull);
+    });
+  });
+
   test('openingHoursRows lists all seven days, closed ones included', () {
     final rows = openingHoursRows(hours);
     expect(rows, hasLength(7));
