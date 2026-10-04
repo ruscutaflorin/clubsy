@@ -80,6 +80,39 @@ void main() {
     expect(t, contains('Best week: week of 14 Sep · 5 check-ins'));
   });
 
+  test('guest vibe line only when an average is present', () {
+    ClubFootfallModel withVibe(VibeSummary? v) => ClubFootfallModel(
+      vibe: v,
+      totalCheckIns: 1,
+      uniqueVisitors: 1,
+      returningVisitorRate: 0,
+      firstTimeShare: 1,
+      weekly: const [],
+      byWeekday: const [],
+    );
+    expect(
+      footfallSummaryText(
+        'Alpha',
+        withVibe(
+          const VibeSummary(
+            count: 27,
+            average: 4.3,
+            distribution: [0, 1, 4, 9, 13],
+          ),
+        ),
+      ),
+      contains('Guest vibe: ★4.3 from 27 ratings'),
+    );
+    expect(
+      footfallSummaryText('Alpha', withVibe(const VibeSummary(count: 3))),
+      isNot(contains('Guest vibe')),
+    );
+    expect(
+      footfallSummaryText('Alpha', withVibe(null)),
+      isNot(contains('Guest vibe')),
+    );
+  });
+
   test('percentages are whole numbers; name and week count included', () {
     final t = footfallSummaryText('Alpha', model());
     expect(t, contains('Returning visitors: 38%'));

@@ -2,7 +2,26 @@ import {
   computeClubFootfall,
   computeClubRanking,
   computeDistanceHealth,
+  computeVibeSummary,
 } from "../services/footfallService.js";
+
+describe("computeVibeSummary", () => {
+  it("averages and buckets ratings, ignoring nulls", () => {
+    expect(computeVibeSummary([5, 4, 4, null, 3, 5])).toEqual({
+      count: 5,
+      average: 4.2,
+      distribution: [0, 0, 1, 2, 2],
+    });
+  });
+
+  it("withholds average and distribution below the floor", () => {
+    expect(computeVibeSummary([5, 5, 4, 4])).toEqual({
+      count: 4,
+      average: null,
+      distribution: null,
+    });
+  });
+});
 
 describe("computeDistanceHealth", () => {
   it("is insufficient with null numbers for no data", () => {

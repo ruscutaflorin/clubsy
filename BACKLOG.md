@@ -1038,7 +1038,7 @@ Product-owner proposals, 2026-10-04 (late night). 7.2 gave every club music genr
 
 Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' nights (8.4, B77) now hold data that only partly reaches the people who would act on it. These items give venues the rating feedback that supports the B2B direction, turn a friend's history into "where next?" ideas, and make opening hours useful for planning tonight.
 
-- [ ] B91 Admin footfall "Guest vibe": the rating summary for a club over the report window, aggregate only — status: approved
+- [x] B91 Admin footfall "Guest vibe": the rating summary for a club over the report window, aggregate only — status: done
   - Why: the decided monetization is venue-side B2B (PLAN decision 6), and the footfall report is what admins show partner venues. It says how many people came but not how they felt about the night, even though 7.4 collects a 1-5 vibe rating on check-ins. An aggregate rating with the same 5-rating floor as the public club score adds venue value without exposing any single guest (principle 2).
   - Scope: server and client, no schema change.
     - Server pure logic: in `server/src/services/footfallService.js`, add `export const computeVibeSummary = (ratings, { min = 5 } = {})`. `ratings` is an array of ints 1-5 (nulls are ignored).

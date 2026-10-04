@@ -40,6 +40,22 @@ class DistanceHealth {
   );
 }
 
+class VibeSummary {
+  final int count;
+  final double? average;
+  final List<int>? distribution;
+
+  const VibeSummary({required this.count, this.average, this.distribution});
+
+  factory VibeSummary.fromMap(Map<String, dynamic> map) => VibeSummary(
+    count: (map['count'] as num?)?.toInt() ?? 0,
+    average: (map['average'] as num?)?.toDouble(),
+    distribution: map['distribution'] is List
+        ? (map['distribution'] as List).map((n) => (n as num).toInt()).toList()
+        : null,
+  );
+}
+
 class ClubFootfallModel {
   final int totalCheckIns;
   final int uniqueVisitors;
@@ -48,9 +64,11 @@ class ClubFootfallModel {
   final List<FootfallWeek> weekly;
   final List<int> byWeekday;
   final DistanceHealth? distance;
+  final VibeSummary? vibe;
 
   const ClubFootfallModel({
     this.distance,
+    this.vibe,
     required this.totalCheckIns,
     required this.uniqueVisitors,
     required this.returningVisitorRate,
@@ -74,6 +92,9 @@ class ClubFootfallModel {
             .toList(),
         distance: map['distance'] is Map
             ? DistanceHealth.fromMap(Map<String, dynamic>.from(map['distance']))
+            : null,
+        vibe: map['vibe'] is Map
+            ? VibeSummary.fromMap(Map<String, dynamic>.from(map['vibe']))
             : null,
       );
 }

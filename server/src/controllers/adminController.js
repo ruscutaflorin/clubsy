@@ -4,6 +4,7 @@ import {
   computeClubFootfall,
   computeClubRanking,
   computeDistanceHealth,
+  computeVibeSummary,
 } from "../services/footfallService.js";
 
 import { findClubDataIssues } from "../services/clubDataService.js";
@@ -74,7 +75,7 @@ export const getClubFootfall = async (req, res) => {
     const since = new Date(now.getTime() - (weeks + 1) * 7 * DAY_MS);
     const checkIns = await prisma.checkIn.findMany({
       where: { clubId: club.id, checkedInAt: { gte: since } },
-      select: { userId: true, checkedInAt: true, distanceMeters: true },
+      select: { userId: true, checkedInAt: true, distanceMeters: true, vibe: true },
     });
     const visitorIds = [...new Set(checkIns.map((c) => c.userId))];
     const firsts = visitorIds.length
@@ -92,6 +93,7 @@ export const getClubFootfall = async (req, res) => {
     res.json({
       ...computeClubFootfall({ checkIns, firstVisits, now, weeks }),
       distance: computeDistanceHealth(distances),
+      vibe: computeVibeSummary(checkIns.map((c) => c.vibe)),
     });
   } catch (error) {
     console.error("Club footfall error:", error);
