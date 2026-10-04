@@ -771,7 +771,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         `isFavorite` only reflects the caller's favourites), Flutter controller tests for the
         optimistic toggle with rollback, `pnpm test` and `flutter test`.
 
-- [ ] 7.4 Private night notes and a venue "vibe" rating on each check-in.
+- [x] 7.4 Private night notes and a venue "vibe" rating on each check-in.
       - Goal: turn the history into a real diary ("great DJ, went with Ana") and collect the venue
         quality signal that powers 7.5. This rates **venues**, not people; person-to-person
         ratings (B2) stay gated behind Phase 8.
