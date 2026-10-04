@@ -55,4 +55,21 @@ void main() {
     expect(find.textContaining('No shared nights yet'), findsOneWidget);
     expect(find.byKey(const Key('sharedClubCount')), findsNothing);
   });
+
+  testWidgets('shows the clubs the friend has been to that are new to me', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      const FeedPage(newToYou: [(id: 'k9', name: 'Club Nine', city: 'Iasi')]),
+    );
+    expect(find.byKey(const Key('newToYou')), findsOneWidget);
+    expect(find.byKey(const Key('newToYou_k9')), findsOneWidget);
+    expect(find.text('Club Nine'), findsOneWidget);
+  });
+
+  testWidgets('empty newToYou shows no section', (tester) async {
+    await _pump(tester, const FeedPage());
+    expect(find.byKey(const Key('newToYou')), findsNothing);
+  });
 }

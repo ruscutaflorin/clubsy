@@ -40,10 +40,14 @@ class FeedPage {
   /// Clubs both viewer and friend have been to; only sent for a friend's page 1.
   final int sharedClubCount;
 
+  /// Friend's clubs the viewer hasn't been to; only sent for a friend's page 1.
+  final List<({String id, String name, String? city})> newToYou;
+
   const FeedPage({
     this.nights = const [],
     this.hasMore = false,
     this.sharedClubCount = 0,
+    this.newToYou = const [],
   });
 
   factory FeedPage.fromMap(Map<String, dynamic> map) => FeedPage(
@@ -52,5 +56,15 @@ class FeedPage {
         .toList(),
     hasMore: map['hasMore'] == true,
     sharedClubCount: (map['sharedClubCount'] as num?)?.toInt() ?? 0,
+    newToYou: ((map['newToYou'] as List?) ?? [])
+        .map((e) => e as Map<String, dynamic>)
+        .map(
+          (e) => (
+            id: e['id'].toString(),
+            name: (e['name'] as String?) ?? '',
+            city: e['city'] as String?,
+          ),
+        )
+        .toList(),
   );
 }
