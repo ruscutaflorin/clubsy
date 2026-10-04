@@ -49,7 +49,9 @@ class WantToGoPage extends StatelessWidget {
       key: Key('wantToGo_${club.id}'),
       title: Text(club.name),
       subtitle: Text(
-        status == null ? club.city : [club.city, status, ?detail].join(' · '),
+        status == null
+            ? club.city
+            : [club.city, status, if (detail != null) detail].join(' · '),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
