@@ -788,7 +788,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         (pure `pendingVibePrompt(checkIns, now)`), `pnpm test` and `flutter test`.
       - Depends on: 7.0, 3.5 and 5.4 (history tile layout).
 
-- [ ] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
+- [x] 7.5 Club vibe score on club pages (aggregate, privacy-preserving).
       - Server: club responses include `vibe: {average, count}` only when `count >= 5` (k-anonymity:
         individual ratings are never exposed, and below the threshold the field is `null`).
         Compute it over the last 90 days. Add a `sort=vibe` option on `GET /api/clubs`.
