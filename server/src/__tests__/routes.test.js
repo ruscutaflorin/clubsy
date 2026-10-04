@@ -333,16 +333,30 @@ describe("admin club ranking route", () => {
 describe("admin club data health route", () => {
   it("returns 200 with the three lists and no qrSecret for an admin", async () => {
     clubFindMany.mockResolvedValue([
-      { id: "c1", name: "Zero", city: "X", latitude: 0, longitude: 0, isApproved: false },
+      {
+        id: "c1",
+        name: "Zero",
+        city: "X",
+        latitude: 0,
+        longitude: 0,
+        isApproved: false,
+        description: "Has one",
+        genres: [],
+        openingHours: { mon: { open: "22:00", close: "04:00" } },
+      },
     ]);
     const res = await request(app).get("/api/admin/clubs/data-health").set(auth(adminToken));
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual([
       "farFromCity",
+      "incompleteProfiles",
       "invalidCoordinates",
       "nearDuplicates",
     ]);
     expect(res.body.invalidCoordinates).toHaveLength(1);
+    expect(res.body.incompleteProfiles).toEqual([
+      { id: "c1", name: "Zero", city: "X", isApproved: false, missing: ["genres"] },
+    ]);
     expect(JSON.stringify(res.body)).not.toContain("qrSecret");
   });
 });

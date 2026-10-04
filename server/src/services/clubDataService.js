@@ -80,5 +80,32 @@ export const findClubDataIssues = (clubs, { duplicateMeters = 75, outlierKm = 30
   }
   farFromCity.sort((x, y) => y.km - x.km);
 
-  return { invalidCoordinates, nearDuplicates, farFromCity };
+  const incompleteProfiles = [];
+  for (const club of clubs) {
+    const missing = [];
+    const hours = club.openingHours;
+    if (!hours || typeof hours !== "object" || Object.keys(hours).length === 0) {
+      missing.push("openingHours");
+    }
+    if (!Array.isArray(club.genres) || club.genres.length === 0) missing.push("genres");
+    if (typeof club.description !== "string" || club.description.trim() === "") {
+      missing.push("description");
+    }
+    if (missing.length === 0) continue;
+    incompleteProfiles.push({
+      id: club.id,
+      name: club.name,
+      city: club.city,
+      isApproved: club.isApproved,
+      missing,
+    });
+  }
+  incompleteProfiles.sort(
+    (x, y) =>
+      Number(Boolean(y.isApproved)) - Number(Boolean(x.isApproved)) ||
+      y.missing.length - x.missing.length ||
+      String(x.name ?? "").localeCompare(String(y.name ?? "")),
+  );
+
+  return { invalidCoordinates, nearDuplicates, farFromCity, incompleteProfiles };
 };
