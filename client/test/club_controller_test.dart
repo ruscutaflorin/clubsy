@@ -7,6 +7,7 @@ import 'package:clubsy/data/classes/check_in_stats_model.dart';
 import 'package:clubsy/data/classes/city_progress_model.dart';
 import 'package:clubsy/data/classes/club_model.dart';
 import 'package:clubsy/services/check_in_service.dart';
+import 'package:clubsy/services/club_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
 
 CheckInModel checkIn(String id, String clubId) => CheckInModel(
@@ -104,6 +105,41 @@ void main() {
       expect(controller.myCheckIns.map((c) => c.id), ['1', '2']);
     });
 
+    test('toggleFavorite is optimistic and calls the server', () async {
+      final service = _FakeClubService();
+      final controller = ClubController(clubService: service);
+      final pending = controller.toggleFavorite('a');
+      expect(controller.favoriteIds, {'a'});
+      await pending;
+      await controller.toggleFavorite('a');
+      expect(controller.favoriteIds, isEmpty);
+      expect(service.calls, ['a:true', 'a:false']);
+    });
+
+    test('toggleFavorite rolls back when the server call fails', () async {
+      final controller = ClubController(
+        clubService: _FakeClubService(fail: true),
+      );
+      await expectLater(controller.toggleFavorite('a'), throwsException);
+      expect(controller.favoriteIds, isEmpty);
+
+      controller.favoriteIds.add('b');
+      await expectLater(controller.toggleFavorite('b'), throwsException);
+      expect(controller.favoriteIds, {'b'});
+    });
+
+    test('checking into a favourite for the first time ticks it off', () async {
+      final controller = ClubController(checkInService: _FakeCheckInService());
+      controller.favoriteIds.add('a');
+      final result = await controller.checkIn(
+        clubId: 'a',
+        qrPayload: 'qr',
+        latitude: 1,
+        longitude: 2,
+      );
+      expect(result.tickedOffList, isTrue);
+    });
+
     test('refresh while signed out swallows the error', () async {
       SharedPreferences.setMockInitialValues({});
       final controller = ClubController();
@@ -113,6 +149,22 @@ void main() {
       expect(controller.myCheckIns, isEmpty);
     });
   });
+}
+
+class _FakeClubService implements ClubService {
+  final bool fail;
+  final calls = <String>[];
+
+  _FakeClubService({this.fail = false});
+
+  @override
+  Future<void> setFavorite(String id, bool favorite) async {
+    calls.add('$id:$favorite');
+    if (fail) throw Exception('boom');
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeCheckInService implements CheckInService {

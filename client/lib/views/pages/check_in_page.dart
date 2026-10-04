@@ -121,6 +121,16 @@ class _CheckInPageState extends State<CheckInPage> {
         outcome: result.outcome,
         club: widget.club,
         extras: [
+          if (result.tickedOffList)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Ticked off your list!',
+                key: Key('tickedOffList'),
+                style: TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
           for (final badge in result.unlocked)
             Padding(
               padding: const EdgeInsets.only(top: 8),

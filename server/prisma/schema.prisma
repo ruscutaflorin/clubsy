@@ -16,6 +16,7 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   checkIns  CheckIn[]
+  favorites Favorite[]
 
   username        String?   @unique
   homeCity        String?
@@ -37,6 +38,7 @@ model Club {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   checkIns   CheckIn[]
+  favorites  Favorite[]
 
   description  String?
   genres       String[]
@@ -58,6 +60,18 @@ model CheckIn {
   club               Club               @relation(fields: [clubId], references: [id])
 
   @@index([userId])
+  @@index([clubId])
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  clubId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  club      Club     @relation(fields: [clubId], references: [id])
+
+  @@unique([userId, clubId])
   @@index([clubId])
 }
 

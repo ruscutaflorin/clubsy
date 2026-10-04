@@ -14,6 +14,7 @@ class ClubModel {
   final String? instagramUrl;
   final String? websiteUrl;
   final String timezone;
+  final bool isFavorite;
 
   /// The club's own wall-clock time when the response was built (server-side,
   /// in [timezone]), advanced by the time elapsed since it was received.
@@ -43,6 +44,7 @@ class ClubModel {
     this.instagramUrl,
     this.websiteUrl,
     this.timezone = 'Europe/Bucharest',
+    this.isFavorite = false,
     DateTime? localNow,
   }) : _localNowAtFetch = localNow;
 
@@ -65,6 +67,7 @@ class ClubModel {
       instagramUrl: map['instagramUrl'],
       websiteUrl: map['websiteUrl'],
       timezone: map['timezone'] ?? 'Europe/Bucharest',
+      isFavorite: map['isFavorite'] ?? false,
       localNow: map['localNow'] is String
           ? DateTime.tryParse(map['localNow'])
           : null,
@@ -87,5 +90,6 @@ class ClubModel {
     'instagramUrl': instagramUrl,
     'websiteUrl': websiteUrl,
     'timezone': timezone,
+    'isFavorite': isFavorite,
   };
 }

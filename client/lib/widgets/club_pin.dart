@@ -6,6 +6,7 @@ import 'package:clubsy/data/classes/club_model.dart';
 class ClubPin extends StatelessWidget {
   final ClubModel club;
   final bool isVisited;
+  final bool isFavorite;
   final int nights;
   final VoidCallback onTap;
 
@@ -13,6 +14,7 @@ class ClubPin extends StatelessWidget {
     super.key,
     required this.club,
     required this.isVisited,
+    this.isFavorite = false,
     required this.nights,
     required this.onTap,
   });
@@ -28,8 +30,23 @@ class ClubPin extends StatelessWidget {
           Icon(
             Icons.location_on,
             size: 40,
-            color: isVisited ? Colors.green : Colors.redAccent,
+            color: isVisited
+                ? Colors.green
+                : isFavorite
+                ? Colors.amber
+                : Colors.redAccent,
           ),
+          // Visited = green, favourite = gold, both = green with a star.
+          if (isFavorite)
+            Positioned(
+              top: 6,
+              child: Icon(
+                Icons.star,
+                key: Key('pinStar_${club.id}'),
+                size: 16,
+                color: isVisited ? Colors.amber : Colors.white,
+              ),
+            ),
           if (nights >= 2)
             Positioned(
               top: 0,

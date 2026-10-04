@@ -2,12 +2,18 @@ import 'package:clubsy/data/classes/club_model.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
-/// Pure: the clubs a map should render, filtered to visited-only when asked.
+/// Pure: the clubs a map should render, filtered to visited-only or
+/// want-to-go-only when asked (want-to-go wins if both are set).
 List<ClubModel> clubsForMap(
   List<ClubModel> clubs,
   Set<String> visitedIds,
-  bool visitedOnly,
-) {
+  bool visitedOnly, {
+  Set<String> favoriteIds = const {},
+  bool wantToGoOnly = false,
+}) {
+  if (wantToGoOnly) {
+    return clubs.where((club) => favoriteIds.contains(club.id)).toList();
+  }
   if (!visitedOnly) return clubs;
   return clubs.where((club) => visitedIds.contains(club.id)).toList();
 }

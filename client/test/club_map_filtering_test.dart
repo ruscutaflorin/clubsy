@@ -26,6 +26,19 @@ void main() {
     test('returns only visited clubs when filtering', () {
       expect(clubsForMap([a, b, c], {'a', 'c'}, true), [a, c]);
     });
+
+    test('want-to-go shows only favourites, regardless of visited', () {
+      expect(
+        clubsForMap(
+          [a, b, c],
+          {'a'},
+          true,
+          favoriteIds: {'b'},
+          wantToGoOnly: true,
+        ),
+        [b],
+      );
+    });
   });
 
   group('boundsFor', () {

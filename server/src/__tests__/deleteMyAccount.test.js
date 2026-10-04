@@ -7,12 +7,14 @@ const userFindUnique = jest.fn();
 const userCount = jest.fn();
 const userDelete = jest.fn((a) => ({ op: "user.delete", a }));
 const checkInDeleteMany = jest.fn((a) => ({ op: "checkIn.deleteMany", a }));
+const favoriteDeleteMany = jest.fn((a) => ({ op: "favorite.deleteMany", a }));
 const transaction = jest.fn();
 
 jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
     user: { findUnique: userFindUnique, count: userCount, delete: userDelete },
     checkIn: { deleteMany: checkInDeleteMany },
+    favorite: { deleteMany: favoriteDeleteMany },
     $transaction: transaction,
   },
 }));
@@ -51,7 +53,7 @@ describe("DELETE /api/auth/me", () => {
     const res = await del({ password: "secret-pass" });
     expect(res.status).toBe(204);
     const ops = transaction.mock.calls[0][0].map((o) => o.op);
-    expect(ops).toEqual(["checkIn.deleteMany", "user.delete"]);
+    expect(ops).toEqual(["checkIn.deleteMany", "favorite.deleteMany", "user.delete"]);
     expect(checkInDeleteMany).toHaveBeenCalledWith({ where: { userId: "u1" } });
     expect(userDelete).toHaveBeenCalledWith({ where: { id: "u1" } });
   });

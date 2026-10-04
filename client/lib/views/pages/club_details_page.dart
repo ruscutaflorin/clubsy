@@ -139,6 +139,22 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
       appBar: AppBar(
         title: Text(club.name),
         actions: [
+          Obx(() {
+            final isFavorite = clubController.favoriteIds.contains(club.id);
+            return IconButton(
+              key: const Key('favoriteToggle'),
+              icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+              color: isFavorite ? Colors.redAccent : null,
+              tooltip: isFavorite ? 'Remove from Want to go' : 'Want to go',
+              onPressed: () async {
+                try {
+                  await clubController.toggleFavorite(club.id);
+                } catch (_) {
+                  Get.snackbar('Want to go', 'Could not update your list');
+                }
+              },
+            );
+          }),
           IconButton(
             key: const Key('shareClub'),
             icon: const Icon(Icons.share),

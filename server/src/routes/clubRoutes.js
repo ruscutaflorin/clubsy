@@ -10,6 +10,9 @@ import {
   getClubQr,
   rotateClubQr,
   getDisplayLink,
+  getFavorites,
+  addFavorite,
+  removeFavorite,
 } from "../controllers/clubController.js";
 import { GENRES } from "../utils/genres.js";
 import { openingHoursError } from "../utils/openingHours.js";
@@ -112,6 +115,9 @@ const clubUpdateValidation = [
 ];
 
 router.get("/", authMiddleware, getClubs);
+router.get("/favorites", authMiddleware, getFavorites);
+router.put("/:id/favorite", authMiddleware, addFavorite);
+router.delete("/:id/favorite", authMiddleware, removeFavorite);
 router.get("/:id", authMiddleware, getClubById);
 router.post("/", authMiddleware, adminMiddleware, clubValidation, createClub);
 router.patch("/:id", authMiddleware, adminMiddleware, clubUpdateValidation, updateClub);

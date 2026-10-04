@@ -70,6 +70,9 @@ describe("auth wiring", () => {
     ["get", "/api/check-ins/me/cities"],
     ["get", "/api/check-ins/me/achievements"],
     ["delete", "/api/check-ins/ci1"],
+    ["get", "/api/clubs/favorites"],
+    ["put", "/api/clubs/c1/favorite"],
+    ["delete", "/api/clubs/c1/favorite"],
   ])("%s %s returns 401 without a token", async (method, path) => {
     const res = await call(method, path);
     expect(res.status).toBe(401);
