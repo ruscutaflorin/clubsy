@@ -104,6 +104,8 @@ const evaluate = (badge, sorted) => {
     return done(earnedAt ? 1 : 0, earnedAt);
   }
 
+  if (kind !== "streak") throw new Error(`Unknown badge kind: ${kind}`);
+
   // streak: the first check-in of the week that completes a run of `target` weeks.
   const firstInWeek = new Map();
   for (const c of sorted) {

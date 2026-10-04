@@ -43,7 +43,7 @@ void main() {
   group('ClubDetailsPage', () {
     final club = fixtureClub('a', 'Club Alpha');
 
-    testWidgets('shows club info and no visited chip by default', (
+    testWidgets('shows club info and no visit history by default', (
       tester,
     ) async {
       await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
@@ -55,6 +55,7 @@ void main() {
       expect(find.text('Checked in before'), findsNothing);
       expect(find.text('Not on your map yet'), findsOneWidget);
       expect(find.text('Directions'), findsOneWidget);
+      expect(find.byKey(const Key('nightsHereTile')), findsNothing);
     });
 
     testWidgets('shows visited chip and a 1-visit summary with one check-in', (
@@ -104,13 +105,6 @@ void main() {
       await tester.tap(find.byKey(const Key('nightsHereTile')));
       await tester.pumpAndSettle();
       expect(find.text('Sat 14 Mar 2026'), findsOneWidget);
-    });
-
-    testWidgets('hides the nights tile for an unvisited club', (tester) async {
-      await tester.pumpWidget(MaterialApp(home: ClubDetailsPage(club: club)));
-      tester.takeException();
-
-      expect(find.byKey(const Key('nightsHereTile')), findsNothing);
     });
   });
 

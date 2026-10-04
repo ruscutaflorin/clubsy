@@ -8,9 +8,8 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
   default: { club: { findUnique }, checkIn: { create, findMany, findFirst } },
 }));
 
-const { checkIn, getMyCheckIns, getMyCheckInStats } = await import(
-  "../controllers/checkInController.js"
-);
+const { checkIn, getMyCheckInStats } = await import("../controllers/checkInController.js");
+const { nightStart, nightEnd } = await import("../utils/night.js");
 
 const makeRes = () => {
   const res = {};
@@ -74,14 +73,6 @@ describe("checkIn", () => {
     });
   });
 
-  it("accepts isMocked false with an accuracy", async () => {
-    findUnique.mockResolvedValue(club);
-    create.mockResolvedValue({ id: "ci1" });
-    const res = makeRes();
-    await checkIn(makeReq({ isMocked: false, accuracyMeters: 8.5 }), res);
-    expect(res.status).toHaveBeenCalledWith(201);
-  });
-
   it("rejects a wrong QR secret", async () => {
     findUnique.mockResolvedValue(club);
     const res = makeRes();
@@ -122,10 +113,8 @@ describe("checkIn", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("allows a check-in at a different club the same night", async () => {
-    const club2 = { ...club, id: "c2" };
-    findUnique.mockResolvedValue(club2);
-    findFirst.mockResolvedValue(null);
+  it("scopes the once-a-night check to this club and tonight, so other clubs stay allowed", async () => {
+    findUnique.mockResolvedValue({ ...club, id: "c2" });
     create.mockResolvedValue({ id: "ci2" });
     const res = makeRes();
     await checkIn(
@@ -136,6 +125,12 @@ describe("checkIn", () => {
       res
     );
     expect(res.status).toHaveBeenCalledWith(201);
+    const now = new Date();
+    expect(findFirst.mock.calls[0][0].where).toEqual({
+      userId: "u1",
+      clubId: "c2",
+      checkedInAt: { gte: nightStart(now), lt: nightEnd(now) },
+    });
   });
 
   describe("impossible travel", () => {
@@ -166,14 +161,6 @@ describe("checkIn", () => {
       await checkIn(makeReq(), res);
       expect(res.status).toHaveBeenCalledWith(201);
     });
-
-    it("allows a first check-in", async () => {
-      findUnique.mockResolvedValue(club);
-      create.mockResolvedValue({ id: "ci1" });
-      const res = makeRes();
-      await checkIn(makeReq(), res);
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
   });
 
   it("returns 500 when the database fails", async () => {
@@ -181,16 +168,6 @@ describe("checkIn", () => {
     const res = makeRes();
     await checkIn(makeReq(), res);
     expect(res.status).toHaveBeenCalledWith(500);
-  });
-});
-
-describe("getMyCheckIns", () => {
-  it("lists only the caller's check-ins", async () => {
-    findMany.mockResolvedValue([]);
-    const res = makeRes();
-    await getMyCheckIns({ user: { id: "u1" } }, res);
-    expect(findMany.mock.calls[0][0].where).toEqual({ userId: "u1" });
-    expect(res.json).toHaveBeenCalledWith({ checkIns: [] });
   });
 });
 

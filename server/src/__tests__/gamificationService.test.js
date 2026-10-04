@@ -30,7 +30,9 @@ const badge = (list, id) => list.find((b) => b.id === id);
 describe("weeklyStreak", () => {
   it("is 0 for empty history and no badge is earned", () => {
     expect(weeklyStreak([], NOW)).toEqual({ streak: 0, longestStreak: 0, atRisk: false });
-    expect(badges([]).every((b) => b.earnedAt === null)).toBe(true);
+    const all = badges([]);
+    expect(all.every((b) => b.earnedAt === null)).toBe(true);
+    expect(new Set(all.map((b) => b.id)).size).toBe(all.length);
   });
 
   it("counts W1-W3 when the current week has no check-in yet", () => {
@@ -124,7 +126,7 @@ describe("weeklyChallenges and points", () => {
 });
 
 describe("GET /api/check-ins/me/achievements", () => {
-  it("returns all four sections", async () => {
+  it("returns all four sections, evaluated from the caller's check-ins", async () => {
     userFindUnique.mockResolvedValue({ id: "u1", role: "USER" });
     findMany.mockResolvedValue([ci("2026-09-01T22:00:00Z")]);
     const token = jwt.sign({ userId: "u1" }, "test-secret");
@@ -133,6 +135,6 @@ describe("GET /api/check-ins/me/achievements", () => {
       .set("Authorization", `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(Object.keys(res.body).sort()).toEqual(["badges", "challenges", "points", "streak"]);
-    expect(res.body.badges).toHaveLength(8);
+    expect(badge(res.body.badges, "first_pin").earnedAt).toBe("2026-09-01T22:00:00.000Z");
   });
 });

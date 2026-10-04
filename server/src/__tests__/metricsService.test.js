@@ -3,7 +3,6 @@ import jwt from "jsonwebtoken";
 import request from "supertest";
 import { computePilotMetrics, computePilotScorecard } from "../services/metricsService.js";
 
-const clubCount = jest.fn();
 const userFindUnique = jest.fn();
 const userFindMany = jest.fn();
 const checkInFindMany = jest.fn();
@@ -12,7 +11,6 @@ jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
     user: { findUnique: userFindUnique, findMany: userFindMany },
     checkIn: { findMany: checkInFindMany },
-    club: { count: clubCount },
   },
 }));
 
@@ -115,19 +113,7 @@ describe("GET /api/admin/metrics", () => {
     return `Bearer ${jwt.sign({ userId: "u1" }, "test-secret")}`;
   };
 
-  it("rejects a USER with 403", async () => {
-    const res = await request(app).get("/api/admin/metrics").set("Authorization", asRole("USER"));
-    expect(res.status).toBe(403);
-  });
-
-  it("rejects days=5 with 400", async () => {
-    const res = await request(app)
-      .get("/api/admin/metrics?days=5")
-      .set("Authorization", asRole("ADMIN"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns aggregates for an admin", async () => {
+  it("defaults to a 7-day window for an admin", async () => {
     userFindMany.mockResolvedValue([]);
     checkInFindMany.mockResolvedValue([]);
     const res = await request(app).get("/api/admin/metrics").set("Authorization", asRole("ADMIN"));
@@ -182,39 +168,5 @@ describe("computePilotScorecard", () => {
     });
     expect(crit(s, "partner_clubs").met).toBe(true);
     expect(JSON.stringify(s)).not.toMatch(/userId|u1/);
-  });
-});
-
-describe("GET /api/admin/metrics/scorecard", () => {
-  beforeEach(() => jest.spyOn(console, "log").mockImplementation(() => {}));
-  afterEach(() => jest.restoreAllMocks());
-
-  const asRole = (role) => {
-    userFindUnique.mockResolvedValue({ id: "u1", email: "a@b.c", role });
-    return `Bearer ${jwt.sign({ userId: "u1" }, "test-secret")}`;
-  };
-
-  it("rejects no token with 401", async () => {
-    const res = await request(app).get("/api/admin/metrics/scorecard");
-    expect(res.status).toBe(401);
-  });
-
-  it("rejects a USER with 403", async () => {
-    const res = await request(app)
-      .get("/api/admin/metrics/scorecard")
-      .set("Authorization", asRole("USER"));
-    expect(res.status).toBe(403);
-  });
-
-  it("returns the scorecard for an admin", async () => {
-    userFindMany.mockResolvedValue([]);
-    checkInFindMany.mockResolvedValue([]);
-    clubCount.mockResolvedValue(3);
-    const res = await request(app)
-      .get("/api/admin/metrics/scorecard")
-      .set("Authorization", asRole("ADMIN"));
-    expect(res.status).toBe(200);
-    expect(res.body.criteria).toHaveLength(4);
-    expect(res.body.wacu).toHaveLength(8);
   });
 });

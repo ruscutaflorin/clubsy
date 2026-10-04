@@ -108,19 +108,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('parses distance and defaults to null without it', () {
+  // A full distance block is parsed and rendered in the marginal-warning test below.
+  test('distance defaults to null, and to null figures when insufficient', () {
     expect(fixture.distance, isNull);
-    final m = ClubFootfallModel.fromMap({
-      'distance': {
-        'count': 10,
-        'medianMeters': 42,
-        'p90Meters': 118,
-        'nearLimitShare': 0.3,
-        'status': 'marginal',
-      },
-    });
-    expect(m.distance!.medianMeters, 42);
-    expect(m.distance!.status, 'marginal');
     final empty = DistanceHealth.fromMap({
       'count': 0,
       'status': 'insufficient',

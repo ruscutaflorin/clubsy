@@ -71,9 +71,4 @@ describe("DELETE /api/auth/me", () => {
     const res = await del({ password: "secret-pass" });
     expect(res.status).toBe(204);
   });
-
-  it("401 without a token", async () => {
-    const res = await request(app).delete("/api/auth/me").send({ password: "x" });
-    expect(res.status).toBe(401);
-  });
 });

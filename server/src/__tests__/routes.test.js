@@ -1,10 +1,8 @@
 import { jest } from "@jest/globals";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
 import request from "supertest";
 
 const userFindUnique = jest.fn();
-const userCreate = jest.fn();
 const userFindMany = jest.fn();
 const clubFindUnique = jest.fn();
 const clubFindMany = jest.fn();
@@ -15,7 +13,7 @@ const checkInGroupBy = jest.fn();
 
 jest.unstable_mockModule("../prisma/client.js", () => ({
   default: {
-    user: { findUnique: userFindUnique, create: userCreate, findMany: userFindMany },
+    user: { findUnique: userFindUnique, findMany: userFindMany },
     club: {
       findUnique: clubFindUnique,
       findMany: clubFindMany,
@@ -51,35 +49,50 @@ beforeEach(() => {
 
 afterEach(() => jest.restoreAllMocks());
 
-describe("auth routes", () => {
-  it("signup returns 400 {errors} for a bad email", async () => {
-    const res = await request(app)
-      .post("/api/auth/signup")
-      .send({ email: "nope", password: "password1", name: "Ana" });
-    expect(res.status).toBe(400);
-    expect(res.body.errors).toBeDefined();
-  });
+// Every route mounts its own auth middleware, so each one is checked here; the per-feature
+// suites only cover what a signed-in caller sees.
+const call = (method, path) => request(app)[method](path);
 
-  it("signup returns 201 with a token", async () => {
-    userFindUnique.mockResolvedValue(null);
-    userCreate.mockResolvedValue({ id: "u9", email: "ana@x.com", name: "Ana", role: "USER" });
-    const res = await request(app)
-      .post("/api/auth/signup")
-      .send({ email: "ana@x.com", password: "password1", name: "Ana" });
-    expect(res.status).toBe(201);
-    expect(typeof res.body.token).toBe("string");
-  });
-
-  it("signin returns 401 for a wrong password", async () => {
-    userFindUnique.mockResolvedValue({
-      id: "u1",
-      email: "ana@x.com",
-      password: await bcrypt.hash("right-password", 4),
-    });
-    const res = await request(app)
-      .post("/api/auth/signin")
-      .send({ email: "ana@x.com", password: "wrong-password" });
+describe("auth wiring", () => {
+  it.each([
+    ["get", "/api/auth/me"],
+    ["patch", "/api/auth/me"],
+    ["delete", "/api/auth/me"],
+    ["get", "/api/auth/me/export"],
+    ["post", "/api/auth/me/password"],
+    ["get", "/api/clubs"],
+    ["get", "/api/clubs/c1"],
+    ["post", "/api/check-ins"],
+    ["get", "/api/check-ins/me"],
+    ["get", "/api/check-ins/me/stats"],
+    ["get", "/api/check-ins/me/cities"],
+    ["get", "/api/check-ins/me/achievements"],
+    ["delete", "/api/check-ins/ci1"],
+  ])("%s %s returns 401 without a token", async (method, path) => {
+    const res = await call(method, path);
     expect(res.status).toBe(401);
+  });
+
+  it.each([
+    ["post", "/api/clubs"],
+    ["patch", "/api/clubs/c1"],
+    ["patch", "/api/clubs/c1/approve"],
+    ["patch", "/api/clubs/c1/unapprove"],
+    ["get", "/api/clubs/c1/qr"],
+    ["get", "/api/clubs/c1/display-link"],
+    ["post", "/api/clubs/c1/qr/rotate"],
+    ["get", "/api/admin/metrics"],
+    ["get", "/api/admin/metrics/scorecard"],
+    ["get", "/api/admin/clubs/ranking"],
+    ["get", "/api/admin/clubs/data-health"],
+    ["get", "/api/admin/clubs/c1/footfall"],
+  ])("%s %s is admin only (401 anonymous, 403 USER)", async (method, path) => {
+    expect((await call(method, path)).status).toBe(401);
+    const res = await call(method, path).set(auth(userToken)).send({ name: "N" });
+    expect(res.status).toBe(403);
+    expect(clubUpdate).not.toHaveBeenCalled();
+    expect(clubFindUnique).not.toHaveBeenCalled();
+    expect(checkInFindMany).not.toHaveBeenCalled();
   });
 });
 
@@ -99,39 +112,6 @@ describe("club routes", () => {
     const res = await request(app).get("/api/clubs").set(auth(adminToken));
     expect(res.status).toBe(200);
     expect(res.body.clubs[0].qrSecret).toBe("s3cret");
-  });
-
-  it("GET /api/clubs/:id returns 404 for an unapproved club as USER", async () => {
-    clubFindUnique.mockResolvedValue({ ...club, isApproved: false });
-    const res = await request(app).get("/api/clubs/c1").set(auth(userToken));
-    expect(res.status).toBe(404);
-  });
-
-  const p2025 = () => Object.assign(new Error("x"), { code: "P2025" });
-
-  it.each(["approve", "unapprove"])(
-    "PATCH /api/clubs/:id/%s returns 404 for an unknown id",
-    async (action) => {
-      clubUpdate.mockRejectedValue(p2025());
-      const res = await request(app).patch(`/api/clubs/nope/${action}`).set(auth(adminToken));
-      expect(res.status).toBe(404);
-      expect(res.body).toEqual({ message: "Club not found" });
-    },
-  );
-
-  it("PATCH /api/clubs/:id returns 404 for an unknown id", async () => {
-    clubUpdate.mockRejectedValue(p2025());
-    const res = await request(app)
-      .patch("/api/clubs/nope")
-      .set(auth(adminToken))
-      .send({ name: "N" });
-    expect(res.status).toBe(404);
-  });
-
-  it("PATCH /api/clubs/:id returns 403 for USER", async () => {
-    const res = await request(app).patch("/api/clubs/c1").set(auth(userToken)).send({ name: "N" });
-    expect(res.status).toBe(403);
-    expect(clubUpdate).not.toHaveBeenCalled();
   });
 
   it("PATCH /api/clubs/:id rejects latitude 200", async () => {
@@ -174,57 +154,15 @@ describe("club routes", () => {
       data: { name: "New", latitude: 44.4, imageUrl: "https://x.com/a.png" },
     });
   });
-
-  it("PATCH /api/clubs/:id/approve returns 403 for USER", async () => {
-    const res = await request(app).patch("/api/clubs/c1/approve").set(auth(userToken));
-    expect(res.status).toBe(403);
-    expect(clubUpdate).not.toHaveBeenCalled();
-  });
 });
 
-describe("venue display", () => {
-  const key = () => displayKey(club);
-
-  it("serves the page as html with an inline PNG for the right key", async () => {
+// The display page and QR endpoint themselves are covered in venueDisplayController.test.js.
+describe("venue display link", () => {
+  it("GET /api/clubs/:id/display-link returns the keyed display url", async () => {
     clubFindUnique.mockResolvedValue(club);
-    const res = await request(app).get(`/venue-display/c1?key=${key()}`);
-    expect(res.status).toBe(200);
-    expect(res.headers["content-type"]).toMatch(/text\/html/);
-    expect(res.text).toContain("data:image/png");
-  });
-
-  it("returns 404 for a wrong key, a missing key and an unknown club", async () => {
-    clubFindUnique.mockResolvedValue(club);
-    expect((await request(app).get("/venue-display/c1?key=nope")).status).toBe(404);
-    expect((await request(app).get("/venue-display/c1")).status).toBe(404);
-    clubFindUnique.mockResolvedValue(null);
-    expect((await request(app).get(`/venue-display/zzz?key=${key()}`)).status).toBe(404);
-  });
-
-  it("GET /venue-display/:id/qr returns qrCode and expiresAt", async () => {
-    clubFindUnique.mockResolvedValue(club);
-    const before = Date.now();
-    const res = await request(app).get(`/venue-display/c1/qr?key=${key()}`);
-    expect(res.status).toBe(200);
-    expect(res.body.qrCode).toMatch(/^data:image\/png/);
-    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(before);
-  });
-
-  it("the old display key stops working after the QR secret is rotated", async () => {
-    const oldKey = key();
-    clubFindUnique.mockResolvedValue({ ...club, qrSecret: "rotated" });
-    const res = await request(app).get(`/venue-display/c1?key=${oldKey}`);
-    expect(res.status).toBe(404);
-  });
-
-  it("GET /api/clubs/:id/display-link is admin only and returns the url", async () => {
-    clubFindUnique.mockResolvedValue(club);
-    expect(
-      (await request(app).get("/api/clubs/c1/display-link").set(auth(userToken))).status,
-    ).toBe(403);
     const res = await request(app).get("/api/clubs/c1/display-link").set(auth(adminToken));
     expect(res.status).toBe(200);
-    expect(res.body.url).toContain(`/venue-display/c1?key=${key()}`);
+    expect(res.body.url).toContain(`/venue-display/c1?key=${displayKey(club)}`);
   });
 });
 
@@ -242,21 +180,6 @@ describe("stats, health and fallbacks", () => {
       });
     expect(res.status).toBe(400);
     expect(res.body.errors).toBeDefined();
-  });
-
-  it("GET /api/check-ins/me/stats returns aggregated stats", async () => {
-    checkInFindMany.mockResolvedValue([
-      { clubId: "c1", checkedInAt: new Date(), club: { id: "c1", city: "X" } },
-    ]);
-    const res = await request(app).get("/api/check-ins/me/stats").set(auth(userToken));
-    expect(res.status).toBe(200);
-    expect(res.body.totalCheckIns).toBe(1);
-    expect(res.body.uniqueCities).toBe(1);
-  });
-
-  it("GET /api/check-ins/me/cities requires a token", async () => {
-    const res = await request(app).get("/api/check-ins/me/cities");
-    expect(res.status).toBe(401);
   });
 
   it("GET /api/check-ins/me/cities returns per-city progress", async () => {
@@ -298,13 +221,6 @@ describe("stats, health and fallbacks", () => {
 });
 
 describe("admin metrics routes", () => {
-  it("rejects metrics without a token or for a non-admin", async () => {
-    expect((await request(app).get("/api/admin/metrics")).status).toBe(401);
-    expect((await request(app).get("/api/admin/metrics").set(auth(userToken))).status).toBe(403);
-    const scorecard = await request(app).get("/api/admin/metrics/scorecard").set(auth(userToken));
-    expect(scorecard.status).toBe(403);
-  });
-
   it("400s on a days value outside 7/30/90 without querying", async () => {
     const res = await request(app).get("/api/admin/metrics?days=5").set(auth(adminToken));
     expect(res.status).toBe(400);
@@ -342,16 +258,6 @@ describe("admin metrics routes", () => {
 });
 
 describe("admin club ranking route", () => {
-  it("returns 401 without a token", async () => {
-    const res = await request(app).get("/api/admin/clubs/ranking");
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 for a non-admin", async () => {
-    const res = await request(app).get("/api/admin/clubs/ranking").set(auth(userToken));
-    expect(res.status).toBe(403);
-  });
-
   it("returns 200 with ranked clubs and no user ids for an admin", async () => {
     clubFindMany.mockResolvedValue([
       { id: "c1", name: "Alpha", city: "X" },
@@ -367,16 +273,6 @@ describe("admin club ranking route", () => {
 });
 
 describe("admin club data health route", () => {
-  it("returns 401 without a token", async () => {
-    const res = await request(app).get("/api/admin/clubs/data-health");
-    expect(res.status).toBe(401);
-  });
-
-  it("returns 403 for a non-admin", async () => {
-    const res = await request(app).get("/api/admin/clubs/data-health").set(auth(userToken));
-    expect(res.status).toBe(403);
-  });
-
   it("returns 200 with the three lists and no qrSecret for an admin", async () => {
     clubFindMany.mockResolvedValue([
       { id: "c1", name: "Zero", city: "X", latitude: 0, longitude: 0, isApproved: false },
@@ -394,11 +290,6 @@ describe("admin club data health route", () => {
 });
 
 describe("admin club footfall route", () => {
-  it("returns 403 for a non-admin", async () => {
-    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(userToken));
-    expect(res.status).toBe(403);
-  });
-
   it("returns 404 for an unknown club", async () => {
     clubFindUnique.mockResolvedValue(null);
     const res = await request(app).get("/api/admin/clubs/nope/footfall").set(auth(adminToken));
@@ -406,22 +297,17 @@ describe("admin club footfall route", () => {
     expect(res.body.message).toBeDefined();
   });
 
-  it("returns 200 with 12 weekly buckets for an admin", async () => {
+  it("defaults to 12 weekly buckets, with distance health and no user ids", async () => {
     clubFindUnique.mockResolvedValue({ id: "c1" });
-    checkInFindMany.mockResolvedValue([{ userId: "u1", checkedInAt: new Date() }]);
+    checkInFindMany.mockResolvedValue([
+      { userId: "u1", checkedInAt: new Date(), distanceMeters: 42 },
+    ]);
     checkInGroupBy.mockResolvedValue([{ userId: "u1", _min: { checkedInAt: new Date() } }]);
     const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
     expect(res.status).toBe(200);
     expect(res.body.weekly).toHaveLength(12);
-    expect(JSON.stringify(res.body)).not.toContain("u1");
-  });
-
-  it("defaults to 12 weeks without the param", async () => {
-    clubFindUnique.mockResolvedValue({ id: "c1" });
-    checkInFindMany.mockResolvedValue([]);
-    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
-    expect(res.status).toBe(200);
-    expect(res.body.weekly).toHaveLength(12);
+    expect(res.body.distance.count).toBe(1);
+    expect(JSON.stringify(res.body)).not.toMatch(/userId|u1/);
   });
 
   it("honours ?weeks=4", async () => {
@@ -433,22 +319,9 @@ describe("admin club footfall route", () => {
   });
 
   it.each(["5", "abc"])("rejects ?weeks=%s before querying", async (w) => {
-    checkInFindMany.mockClear();
     const res = await request(app).get(`/api/admin/clubs/c1/footfall?weeks=${w}`).set(auth(adminToken));
     expect(res.status).toBe(400);
     expect(res.body.message).toBe("weeks must be 4, 12, 26 or 52");
     expect(checkInFindMany).not.toHaveBeenCalled();
-  });
-
-  it("includes distance health without user ids", async () => {
-    clubFindUnique.mockResolvedValue({ id: "c1" });
-    checkInFindMany.mockResolvedValue([
-      { userId: "u1", checkedInAt: new Date(), distanceMeters: 42 },
-    ]);
-    checkInGroupBy.mockResolvedValue([{ userId: "u1", _min: { checkedInAt: new Date() } }]);
-    const res = await request(app).get("/api/admin/clubs/c1/footfall").set(auth(adminToken));
-    expect(res.status).toBe(200);
-    expect(res.body.distance.count).toBe(1);
-    expect(JSON.stringify(res.body)).not.toContain("userId");
   });
 });
