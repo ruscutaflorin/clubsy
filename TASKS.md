@@ -798,7 +798,7 @@ feature, per the sizing rules. Server tests still mock Prisma.
         no rater ids in the payload), `pnpm test` and `flutter test`.
       - Depends on: 7.4.
 
-- [ ] 7.6 Password reset by email.
+- [x] 7.6 Password reset by email.
       - Provider: **Resend** (decided 2026-10-03, `PLAN.md` decision 4). Call its HTTP API
         (`POST https://api.resend.com/emails`) with `fetch` instead of adding an SDK. Use the
         Resend sender when `RESEND_API_KEY` is set, otherwise the console sender, and send from
