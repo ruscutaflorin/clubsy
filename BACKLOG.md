@@ -1143,7 +1143,7 @@ Product-owner proposals, 2026-10-04 (night, later). Genres (7.2, B86) now descri
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B96 "Your first techno night!": a new-genre line on the check-in success sheet — status: approved
+- [x] B96 "Your first techno night!": a new-genre line on the check-in success sheet — status: done
   - Why: the success sheet is the reward moment of the core loop (step 2). It celebrates a new club and a new city, but not a new kind of night, even though B86 now builds "Your sound" from genres. Marking the first night in a genre rewards exploring (the explorer persona), and it comes only from verified check-ins and the user's own history (principles 2 and 5).
   - Scope: client only, no server or schema change.
     - Pure logic: add `List<String> newGenres(List<String> clubGenres, List<CheckInModel> previousCheckIns)` to `client/lib/data/classes/genre_taste.dart`.

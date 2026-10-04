@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:clubsy/data/classes/club_model.dart';
+import 'package:clubsy/data/classes/genre_taste.dart';
 import 'package:clubsy/data/classes/location_problem.dart';
 import 'package:clubsy/services/check_in_service.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
@@ -128,6 +129,16 @@ class _CheckInPageState extends State<CheckInPage> {
                 'Ticked off your list!',
                 key: Key('tickedOffList'),
                 style: TextStyle(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          if (newGenreText(result.newGenres) case final text?)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                text,
+                key: const Key('newGenreText'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
             ),
