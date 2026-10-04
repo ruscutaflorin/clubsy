@@ -848,7 +848,7 @@ follows the 8.0 decisions below.
         48 hours. A user with 3+ open reports is flagged for review.
       - **Navigation:** no new bottom tab. Friends and the feed are pages pushed from Profile.
 
-- [ ] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
+- [x] 8.1 Friends: requests by username, accept or decline, friend list, unfriend.
       - Schema: `Friendship {id, requesterId, addresseeId, status PENDING|ACCEPTED, createdAt,
         respondedAt, @@unique([requesterId, addresseeId])}`.
       - Server: send a request by `username` (7.1). Searching only matches an exact username,
