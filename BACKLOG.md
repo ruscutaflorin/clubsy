@@ -843,3 +843,91 @@ Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These
     - A Flutter widget test for the admin action.
     - `node .nightshift/test-all.mjs` passes.
   - Size: M
+
+---
+
+Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe ratings into the data model, but favourites only show up as a heart and a map layer, and ratings only as a crowd average. These items make both part of the "where next?" and "look back" steps of the core loop.
+
+- [ ] B81 "Want to go" list: my favourited clubs on one page, not-yet-visited first, with today's opening status — status: approved
+  - Why: 7.3 lets a user heart clubs ("Want to go"), but the only way to see the list is the map layer. "Which of my saved places haven't I been to, and which is open tonight?" has no answer in the app. A list page turns favourites into step 4 of the core loop (find the next place to go). It also makes `tickedOffList` on the success sheet a goal the user can see. It uses only the user's own data (principle 2).
+  - Scope: client only, no server or schema change. `ClubController.favoriteIds` and `ClubController.clubs` already hold everything.
+    - Pure logic: add `List<WantToGoEntry> wantToGoList(List<ClubModel> clubs, Set<String> favoriteIds, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, with a small `WantToGoEntry {ClubModel club; int nights}` class. `nights` comes from `nightsPerClub(checkIns)` in the same file. Clubs with 0 nights come first, then visited ones, alphabetical by name (case-insensitive) within each group. Favourite ids with no matching club are skipped.
+    - Page: add `client/lib/views/pages/want_to_go_page.dart` (`WantToGoPage`). It reads `Get.find<ClubController>()` inside an `Obx`.
+      - Each row shows the club name, the city, and a trailing status: "Not been yet" for unvisited clubs, "Been · N nights" for visited ones ("1 night" singular).
+      - When `openingChipText(club.openingHours, club.localNow)` from `client/lib/data/classes/club_profile.dart` returns a value, append it to the subtitle after the city, called the same way `ClubDetailsPage` calls it ("Cluj · Open now").
+      - Tapping a row pushes `ClubDetailsPage` with `Get.to`. Each row has an un-heart `IconButton` (`Key('unfavorite_<clubId>')`) that calls `ClubController.toggleFavorite`.
+      - With no favourites, show "Nothing saved yet. Tap the heart on a club to add it here."
+    - Entry point: in `client/lib/views/pages/profile_page.dart`, add a `ListTile` (`Key('openWantToGo')`, title "Want to go", trailing count of favourites) next to the existing "Friends" tile. It pushes `WantToGoPage` with `Get.to`.
+    - Out: sorting by distance (needs location on this page), sharing the list, reordering, server changes.
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`:
+      - Favourites "Zeta" (unvisited), "alpha" (visited on 2 nights) and "Beta" (unvisited) come back as Beta, Zeta, alpha, with `nights` 0, 0, 2.
+      - A favourite id with no matching club is skipped, and an empty favourites set gives an empty list.
+    - Widget tests in a new `client/test/want_to_go_test.dart` pump `WantToGoPage` with a fixture `ClubController` (no HTTP), the same way `client/test/club_map_page_test.dart` does:
+      - They find "Not been yet" for an unvisited favourite and "Been · 2 nights" for a visited one.
+      - With no favourites, they find "Nothing saved yet".
+      - Tapping `Key('unfavorite_<id>')` removes the row (the fixture service's `setFavorite` succeeds).
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B82 "You rated it ★4.3 over 5 nights": my own vibe rating on a club's page — status: approved
+  - Why: 7.4 asks for a vibe rating after each night, and 7.5 shows the crowd's average on the club page, but the user's own ratings disappear into the history. "Is this my kind of place?" is best answered by what I thought myself. Showing my rating next to the crowd score rewards the rating habit and helps decide where to go next. It uses only the user's own data (principle 2).
+  - Scope: client only, no server or schema change. `CheckInModel.vibe` (nullable int, 1-5) is already loaded into `ClubController.myCheckIns`.
+    - Pure logic: add `({double average, int count})? myVibeAtClub(String clubId, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`. It averages the non-null `vibe` values of my check-ins at that club and returns null when there are none.
+    - Text: add `String myVibeText(({double average, int count}) v)` to `client/lib/data/classes/club_profile.dart`, next to `vibeText`. It returns "You rated it ★4.3 over 5 nights", with one decimal and "1 night" for a single rating.
+    - UI: in `client/lib/views/pages/club_details_page.dart`, add `Text(myVibeText(...), key: const Key('myVibeText'))` directly below the existing `Text(vibeText(club.vibe), key: const Key('vibeText'))`. Show it only when `myVibeAtClub` is non-null. Read `clubController.myCheckIns` inside an `Obx` so the line updates after the user rates a night.
+    - Out: showing my ratings to anyone else, editing ratings from the club page, changing the aggregate score.
+  - Acceptance:
+    - Flutter unit tests added to `client/test/visit_summary_test.dart`:
+      - Ratings 4, 5 and null at club A, plus 1 at club B, give A `(average: 4.5, count: 2)`.
+      - A club with only null ratings gives null, and an empty list gives null.
+    - A unit test in `client/test/club_profile_test.dart`: `myVibeText((average: 4.25, count: 5))` is "You rated it ★4.3 over 5 nights", and a count of 1 says "1 night".
+    - Widget tests in `client/test/pages_widget_test.dart`, next to the existing `ClubDetailsPage` tests there, pump the page with fixture check-ins:
+      - A club I rated shows `Key('myVibeText')` containing "You rated it".
+      - A club I never rated has no `Key('myVibeText')`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B83 Recap "Highest rated": the club I rated best in the period — status: proposed
+  - Why: the recap (Wrapped) counts nights and names the most-visited club, but ignores the vibe ratings 7.4 collects. "Your highest-rated club of September: Club X ★4.8" is a line people would want to share, and it rewards rating nights.
+  - Scope: client only.
+    - Extend `Recap`/`buildRecap` in `client/lib/data/classes/recap.dart` with `topRatedClub` and its average, picked from the period's check-ins that have a non-null `vibe`.
+    - A club needs at least 2 rated nights, so one lucky night doesn't win. Break ties by the number of ratings, then by name.
+    - Add a line to `RecapCard` in `client/lib/views/pages/recap_page.dart`. It hides the club name under the existing `hideClubNames` toggle, the same way the top-club line does. Notes are never shown.
+    - Out: friends' ratings, server changes.
+  - Acceptance:
+    - Unit tests in `client/test/recap_test.dart`:
+      - 2 rated nights at A averaging 4.5 beat 3 at B averaging 4.0.
+      - A single rated night gives no top-rated club.
+      - Ratings outside the period are ignored.
+    - A widget test finds the line, and finds no club name in it when `hideClubNames` is on.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: S
+
+- [ ] B84 "Friends who've been here": the names behind the friend count on a club page — status: proposed
+  - Why: the club page shows how many friends have been to a club (`GET /api/feed/clubs/:clubId/friends-count`), but not who, so "ask Ana what it's like" is impossible. The names would come from the same visibility rule as the feed (ended, unhidden nights, sharing on both sides, not blocked), so they show nothing 8.0 doesn't already allow.
+  - Scope: needs a quick product/safety confirmation first. The count was deliberately built as an aggregate, so someone should confirm that listing friend names per club fits 8.0's rules. If confirmed:
+    - Server: add `GET /api/feed/clubs/:clubId/friends` in `server/src/controllers/feedController.js`. It reuses `visibleCheckInsWhere(req.user.id)` exactly like `getClubFriendCount` and returns `[{userId, username, name, nights}]`, with distinct night counts and no dates or times.
+    - Client: make the friend count on `ClubDetailsPage` tappable. It opens a sheet that lists those friends, and tapping one pushes `FriendNightsPage`.
+    - Out: last-visit dates, anything about tonight.
+  - Acceptance:
+    - Supertest tests in `server/src/__tests__/feed.test.js`:
+      - A viewer with sharing off gets `[]` and no check-in query runs.
+      - The `where` keeps the friend, not-hidden and night-ended filters.
+      - The body has no `checkedInAt` and no email.
+      - No token gives 401.
+    - A widget test for the sheet, with a fake service.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
+
+- [ ] B85 Admin reports queue: group open reports by reported user, with their report history — status: proposed
+  - Why: `listReports` returns one row per report, with an `openReports` count and a `flagged` flag. Three reports against one account show as three separate rows, and an admin can't see past ACTIONED or DISMISSED reports against the same person. Grouping by user makes repeat offenders obvious, which principle 3 needs before the social layer grows. It also prepares the ground for the suspension action (B80) once its policy is decided.
+  - Scope: server and client, no schema change.
+    - Server: add `GET /api/admin/reports/users` (admin only) in `server/src/controllers/reportController.js`, built with `prisma.report.groupBy`. It returns one entry for each reported user with at least one OPEN report: `{user: {id, username, name}, open, actioned, dismissed, reasons: {HARASSMENT: n, ...}, latestAt}`. Entries are sorted by `open` descending, then `latestAt` descending.
+    - Client: in `client/lib/views/pages/admin/admin_reports_page.dart`, add a "By user" toggle that shows this list. Tapping a user filters the existing per-report list to that user.
+    - Out: suspension (B80), reporter identities in the grouped view.
+  - Acceptance:
+    - Supertest tests (mocked Prisma): no token gives 401, a non-admin gets 403, and an admin gets 200 with the sort order and per-status counts above.
+    - A widget test for the toggle, with a fake `AdminService`.
+    - `node .nightshift/test-all.mjs` passes.
+  - Size: M
