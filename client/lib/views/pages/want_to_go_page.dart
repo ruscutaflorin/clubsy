@@ -41,13 +41,18 @@ class WantToGoPage extends StatelessWidget {
   Widget _row(ClubController controller, WantToGoEntry e) {
     final club = e.club;
     final status = openingChipText(club.openingHours, club.localNow);
+    final detail = openingDetailText(club.openingHours, club.localNow);
     final visited = e.nights == 0
         ? 'Not been yet'
         : 'Been · ${e.nights} ${e.nights == 1 ? 'night' : 'nights'}';
     return ListTile(
       key: Key('wantToGo_${club.id}'),
       title: Text(club.name),
-      subtitle: Text(status == null ? club.city : '${club.city} · $status'),
+      subtitle: Text(
+        status == null
+            ? club.city
+            : [club.city, status, if (detail != null) detail].join(' · '),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
