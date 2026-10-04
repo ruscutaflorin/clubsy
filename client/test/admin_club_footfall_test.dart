@@ -82,6 +82,32 @@ void main() {
     expect(copied, contains('Unique visitors'));
   });
 
+  testWidgets('picking 52 wk reloads with 52 and renders without overflow', (
+    tester,
+  ) async {
+    final svc = _FakeAdminService({
+      'weekly': [
+        for (var i = 0; i < 52; i++)
+          {'weekStart': '2026-01-01', 'checkIns': i, 'uniqueVisitors': i},
+      ],
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: AdminClubFootfallPage(club: club, service: svc),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('footfallWeeks')), findsOneWidget);
+    expect(svc.requested, [12]);
+    await tester.tap(find.text('52 wk'));
+    await tester.pumpAndSettle();
+    expect(svc.requested.last, 52);
+    expect(tester.takeException(), isNull);
+  });
+
   // A full distance block is parsed and rendered in the marginal-warning test below.
   test('distance defaults to null, and to null figures when insufficient', () {
     expect(fixture.distance, isNull);

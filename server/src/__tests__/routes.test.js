@@ -297,7 +297,7 @@ describe("admin club footfall route", () => {
     expect(res.body.message).toBeDefined();
   });
 
-  it("returns 12 weekly buckets and distance health without user ids for an admin", async () => {
+  it("defaults to 12 weekly buckets, with distance health and no user ids", async () => {
     clubFindUnique.mockResolvedValue({ id: "c1" });
     checkInFindMany.mockResolvedValue([
       { userId: "u1", checkedInAt: new Date(), distanceMeters: 42 },
@@ -308,5 +308,20 @@ describe("admin club footfall route", () => {
     expect(res.body.weekly).toHaveLength(12);
     expect(res.body.distance.count).toBe(1);
     expect(JSON.stringify(res.body)).not.toMatch(/userId|u1/);
+  });
+
+  it("honours ?weeks=4", async () => {
+    clubFindUnique.mockResolvedValue({ id: "c1" });
+    checkInFindMany.mockResolvedValue([]);
+    const res = await request(app).get("/api/admin/clubs/c1/footfall?weeks=4").set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect(res.body.weekly).toHaveLength(4);
+  });
+
+  it.each(["5", "abc"])("rejects ?weeks=%s before querying", async (w) => {
+    const res = await request(app).get(`/api/admin/clubs/c1/footfall?weeks=${w}`).set(auth(adminToken));
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe("weeks must be 4, 12, 26 or 52");
+    expect(checkInFindMany).not.toHaveBeenCalled();
   });
 });
