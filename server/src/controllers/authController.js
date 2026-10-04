@@ -171,7 +171,19 @@ export const exportMyData = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+        username: true,
+        homeCity: true,
+        acceptedTermsAt: true,
+        termsVersion: true,
+        ageConfirmedAt: true,
+        shareNightsWithFriends: true,
+      },
     });
 
     if (!user) {
@@ -186,6 +198,10 @@ export const exportMyData = async (req, res) => {
         checkedInAt: true,
         distanceMeters: true,
         verificationMethod: true,
+        note: true,
+        vibe: true,
+        vibeAt: true,
+        hiddenFromFriends: true,
         club: {
           select: {
             id: true,
@@ -199,12 +215,66 @@ export const exportMyData = async (req, res) => {
       },
     });
 
+    const userId = req.user.id;
+    const otherSelect = { username: true, name: true };
+    const [favorites, friendshipRows, blocks, reportsFiled] = await Promise.all([
+      prisma.favorite.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          createdAt: true,
+          club: { select: { id: true, name: true, city: true } },
+        },
+      }),
+      prisma.friendship.findMany({
+        where: { OR: [{ requesterId: userId }, { addresseeId: userId }] },
+        orderBy: { createdAt: "asc" },
+        select: {
+          status: true,
+          createdAt: true,
+          respondedAt: true,
+          requesterId: true,
+          requester: { select: otherSelect },
+          addressee: { select: otherSelect },
+        },
+      }),
+      prisma.block.findMany({
+        where: { blockerId: userId },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true, blocked: { select: otherSelect } },
+      }),
+      prisma.report.findMany({
+        where: { reporterId: userId },
+        orderBy: { createdAt: "asc" },
+        select: { reason: true, details: true, status: true, createdAt: true },
+      }),
+    ]);
+
+    const friendships = friendshipRows.map((f) => {
+      const sent = f.requesterId === userId;
+      return {
+        status: f.status,
+        direction: sent ? "sent" : "received",
+        createdAt: f.createdAt,
+        respondedAt: f.respondedAt,
+        other: sent ? f.addressee : f.requester,
+      };
+    });
+
     const exportedAt = new Date();
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="clubsy-export-${exportedAt.toISOString().slice(0, 10)}.json"`
     );
-    res.json({ exportedAt: exportedAt.toISOString(), user, checkIns });
+    res.json({
+      exportedAt: exportedAt.toISOString(),
+      user,
+      checkIns,
+      favorites,
+      friendships,
+      blocks,
+      reportsFiled,
+    });
   } catch (error) {
     console.error("Export data error:", error);
     res.status(500).json({ message: "Error exporting data" });

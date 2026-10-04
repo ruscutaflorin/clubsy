@@ -760,7 +760,7 @@ Product-owner proposals, 2026-10-03 (mid-morning). Schema-free: club data qualit
 
 Product-owner proposals, 2026-10-04 (evening). Phases 7 and 8 have landed. These close the privacy gap they left in the data export, add the first per-friend page, and make the new opening-hours data useful when choosing where to go.
 
-- [ ] B76 "Download my data" covers everything Phases 7 and 8 added: profile, notes, favourites, friends, blocks and reports — status: approved
+- [x] B76 "Download my data" covers everything Phases 7 and 8 added: profile, notes, favourites, friends, blocks and reports — status: done
   - Why: principle 2 promises that users can export their data, but `exportMyData` still returns only the Phase 5 fields. It leaves out username, home city, consent records, privacy settings, night notes and vibe ratings, favourites, friendships, blocks and the reports a user filed. An export that skips the private diary and the social graph doesn't keep that promise, and the pilot's legal review (5.7) will check it.
   - Scope: server only, no schema change, no client change. The client already saves whatever JSON the endpoint returns, and the CSV (B64) stays check-ins only.
     - In `exportMyData` in `server/src/controllers/authController.js` (`GET /api/auth/me/export`), add `username`, `homeCity`, `acceptedTermsAt`, `termsVersion`, `ageConfirmedAt` and `shareNightsWithFriends` to the `user` `select`. Never select `password` or `tokenVersion`.
