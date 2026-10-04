@@ -34,6 +34,15 @@ class ClubSearchPage extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      key: const Key('openNowFilter'),
+                      label: const Text('Open now'),
+                      selected: searchController.openNow.value,
+                      onSelected: (_) => searchController.toggleOpenNow(),
+                    ),
+                  ),
                   for (final g in clubGenres)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
@@ -68,7 +77,13 @@ class ClubSearchPage extends StatelessWidget {
 
       final results = searchController.filteredResults;
       if (results.isEmpty) {
-        return const Center(child: Text('No clubs found'));
+        return Center(
+          child: Text(
+            searchController.openNow.value
+                ? 'No clubs open right now'
+                : 'No clubs found',
+          ),
+        );
       }
 
       final visited = clubController.visitedClubIds;

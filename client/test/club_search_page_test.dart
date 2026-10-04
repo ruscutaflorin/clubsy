@@ -74,4 +74,27 @@ void main() {
       expect(find.text('No clubs found'), findsOneWidget);
     },
   );
+
+  testWidgets('Open now chip shows "No clubs open right now" when none open', (
+    tester,
+  ) async {
+    Get.put(ClubController());
+    final searchController = Get.put(
+      ClubSearchController(
+        fetch: ({search, city}) async => [fixtureClub('a', 'Club Alpha')],
+        clock: () => DateTime(2026, 10, 3, 2),
+      ),
+    );
+
+    await tester.pumpWidget(const MaterialApp(home: ClubSearchPage()));
+    searchController.search('club');
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Club Alpha'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('openNowFilter')));
+    await tester.pump();
+
+    expect(find.text('No clubs open right now'), findsOneWidget);
+    expect(find.text('Club Alpha'), findsNothing);
+  });
 }
