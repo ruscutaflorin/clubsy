@@ -15,8 +15,11 @@ class ClubSearchController extends GetxController {
 
   /// [fetch] is injectable so tests don't need real HTTP; defaults to
   /// [ClubService.getClubs] in the running app.
-  ClubSearchController({ClubFetch? fetch})
-    : _fetch = fetch ?? ClubService().getClubs;
+  ClubSearchController({ClubFetch? fetch, DateTime Function()? clock})
+    : _fetch = fetch ?? ClubService().getClubs,
+      _clock = clock ?? DateTime.now;
+
+  final DateTime Function() _clock;
 
   final results = <ClubModel>[].obs;
   final isLoading = false.obs;
@@ -25,7 +28,15 @@ class ClubSearchController extends GetxController {
   /// Narrows [results] to one music genre; null shows every genre.
   final genre = Rxn<String>();
 
-  List<ClubModel> get filteredResults => clubsWithGenre(results, genre.value);
+  /// Keeps only clubs that are open right now.
+  final openNow = false.obs;
+
+  List<ClubModel> get filteredResults {
+    final byGenre = clubsWithGenre(results, genre.value);
+    return openNow.value ? clubsOpenAt(byGenre, _clock()) : byGenre;
+  }
+
+  void toggleOpenNow() => openNow.value = !openNow.value;
 
   void toggleGenre(String value) =>
       genre.value = genre.value == value ? null : value;

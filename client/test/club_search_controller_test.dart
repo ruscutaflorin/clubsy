@@ -15,6 +15,45 @@ ClubModel fixtureClub(String id, String name) => ClubModel(
 );
 
 void main() {
+  test('openNow and genre combine, and turning openNow off restores genre', () {
+    ClubModel club(String id, List<String> genres, bool hasHours) => ClubModel(
+      id: id,
+      name: id,
+      address: '1 Main St',
+      city: 'Cluj',
+      latitude: 46,
+      longitude: 23.5,
+      imageUrl: 'http://img',
+      isApproved: true,
+      genres: genres,
+      openingHours: hasHours
+          ? {
+              'fri': [
+                {'open': '23:00', 'close': '05:00'},
+              ],
+            }
+          : null,
+    );
+    final controller = ClubSearchController(
+      clock: () => DateTime(2026, 10, 3, 2), // Saturday 02:00
+    );
+    controller.results.addAll([
+      club('openTechno', ['techno'], true),
+      club('openHouse', ['house'], true),
+      club('closedTechno', ['techno'], false),
+    ]);
+
+    controller.toggleGenre('techno');
+    controller.toggleOpenNow();
+    expect(controller.filteredResults.map((c) => c.id), ['openTechno']);
+
+    controller.toggleOpenNow();
+    expect(controller.filteredResults.map((c) => c.id), [
+      'openTechno',
+      'closedTechno',
+    ]);
+  });
+
   group('ClubSearchController.runSearch', () {
     test('forwards the query to fetch and exposes the results', () async {
       String? capturedSearch;
