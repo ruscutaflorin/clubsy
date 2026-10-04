@@ -19,9 +19,12 @@ class DataExportService {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/clubsy-export-$date.json');
     await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data));
-    await Share.shareXFiles([
-      XFile(file.path, mimeType: 'application/json'),
-    ], subject: 'My Clubsy data');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'application/json')],
+        subject: 'My Clubsy data',
+      ),
+    );
   }
 
   Future<void> exportMyCheckInsCsv() async {
@@ -30,8 +33,11 @@ class DataExportService {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/clubsy-check-ins-$date.csv');
     await file.writeAsString(checkInsToCsv(data));
-    await Share.shareXFiles([
-      XFile(file.path, mimeType: 'text/csv'),
-    ], subject: 'My Clubsy check-ins');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path, mimeType: 'text/csv')],
+        subject: 'My Clubsy check-ins',
+      ),
+    );
   }
 }

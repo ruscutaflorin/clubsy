@@ -166,7 +166,9 @@ class _RecapPageState extends State<RecapPage> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/clubsy-recap.png');
       await file.writeAsBytes(data!.buffer.asUint8List());
-      await Share.shareXFiles([XFile(file.path, mimeType: 'image/png')]);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path, mimeType: 'image/png')]),
+      );
     } catch (_) {
       if (mounted) setState(() => _error = "Couldn't share the recap");
     }
