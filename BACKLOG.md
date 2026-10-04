@@ -870,7 +870,7 @@ Product-owner proposals, 2026-10-04 (night). Phase 7 put favourites and vibe rat
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B82 "You rated it ★4.3 over 5 nights": my own vibe rating on a club's page — status: approved
+- [x] B82 "You rated it ★4.3 over 5 nights": my own vibe rating on a club's page — status: done
   - Why: 7.4 asks for a vibe rating after each night, and 7.5 shows the crowd's average on the club page, but the user's own ratings disappear into the history. "Is this my kind of place?" is best answered by what I thought myself. Showing my rating next to the crowd score rewards the rating habit and helps decide where to go next. It uses only the user's own data (principle 2).
   - Scope: client only, no server or schema change. `CheckInModel.vibe` (nullable int, 1-5) is already loaded into `ClubController.myCheckIns`.
     - Pure logic: add `({double average, int count})? myVibeAtClub(String clubId, List<CheckInModel> checkIns)` to `client/lib/data/classes/visit_summary.dart`, next to `nightsAtClub`. It averages the non-null `vibe` values of my check-ins at that club and returns null when there are none.
