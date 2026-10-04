@@ -10,6 +10,7 @@ import 'package:clubsy/data/classes/club_profile.dart';
 import 'package:clubsy/services/location_lookup.dart';
 import 'package:clubsy/data/classes/visit_summary.dart';
 import 'package:clubsy/src/core/controllers/club_controller.dart';
+import 'package:clubsy/src/core/controllers/feed_controller.dart';
 import 'package:clubsy/views/pages/check_in_primer_page.dart';
 
 const _maxNightRows = 20;
@@ -25,6 +26,7 @@ class ClubDetailsPage extends StatefulWidget {
 
 class _ClubDetailsPageState extends State<ClubDetailsPage> {
   String? _distance;
+  int _friendCount = 0;
 
   ClubModel get club => widget.club;
 
@@ -32,6 +34,14 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
   void initState() {
     super.initState();
     _loadDistance();
+    _loadFriendCount();
+  }
+
+  Future<void> _loadFriendCount() async {
+    if (!Get.isRegistered<FeedController>()) return;
+    final count = await Get.find<FeedController>().friendCountForClub(club.id);
+    if (!mounted || count == 0) return;
+    setState(() => _friendCount = count);
   }
 
   Future<void> _loadDistance() async {
@@ -68,6 +78,13 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
     return [
       const SizedBox(height: 8),
       Text(vibeText(club.vibe), key: const Key('vibeText')),
+      if (_friendCount > 0) ...[
+        const SizedBox(height: 8),
+        Text(
+          friendsHaveBeenHereText(_friendCount),
+          key: const Key('friendsHereText'),
+        ),
+      ],
       if (status != null) ...[
         const SizedBox(height: 8),
         Chip(
