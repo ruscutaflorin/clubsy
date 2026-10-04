@@ -65,7 +65,9 @@ class _ClubDetailsPageState extends State<ClubDetailsPage> {
             key: const Key('shareClub'),
             icon: const Icon(Icons.share),
             tooltip: 'Share',
-            onPressed: () => Share.share(clubShareText(club)),
+            onPressed: () => SharePlus.instance.share(
+              ShareParams(text: clubShareText(club)),
+            ),
           ),
         ],
       ),
