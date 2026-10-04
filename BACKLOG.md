@@ -1062,7 +1062,7 @@ Product-owner proposals, 2026-10-04 (evening). Vibe ratings (7.4) and friends' n
     - `node .nightshift/test-all.mjs` passes.
   - Size: S
 
-- [ ] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: approved
+- [x] B92 "Been there, you haven't": the clubs a friend has visited that are new to me, on their nights page — status: done
   - Why: core loop step 4 ("find the next place to go") gets its best ideas from friends, and B77 already counts the clubs we've both been to. The clubs a friend has been to and I've never tried are the natural next suggestion. They come only from that friend's already-visible nights (the same `visibleCheckInsWhere` rule: ended, unhidden, both sharing, not blocked), so nothing new is revealed (principles 2 and 3).
   - Scope: server and client, no schema change.
     - Server: in `getFriendNights` in `server/src/controllers/feedController.js`, on page 1 only, change the `theirs` query to also select `club: { select: { id: true, name: true, city: true } }`. Add `newToYou` to the body: the friend's distinct clubs whose id isn't in `mineIds`, sorted by name, each `{id, name, city}`. The `base` null branch returns `newToYou: []`. Keep `sharedClubCount` unchanged. No dates or counts per club.
